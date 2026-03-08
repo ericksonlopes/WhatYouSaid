@@ -2,7 +2,7 @@ import logging
 
 from src.config.settings import settings
 from src.infrastructure.services.model_loader_service import ModelLoaderService
-from src.infrastructure.services.transcript_processor_service import TranscriptProcessorService
+from src.infrastructure.services.transcript_processor_service import YoutubeTranscriptProcessorService
 
 logging.getLogger("transformers").setLevel(logging.WARNING)
 logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
@@ -12,7 +12,7 @@ if __name__ == '__main__':
     model_loader = ModelLoaderService(model)
     model_instance = model_loader.model
 
-    tp = TranscriptProcessorService()
+    tp = YoutubeTranscriptProcessorService()
 
     v_id = "VQnM8Y3RIyM"
     languages = ["pt"]
