@@ -10,9 +10,11 @@ jobs:
   test:
     name: Test on Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         python-version: ['3.12']
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -26,11 +28,18 @@ jobs:
       - name: Install uv (official method)
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Sync dependencies with uv
         run: |
           uv sync --locked
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
-          uv run pytest tests
+          uv run pytest --cov=what_you_said --cov-branch --cov-report=xml:coverage.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
