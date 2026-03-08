@@ -7,7 +7,7 @@ from src.config.logger import Logger
 logger = Logger()
 
 
-class TranscriptProcessor:
+class TranscriptProcessorService:
     """Class to process and split YouTube transcripts."""
 
     @staticmethod
@@ -22,18 +22,21 @@ class TranscriptProcessor:
         try:
             transcript = YouTubeTranscriptApi().fetch(video_id=video_id, languages=languages)
             logger.debug("Transcript fetched successfully.", context={"video_id": video_id,
-                                                                     "languages": languages,
-                                                                     "transcript_length": len(transcript)})
+                                                                      "languages": languages,
+                                                                      "transcript_length": len(transcript)})
             return transcript
 
         except NoTranscriptFound as ntf:
-            logger.error("Transcript not found.", context={"video_id": video_id, "languages": languages, "error": str(ntf)})
+            logger.error("Transcript not found.",
+                         context={"video_id": video_id, "languages": languages, "error": str(ntf)})
             raise
 
         except TranscriptsDisabled as td:
-            logger.warning("Transcripts are disabled for this video.", context={"video_id": video_id, "languages": languages, "error": str(td)})
+            logger.warning("Transcripts are disabled for this video.",
+                           context={"video_id": video_id, "languages": languages, "error": str(td)})
             raise
 
         except Exception as error:
-            logger.error("Unexpected error while fetching transcript.", context={"video_id": video_id, "languages": languages, "error": str(error)})
+            logger.error("Unexpected error while fetching transcript.",
+                         context={"video_id": video_id, "languages": languages, "error": str(error)})
             raise

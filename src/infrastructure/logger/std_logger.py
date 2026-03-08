@@ -86,7 +86,10 @@ class StdLogger(ILogger):
 
         asctime = datetime.now().strftime('%Y-%m-%d %H:%M:%S,%f')[:-3]
         filename = os.path.basename(frame_best.filename)
-        filepath = os.path.abspath(frame_best.filename)
+        # Caminho relativo ao diretório do projeto
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
+        filepath_abs = os.path.abspath(frame_best.filename)
+        filepath_rel = os.path.relpath(filepath_abs, project_root).replace('\\', '/')
         lineno = frame_best.lineno
         func_name = frame_best.function
 
@@ -94,7 +97,7 @@ class StdLogger(ILogger):
             'asctime': asctime,
             'levelname': level.upper(),
             'filename': filename,
-            'filepath': filepath,
+            'filepath': filepath_rel,
             'lineno': lineno,
             'class': cls_name,
             'funcName': func_name,
