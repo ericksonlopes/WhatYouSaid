@@ -1,10 +1,12 @@
+import inspect
 import logging
+import os
 import sys
+from datetime import datetime
 from typing import Optional, Any
 
 from src.config.settings import settings
 from src.domain.infraestructure.logger.logger import ILogger
-from src.infrastructure.logger.util import get_log_record
 
 
 class StdLogger(ILogger):
@@ -44,6 +46,61 @@ class StdLogger(ILogger):
 
         self.allowed_levels = settings.allowed_log_levels
 
+    @staticmethod
+    def get_logger_module_files(base_dir=None):
+        """
+        Returns a set with normalized (absolute) paths of ALL .py files
+        inside src/infrastructure/logger, including subdirectories.
+        This list adapts dynamically to all files present in the logger infra.
+        """
+        if base_dir is None:
+            base_dir = os.path.join(
+                os.path.dirname(os.path.abspath(__file__))
+            )
+        logger_files = set()
+        for root, _, files in os.walk(base_dir):
+            for file in files:
+                if file.endswith('.py'):
+                    logger_files.add(os.path.abspath(os.path.join(root, file)))
+        return logger_files
+
+    @staticmethod
+    def get_log_record(level: str, message: str):
+        """
+        Extracts detailed context from the frame where the log was originally called.
+        Returns a dict with all fields for the standard log template.
+        This context excludes any frame from infrastructure python files found in the logger directory.
+        """
+        logger_files = StdLogger.get_logger_module_files()
+        stack = inspect.stack()
+        cls_name = ""
+        frame_best = stack[1]
+        for frame_info in stack:
+            filename_abs = os.path.abspath(frame_info.filename)
+            if filename_abs not in logger_files:
+                self_obj = frame_info.frame.f_locals.get('self', None)
+                if self_obj:
+                    cls_name = type(self_obj).__name__
+                frame_best = frame_info
+                break
+
+        asctime = datetime.now().strftime('%Y-%m-%d %H:%M:%S,%f')[:-3]
+        filename = os.path.basename(frame_best.filename)
+        filepath = os.path.abspath(frame_best.filename)
+        lineno = frame_best.lineno
+        func_name = frame_best.function
+
+        return {
+            'asctime': asctime,
+            'levelname': level.upper(),
+            'filename': filename,
+            'filepath': filepath,
+            'lineno': lineno,
+            'class': cls_name,
+            'funcName': func_name,
+            'message': message
+        }
+
     def _is_allowed(self, level_name: str) -> bool:
         try:
             if not self.allowed_levels:
@@ -56,7 +113,7 @@ class StdLogger(ILogger):
     def _log(self, level: str, message: str, context: dict[str, Any] | None = None) -> None:
         if not self._is_allowed(level):
             return
-        ctx = get_log_record(level, message)
+        ctx = StdLogger.get_log_record(level, message)
         # Adiciona o contexto como string (JSON ou str) ao campo 'context'
         if context:
             import json
