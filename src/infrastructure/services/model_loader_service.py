@@ -2,11 +2,12 @@ import torch
 from sentence_transformers import SentenceTransformer
 
 from src.config.logger import Logger
+from src.domain.infraestructure.IModelLoaderService import IModelLoaderService
 
 logger = Logger()
 
 
-class ModelLoaderService:
+class ModelLoaderService(IModelLoaderService):
     def __init__(self, model_name: str):
         super().__init__()
         self.model_name = model_name

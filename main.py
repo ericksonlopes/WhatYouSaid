@@ -1,22 +1,23 @@
-import logging
+from pprint import pprint
+
+from youtube_transcript_api import FetchedTranscript
 
 from src.config.settings import settings
+from src.infrastructure.extractors.youtube_transcript_processor_extractor import YoutubeTranscriptExtractor
 from src.infrastructure.services.model_loader_service import ModelLoaderService
-from src.infrastructure.services.transcript_processor_service import YoutubeTranscriptProcessorService
-
-logging.getLogger("transformers").setLevel(logging.WARNING)
-logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
+from src.infrastructure.services.youtube_text_temporal_splitter_service import YoutubeTranscriptSplitterService
 
 if __name__ == '__main__':
-    model = settings.MODEL_EMBEDDING_NAME
-    model_loader = ModelLoaderService(model)
-    model_instance = model_loader.model
-
-    tp = YoutubeTranscriptProcessorService()
-
     v_id = "VQnM8Y3RIyM"
     languages = ["pt"]
 
-    fetch = tp.fetch_transcript(video_id=v_id, languages=languages)
+    model = settings.MODEL_EMBEDDING_NAME
+    model_loader = ModelLoaderService(model)
 
-    # pprint(fetch)
+    ytp = YoutubeTranscriptExtractor()
+
+    fetch: FetchedTranscript = ytp.fetch_transcript(video_id=v_id, languages=languages)
+
+    ytts = YoutubeTranscriptSplitterService(model_loader)
+    result = ytts.split_transcript(fetch, mode="tokens", tokens_per_chunk=512, token_overlap=5)
+    pprint(result)

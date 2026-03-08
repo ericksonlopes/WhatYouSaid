@@ -7,7 +7,7 @@ from src.config.logger import Logger
 logger = Logger()
 
 
-class YoutubeTranscriptProcessorService:
+class YoutubeTranscriptExtractor:
     """Class to process and split YouTube transcripts."""
 
     @staticmethod
