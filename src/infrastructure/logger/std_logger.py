@@ -104,14 +104,21 @@ class StdLogger(ILogger):
             'message': message
         }
 
+    def _get_log_level(self, level_name: str):
+        return getattr(logging, level_name.upper(), None)
+
     def _is_allowed(self, level_name: str) -> bool:
         try:
             if not self.allowed_levels:
                 return False
-            level = getattr(logging, level_name.upper(), None)
+            level = self._get_log_level(level_name)
             return level in self.allowed_levels
-        except Exception:
+        except TypeError:
+            return False
+        except KeyError:
             return True
+        except Exception as exc:
+            raise RuntimeError(f"Unexpected error in _is_allowed: {exc}") from exc
 
     def _log(self, level: str, message: str, context: dict[str, Any] | None = None) -> None:
         if not self._is_allowed(level):
@@ -122,7 +129,7 @@ class StdLogger(ILogger):
             import json
             try:
                 ctx['context'] = json.dumps(context, ensure_ascii=False)
-            except Exception:
+            except TypeError:
                 ctx['context'] = str(context)
         else:
             ctx['context'] = ""
