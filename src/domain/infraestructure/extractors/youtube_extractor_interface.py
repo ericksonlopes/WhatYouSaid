@@ -14,6 +14,6 @@ class IYoutubeExtractor(ABC):
         pass
 
     @abstractmethod
-    def extract_transcript(self, language: str = 'pt') -> FetchedTranscript:
+    def extract_transcript(self) -> FetchedTranscript:
         """Fetches the transcript for a given YouTube video and language."""
         pass

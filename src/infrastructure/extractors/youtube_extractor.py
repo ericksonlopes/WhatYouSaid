@@ -11,9 +11,10 @@ logger = Logger()
 class YoutubeExtractor(IYoutubeExtractor):
     """Extracts metadata and transcripts from YouTube videos."""
 
-    def __init__(self, video_id: str):
+    def __init__(self, video_id: str, language: str = 'pt'):
         self.video_id = video_id
         self.video_url = f"https://www.youtube.com/watch?v={video_id}"
+        self.language = language
 
     def extract_metadata(self) -> YoutubeMetadataDTO:
         """Extracts metadata from the video using yt_dlp."""
@@ -38,29 +39,28 @@ class YoutubeExtractor(IYoutubeExtractor):
                 video_id=self.video_id
             )
 
-    def extract_transcript(self, language: str = 'pt') -> FetchedTranscript:
+    def extract_transcript(self) -> FetchedTranscript:
         """Fetches the transcript for a given video."""
-
-        logger.info("Starting transcript fetch.", context={"video_id": self.video_id, "language": language})
+        logger.info("Starting transcript fetch.", context={"video_id": self.video_id, "language": self.language})
 
         try:
-            transcript = YouTubeTranscriptApi().fetch(video_id=self.video_id, languages=[language])
+            transcript = YouTubeTranscriptApi().fetch(video_id=self.video_id, languages=[self.language])
             logger.debug("Transcript fetched successfully.", context={"video_id": self.video_id,
-                                                                      "language": language,
+                                                                      "language": self.language,
                                                                       "transcript_length": len(transcript)})
             return transcript
 
         except NoTranscriptFound as ntf:
             logger.error("Transcript not found.",
-                         context={"video_id": self.video_id, "language": language, "error": str(ntf)})
+                         context={"video_id": self.video_id, "language": self.language, "error": str(ntf)})
             raise
 
         except TranscriptsDisabled as td:
             logger.warning("Transcripts are disabled for this video.",
-                           context={"video_id": self.video_id, "language": language, "error": str(td)})
+                           context={"video_id": self.video_id, "language": self.language, "error": str(td)})
             raise
 
         except Exception as error:
             logger.error("Unexpected error while fetching transcript.",
-                         context={"video_id": self.video_id, "language": language, "error": str(error)})
+                         context={"video_id": self.video_id, "language": self.language, "error": str(error)})
             raise
