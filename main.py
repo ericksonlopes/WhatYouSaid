@@ -8,7 +8,7 @@ from langchain_core.documents import Document
 from src.config.logger import Logger
 from src.config.settings import settings
 from src.domain.entities.chunk_entity import ChunkEntity
-from src.domain.entities.external_source_enum import ExternalSourceEnum
+from src.domain.entities.external_source_enum_entity import ExternalSourceEnum
 from src.infrastructure.extractors.youtube_extractor import YoutubeExtractor
 from src.infrastructure.repository.weaviate.chunk_repository import WeaviateChunkRepository
 from src.infrastructure.repository.weaviate.weaviate_client import WeaviateClient
@@ -61,6 +61,6 @@ if __name__ == '__main__':
 
     created_ids = service.index_documents(list_chunk)
 
-    query_result = service.search_by_video_id(video_id=video_id)
-
+    query_result: List[ChunkEntity] = service.search_by_video_id(video_id=video_id)
+    pprint(query_result[0].model_dump())
     service.delete_by_video_id(video_id=video_id)
