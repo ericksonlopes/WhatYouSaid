@@ -10,5 +10,5 @@ class IRetrieverRepository(ABC):
         ...
 
     @abstractmethod
-    def query(self, query: str, top_k: int = 5) -> List[Document]:
+    def retriever(self, query: str, top_k: int = 5) -> List[Document]:
         ...

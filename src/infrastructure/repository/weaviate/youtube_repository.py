@@ -7,6 +7,7 @@ from src.infrastructure.repository.weaviate.weaviate_client import WeaviateClien
 from src.infrastructure.repository.weaviate.weaviate_vector import WeaviateVector
 from src.infrastructure.services.embeddding_service import EmbeddingService
 from weaviate.classes.query import Filter
+from weaviate.collections.classes.filters import _Filters as Filters
 
 logger = Logger()
 
@@ -44,17 +45,23 @@ class WeaviateYoutubeRepository(IRetrieverRepository):
                          context={"num_documents": len(documents), "error": str(e)})
             return e
 
-    def query(self, query: str, top_k: int = 5) -> List[Document]:
-        logger.info("Querying Weaviate", context={"query": query})
-        try:
-            with self.vector_store as vector_store:
-                results = vector_store.similarity_search(query, k=top_k)
+    def retriever(self, query: str, filters: Filters, top_kn=5) -> List[Document]:
+        logger.info("Retrieving", context={
+            "filters": filters,
+            "query": query,
+            "top_kn": top_kn
+        })
 
-                logger.info("Queried Weaviate", context={"query": query, "num_results": len(results)})
-                return results
-        except Exception as e:
-            logger.error("Error querying Weaviate", context={"query": query, "error": str(e)})
-            return e
+        with self.vector_store as vector_store:
+            retriever = vector_store.as_retriever(
+                search_kwargs={
+                    "k": top_kn,
+                    "filters": filters
+                }
+            )
+            results = retriever.invoke(query)
+            logger.info("Retrieved documents", context={"query": query, "results": len(results)})
+            return results
 
     def delete_by_video_id(self, video_id: str) -> int:
         logger.info("Deleting documents by video ID", context={"video_id": video_id})

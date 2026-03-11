@@ -10,6 +10,7 @@ from src.infrastructure.repository.weaviate.youtube_repository import WeaviateYo
 from src.infrastructure.services.embeddding_service import EmbeddingService
 from src.infrastructure.services.model_loader_service import ModelLoaderService
 from src.infrastructure.services.youtube_data_service import YoutubeDataService
+from weaviate.collections.classes.filters import _Filters as Filters, Filter
 
 logger = Logger()
 
@@ -33,6 +34,10 @@ if __name__ == '__main__':
                                            collection_name=settings.weaviate.collection_name_youtube_transcripts)
     repository.create_documents(result)
 
-    query_result = repository.query("Aqui tem coxinha?")
+    filters: Filters = Filter.all_of([
+        Filter.by_property("video_id").equal(v_id)
+    ])
+
+    query_result = repository.retriever(query="Aqui tem coxinha")
 
     repository.delete_by_video_id(video_id=v_id)
