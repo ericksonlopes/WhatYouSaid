@@ -6,7 +6,6 @@ from src.domain.infraestructure.repository.retriver_repository import IRetriever
 from src.infrastructure.repository.weaviate.weaviate_client import WeaviateClient
 from src.infrastructure.repository.weaviate.weaviate_vector import WeaviateVector
 from src.infrastructure.services.embeddding_service import EmbeddingService
-from weaviate.classes.query import Filter
 from weaviate.collections.classes.filters import _Filters as Filters
 
 logger = Logger()
@@ -63,19 +62,18 @@ class WeaviateYoutubeRepository(IRetrieverRepository):
             logger.info("Retrieved documents", context={"query": query, "results": len(results)})
             return results
 
-    def delete_by_video_id(self, video_id: str) -> int:
-        logger.info("Deleting documents by video ID", context={"video_id": video_id})
+    def delete(self, video_id: str, filters: Filters) -> int:
+        logger.info("Deleting documents", context={"video_id": video_id, "filters": filters})
         try:
             with self._weaviate_client as client:
                 collection = client.collections.get(self._collection_name)
-                result = collection.data.delete_many(
-                    where=Filter.by_property("video_id").equal(video_id)
-                )
+                result = collection.data.delete_many(where=filters)
 
                 deleted = result.matches if result is not None else 0
 
-                logger.info("Deleted documents by video ID", context={"video_id": video_id, "deleted": deleted})
+                logger.info("Deleted documents", context={"video_id": video_id, "filters": filters, "deleted": deleted})
                 return deleted
         except Exception as e:
-            logger.error("Error deleting documents by video ID", context={"video_id": video_id, "error": str(e)})
+            logger.error("Error deleting documents",
+                         context={"video_id": video_id, "filters": filters, "error": str(e)})
             return e
