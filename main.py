@@ -10,12 +10,13 @@ from src.infrastructure.repository.weaviate.youtube_repository import WeaviateYo
 from src.infrastructure.services.embeddding_service import EmbeddingService
 from src.infrastructure.services.model_loader_service import ModelLoaderService
 from src.infrastructure.services.youtube_data_service import YoutubeDataService
-from src.infrastructure.services.youtube_repository_service import YouTubeWeaviateService
+from src.infrastructure.services.youtube_weaviate_service import YouTubeWeaviateService
+from weaviate.collections.classes.filters import _Filters as Filters, Filter
 
 logger = Logger()
 
 if __name__ == '__main__':
-    v_id = "VQnM8Y3RIyM"
+    video_id = "VQnM8Y3RIyM"
     language = "pt"
 
     pprint(settings.model_dump())
@@ -24,7 +25,7 @@ if __name__ == '__main__':
     model_loader = ModelLoaderService(model)
     embedding_service = EmbeddingService(model_loader)
 
-    yt_extractor = YoutubeExtractor(video_id=v_id)
+    yt_extractor = YoutubeExtractor(video_id=video_id)
     ytts = YoutubeDataService(model_loader_service=model_loader, yt_extractor=yt_extractor)
     result: List[Document] = ytts.split_transcript(mode="tokens", tokens_per_chunk=512, tokens_overlap=30)
 
@@ -36,6 +37,10 @@ if __name__ == '__main__':
     service = YouTubeWeaviateService(repository=repository)
     created_ids = service.index_documents(result)
 
-    query_result = service.search_by_video_id(video_id=v_id)
+    filters: Filters = Filter.all_of([
+        Filter.by_property("video_id").equal(video_id)
+    ])
 
-    service.delete_by_video_id(video_id=v_id)
+    query_result = service.search_by_video_id(video_id=video_id)
+
+    service.delete_by_video_id(video_id=video_id)

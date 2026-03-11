@@ -12,3 +12,7 @@ class IRetrieverRepository(ABC):
     @abstractmethod
     def retriever(self, query: str, top_k: int = 5) -> List[Document]:
         ...
+
+    @abstractmethod
+    def delete(self, video_id: str, filters) -> int:
+        ...
