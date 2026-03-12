@@ -38,17 +38,7 @@ if __name__ == '__main__':
 
     pprint(settings.model_dump())
 
-    model = settings.model_embedding.name
-    model_loader = ModelLoaderService(model)
-    embedding_service = EmbeddingService(model_loader)
-
     wea_client = WeaviateClient(vector_config=settings.vector)
-
-    repository = ChunkWeaviateRepository(weaviate_client=wea_client, embedding_service=embedding_service,
-                                         collection_name=settings.vector.weaviate_collection_name_chunks,
-                                         text_key="content")
-
-    service = YouTubeVectorService(repository=repository)
 
     ks_repository = KnowledgeSubjectSQLRepository()
     ks_service = KnowledgeSubjectService(ks_repository)
@@ -80,6 +70,10 @@ if __name__ == '__main__':
 
     ingestion_repository = IngestionJobSQLRepository()
     ingestion_service = IngestionJobService(repository=ingestion_repository)
+
+    model = settings.model_embedding.name
+    model_loader = ModelLoaderService(model)
+    embedding_service = EmbeddingService(model_loader)
 
     ingestion = ingestion_service.create_job(
         content_source_id=source.id,
@@ -122,6 +116,12 @@ if __name__ == '__main__':
     chunk_service = ChunkIndexService(chunk_repository)
 
     chunk_service.create_chunks(list_chunk)
+
+    repository = ChunkWeaviateRepository(weaviate_client=wea_client, embedding_service=embedding_service,
+                                         collection_name=settings.vector.weaviate_collection_name_chunks,
+                                         text_key="content")
+
+    service = YouTubeVectorService(repository=repository)
 
     created_ids = service.index_documents(list_chunk)
 
