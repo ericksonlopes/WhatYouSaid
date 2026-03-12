@@ -36,7 +36,7 @@ if __name__ == '__main__':
     wea_client = WeaviateClient(weaviate_config=settings.weaviate)
 
     repository = WeaviateChunkRepository(weaviate_client=wea_client, embedding_service=embedding_service,
-                                         collection_name=settings.weaviate.collection_name_youtube_transcripts)
+                                         collection_name=settings.weaviate.collection_name_chunks)
 
     service = YouTubeService(repository=repository)
 
