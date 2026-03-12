@@ -6,12 +6,12 @@ from src.config.logger import Logger
 from src.domain.entities.chunk_entity import ChunkEntity
 from src.domain.interfaces.repository.retriver_repository import IRetrieverRepository
 from src.domain.mappers.chunk_mapper import ChunkMapper
-from src.infrastructure.repository.weaviate.model.chunk_model import ChunkModel
+from src.infrastructure.repositories.vector.models.chunk_model import ChunkModel
 
 logger = Logger()
 
 
-class YouTubeService:
+class YouTubeVectorService:
     def __init__(self, repository: IRetrieverRepository):
         self._repository = repository
 

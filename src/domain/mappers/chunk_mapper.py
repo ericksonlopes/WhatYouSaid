@@ -8,10 +8,9 @@ from typing import Any, Dict
 from uuid import uuid4
 
 from langchain_core.documents import Document
-
 from src.domain.entities.chunk_entity import ChunkEntity
 from src.domain.entities.external_source_enum_entity import ExternalSourceEnum
-from src.infrastructure.repository.weaviate.model.chunk_model import ChunkModel
+from src.infrastructure.repositories.vector.models.chunk_model import ChunkModel
 
 
 class ChunkMapper:

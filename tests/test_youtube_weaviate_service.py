@@ -1,10 +1,10 @@
-import pytest
 from uuid import uuid4
 
-from src.infrastructure.services.youtube_weaviate_service import YouTubeService
+import pytest
 from src.domain.entities.chunk_entity import ChunkEntity
 from src.domain.entities.external_source_enum_entity import ExternalSourceEnum
-from src.infrastructure.repository.weaviate.model.chunk_model import ChunkModel
+from src.infrastructure.repositories.vector.models.chunk_model import ChunkModel
+from src.infrastructure.services.youtube_vector_service import YouTubeVectorService
 
 
 class DummyRepo:
@@ -41,7 +41,7 @@ def make_chunk_entity():
 class TestYouTubeWeaviateService:
     def test_index_documents_and_search(self):
         repo = DummyRepo()
-        service = YouTubeService(repository=repo)
+        service = YouTubeVectorService(repository=repo)
         entity = make_chunk_entity()
         created = service.index_documents([entity])
         assert created == ["id1"]
@@ -56,7 +56,7 @@ class TestYouTubeWeaviateService:
 
     def test_search_by_video_id_and_delete(self):
         repo = DummyRepo()
-        service = YouTubeService(repository=repo)
+        service = YouTubeVectorService(repository=repo)
 
         with pytest.raises(ValueError):
             service.search_by_video_id(video_id="")

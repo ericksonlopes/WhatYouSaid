@@ -11,7 +11,7 @@ class ChunkEntity(BaseModel):
     """Domain entity representing a content chunk.
 
     Kept intentionally lightweight. job_id and content_source_id are optional in the
-    domain model; persistence will ensure required identifiers when needed.
+    domain models; persistence will ensure required identifiers when needed.
     """
 
     id: UUID = Field(default_factory=lambda: uuid4(), description="Logical ID of the chunk")

@@ -10,12 +10,12 @@ from src.config.settings import settings
 from src.domain.entities.chunk_entity import ChunkEntity
 from src.domain.entities.external_source_enum_entity import ExternalSourceEnum
 from src.infrastructure.extractors.youtube_extractor import YoutubeExtractor
-from src.infrastructure.repository.weaviate.chunk_repository import WeaviateChunkRepository
-from src.infrastructure.repository.weaviate.weaviate_client import WeaviateClient
+from src.infrastructure.repositories.vector.weaviate.chunk_repository import WeaviateChunkRepository
+from src.infrastructure.repositories.vector.weaviate.weaviate_client import WeaviateClient
 from src.infrastructure.services.embeddding_service import EmbeddingService
 from src.infrastructure.services.model_loader_service import ModelLoaderService
-from src.infrastructure.services.youtube_data_service import YoutubeDataService
-from src.infrastructure.services.youtube_weaviate_service import YouTubeService
+from src.infrastructure.services.youtube_extractor_service import YoutubeExtractorService
+from src.infrastructure.services.youtube_vector_service import YouTubeVectorService
 
 logger = Logger()
 
@@ -30,15 +30,16 @@ if __name__ == '__main__':
     embedding_service = EmbeddingService(model_loader)
 
     yt_extractor = YoutubeExtractor(video_id=video_id)
-    ytts = YoutubeDataService(model_loader_service=model_loader, yt_extractor=yt_extractor)
+    ytts = YoutubeExtractorService(model_loader_service=model_loader, yt_extractor=yt_extractor)
     result: List[Document] = ytts.split_transcript(mode="tokens", tokens_per_chunk=512, tokens_overlap=30)
 
-    wea_client = WeaviateClient(weaviate_config=settings.weaviate)
+    wea_client = WeaviateClient(vector_config=settings.vector)
 
     repository = WeaviateChunkRepository(weaviate_client=wea_client, embedding_service=embedding_service,
-                                         collection_name=settings.weaviate.collection_name_chunks)
+                                         collection_name=settings.vector.weaviate_collection_name_chunks,
+                                         text_key="content")
 
-    service = YouTubeService(repository=repository)
+    service = YouTubeVectorService(repository=repository)
 
     list_chunk: List[ChunkEntity] = []
 

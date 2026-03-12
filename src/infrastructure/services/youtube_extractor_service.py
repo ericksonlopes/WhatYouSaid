@@ -2,23 +2,22 @@ import math
 from typing import Literal, List, Tuple, Dict, Optional
 
 from langchain_core.documents import Document
-from youtube_transcript_api import FetchedTranscript
-
 from src.config.logger import Logger
 from src.domain.interfaces.services.mode_loader_service import IModelLoaderService
 from src.infrastructure.extractors.youtube_extractor import YoutubeExtractor
+from youtube_transcript_api import FetchedTranscript
 
 logger = Logger()
 
 
-class YoutubeDataService:
+class YoutubeExtractorService:
     """Splits the transcript into overlapping temporal windows or into token-sized chunks.
 
     Usage:
       - Time-based: tempo.split_transcript(transcript, window_size=30, overlap=5)
       - Token-based: tempo.split_transcript(transcript, mode='tokens', tokens_per_chunk=512, token_overlap=50)
 
-    Token-based splitting usa o tokenizer do model_loader_service.model.
+    Token-based splitting usa o tokenizer do model_loader_service.models.
     Se não houver tokenizer, faz fallback para tiktoken.
     """
 
@@ -104,9 +103,9 @@ class YoutubeDataService:
 
         tokenizer = getattr(self.model_loader_service.model, "tokenizer", None)
         if tokenizer is None:
-            logger.error("No tokenizer available in the model.", context=context)
+            logger.error("No tokenizer available in the models.", context=context)
             raise RuntimeError(
-                "No tokenizer available in the model. Please configure a tokenizer in model_loader_service.model.")
+                "No tokenizer available in the models. Please configure a tokenizer in model_loader_service.models.")
 
         token_ids, token_meta = self._tokenize_transcript(transcript, tokenizer, context)
         documents = self._create_token_chunks(token_ids, token_meta, tokens_per_chunk, step, transcript, context)

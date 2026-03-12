@@ -2,9 +2,8 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
-
-from src.infrastructure.repository.weaviate.chunk_repository import WeaviateChunkRepository
-from src.infrastructure.repository.weaviate.model.chunk_model import ChunkModel
+from src.infrastructure.repositories.vector.models.chunk_model import ChunkModel
+from src.infrastructure.repositories.vector.weaviate.chunk_repository import WeaviateChunkRepository
 
 
 class DummyVector:
@@ -71,7 +70,8 @@ class TestChunkRepository:
         vec = DummyVector()
         repo.vector_store = DummyVectorCtx(vec)
 
-        doc = ChunkModel(job_id=uuid4(), content_source_id=uuid4(), source_type="youtube", external_source="v1", subject_id=uuid4(), embedding_model="model-x", content="hello")
+        doc = ChunkModel(job_id=uuid4(), content_source_id=uuid4(), source_type="youtube", external_source="v1",
+                         subject_id=uuid4(), embedding_model="models-x", content="hello")
         created = repo.create_documents([doc])
         assert isinstance(created, list)
         assert 'texts' in vec.last

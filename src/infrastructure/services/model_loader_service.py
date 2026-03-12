@@ -20,15 +20,15 @@ class ModelLoaderService(IModelLoaderService):
         if self.model_instance is None:
             try:
                 self.model_instance = SentenceTransformer(self.model_name, device=self.device)
-                logger.info("Loading model", context={"model_name": self.model_name, "device": self.device})
+                logger.info("Loading models", context={"model_name": self.model_name, "device": self.device})
             except Exception as e:
-                logger.error(f"Error loading model: {e}")
-                raise RuntimeError(f"Failed to load model '{self.model_name}': {e}")
+                logger.error(f"Error loading models: {e}")
+                raise RuntimeError(f"Failed to load models '{self.model_name}': {e}")
 
     @property
     def model(self) -> SentenceTransformer:
         if self.model_instance is None:
-            # Attempt to (re)load the model; load_model will raise on failure.
+            # Attempt to (re)load the models; load_model will raise on failure.
             self.load_model()
         assert self.model_instance is not None
         return self.model_instance
