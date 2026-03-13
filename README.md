@@ -2,7 +2,7 @@
 
 # WhatYouSaid
 
-[![codecov](https://codecov.io/github/ericksonlopes/what-you-said/graph/badge.svg?token=8CZJARVJUE)](https://codecov.io/github/ericksonlopes/what-you-said)
+[![codecov](https://codecov.io/github/ericksonlopes/WhatYouSaid/branch/main/graph/badge.svg?token=8CZJARVJUE)](https://codecov.io/github/ericksonlopes/WhatYouSaid)
 
 [![Tests](https://github.com/ericksonlopes/what-you-said/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/ericksonlopes/what-you-said/actions/workflows/python-tests.yml)
 [![Code Quality](https://github.com/ericksonlopes/what-you-said/actions/workflows/code-quality.yml/badge.svg?branch=main)](https://github.com/ericksonlopes/what-you-said/actions/workflows/code-quality.yml)
