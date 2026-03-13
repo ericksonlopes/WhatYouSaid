@@ -1,9 +1,17 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Protocol, Any
 from uuid import UUID
 
 from weaviate.collections.classes.filters import _Filters as Filters, Filter
 
-from src.domain.interfaces.repository.retriver_repository import IVectorRepository
+
+class VectorRetriever(Protocol):
+    """Protocol for objects that expose a retriever method used by the use case.
+
+    This is intentionally narrow (structural typing) so tests can pass simple fakes.
+    """
+
+    def retriever(self, query: str, top_kn: int = 5, filters: Optional[Any] = None) -> List[Any]:
+        ...
 
 
 class SearchChunksUseCase:
@@ -12,8 +20,8 @@ class SearchChunksUseCase:
     Pode filtrar por subject_id (UUID ou str) ou por subject_name (requer ks_service).
     """
 
-    def __init__(self, vector_service: IVectorRepository, ks_service=None):
-        self.vector_service: IVectorRepository = vector_service
+    def __init__(self, vector_service: VectorRetriever, ks_service=None):
+        self.vector_service: VectorRetriever = vector_service
         self.ks_service = ks_service
 
     def execute(

@@ -76,9 +76,11 @@ class IngestYoutubeUseCase:
 
             # determine list of video URLs to process
             video_list: List[str] = []
-            if getattr(cmd, "video_urls", None):
-                video_list = cmd.video_urls or []
-            elif getattr(cmd, "video_url", None):
+            if cmd.video_urls:
+                # filter out any None values defensively
+                video_list = [v for v in cmd.video_urls if v is not None]
+            elif cmd.video_url:
+                # mypy recognizes the truthiness check and treats cmd.video_url as str
                 video_list = [cmd.video_url]
             else:
                 raise ValueError("No video_url(s) provided in command")
@@ -136,8 +138,8 @@ class IngestYoutubeUseCase:
         return {"video_url": video_url, "video_id": video_id, "skipped": False, "created_chunks": len(chunks),
                 "vector_ids": created_ids, "source_id": source.id}
 
-    # --- Steps extracted into separate methods ---
-    def _extract_video_id_from_url(self, url: str) -> Optional[str]:
+    @classmethod
+    def _extract_video_id_from_url(cls, url: str) -> Optional[str]:
         """Try to extract YouTube video id from common URL formats."""
         if not url:
             return None
@@ -180,7 +182,7 @@ class IngestYoutubeUseCase:
                 raise ValueError(f"KnowledgeSubject with id {subject_id_val} not found")
             return subject
 
-        if getattr(cmd, "subject_name", None):
+        if cmd.subject_name:
             subject = self.ks_service.get_by_name(cmd.subject_name)
             if subject is None:
                 logger.error("KnowledgeSubject not found by name", context={"subject_name": cmd.subject_name})
@@ -268,10 +270,14 @@ class IngestYoutubeUseCase:
         return created_ids
 
     def _finish_ingestion(self, source, num_chunks: int) -> None:
+        dims = getattr(self.model_loader_service, "dimensions", None)
+
+        dims_val: int = int(dims) if dims is not None else 0
+
         self.cs_service.finish_ingestion(
             content_source_id=source.id,
             embedding_model=self.model_loader_service.model_name,
-            dimensions=getattr(self.model_loader_service, "dimensions", None),
+            dimensions=dims_val,
             chunks=num_chunks,
         )
         logger.info("Content source ingestion finished",
