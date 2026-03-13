@@ -3,6 +3,12 @@
 ## Overview
 This document provides essential knowledge for AI coding agents to be productive in the `WhatYouSaid` codebase. It highlights the architecture, workflows, conventions, and integration points specific to this project.
 
+- Main layout:
+    - `src/` — source code
+    - `tests/` — automated tests
+    - `alembic/`, `alembic.ini` — database migrations (Alembic)
+    - `main.py` — entry point
+    - `pyproject.toml`, `mypy.ini`, `pytest.ini` — tool configurations
 ---
 
 ## Big Picture Architecture
@@ -13,7 +19,8 @@ This document provides essential knowledge for AI coding agents to be productive
 ### Key Components
 1. **Extractors**: Located in `src/infrastructure/extractors`, these modules handle data ingestion from sources like YouTube, audio, and text.
 2. **Services**: Found in `src/infrastructure/services`, these orchestrate tasks like transcript splitting, embedding generation, and model loading.
-3. **Repositories**: Adapters for vector stores (e.g., Weaviate, FAISS) are in `src/infrastructure/repositories/vector_stores`.
+3. **Repositories**: Adapters for vector stores (e.g., Weaviate, FAISS) are in
+   `src/infrastructure/repository/vector_stores`.
 4. **Domain Layer**: Defines entities and enums (e.g., `ChunkEntity`, `SourceType`) in `src/domain`.
 5. **Configuration**: Managed via `src/config/settings.py` using `pydantic-settings`.
 
@@ -120,8 +127,6 @@ This document provides essential knowledge for AI coding agents to be productive
 ---
 
 ## Examples and Notes
-- Vector store examples: `src/infrastructure/repositories/vector/README.md`.
-- NoSQL examples: `src/infrastructure/repositories/nosql/README.md`.
 - Migration tips: `alembic/README.md`.
 
 ---
@@ -139,3 +144,26 @@ This document provides essential knowledge for AI coding agents to be productive
 ---
 
 This document is a living guide. Update it as the project evolves.
+
+---
+
+## Copilot / Contributors instructions (consolidated)
+
+O conteúdo de orientação para Copilot/Contributors que estava em `copilot-instructions.md` foi consolidado aqui para
+evitar duplicação. Principais pontos resumidos:
+
+- Ambiente e instalação: Python 3.12+, python -m venv .venv, .\.venv\Scripts\Activate, python -m pip install -e .; use
+  `uv install` / `uv sync` quando aplicável.
+- Testes e qualidade: pytest -v, pytest -q, mypy src tests, black ., isort .
+- Migrações: alembic upgrade head; alembic revision --autogenerate -m "description"
+- Convenções: Faça mudanças cirúrgicas; planeje alterações complexas (use plan.md); atualize docs e testes ao alterar
+  comportamento público.
+- Fluxo de planejamento: use `plan.md` na sessão para mudanças complexas e a tabela `todos` para acompanhamento.
+- Ferramentas do Copilot CLI: prefira `create`/`edit` para mudanças em arquivos; use backslash em caminhos no Windows.
+- Commit/PR: mensagens curtas; inclua este trailer obrigatório em todos os commits quando aplicável:
+
+- Checklist rápido antes do commit: todos os testes passam; mypy sem erros relevantes; código formatado (black, isort);
+  documentação atualizada.
+
+Para uma cópia completa e histórica das instruções, verifique `.github/copilot-instructions.md`.
+
