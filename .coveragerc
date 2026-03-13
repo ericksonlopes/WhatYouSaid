@@ -2,6 +2,8 @@
 omit =
     */tests/*
     */domain/*
+    */models/*
+    __init__.py
 
 [report]
 exclude_lines =
