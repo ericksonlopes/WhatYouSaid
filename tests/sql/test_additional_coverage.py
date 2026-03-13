@@ -62,8 +62,8 @@ def test_more_sql_paths():
 
     # create ingestion job and list_by_content_source
     job_id = job_repo.create_job(content_source_id=cs_id, status=IngestionJobStatus.STARTED.value)
-    l = job_repo.list_by_content_source(cs_id)
-    assert isinstance(l, list)
+    jobs = job_repo.list_by_content_source(cs_id)
+    assert isinstance(jobs, list)
 
     # update non-existent job to hit not-found branch
     job_repo.update_job(UUID(int=0), status=IngestionJobStatus.FAILED.value, error_message="err")
