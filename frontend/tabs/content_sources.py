@@ -4,7 +4,7 @@ from uuid import UUID
 import math
 import streamlit as st
 
-PAGE_SIZE = 5
+PAGE_SIZE = 10
 CHUNKS_PAGE_SIZE = 5
 
 def _render_header_and_button(services, safe_rerun):
@@ -291,8 +291,17 @@ def _render_chunks_view(source_id, source_title, services):
                 </div>
             """, unsafe_allow_html=True)
         
-        # Pagination controls at the bottom
+        # Pagination controls fixed below
         _render_pagination_controls(total_count, current_page, "chunks_current_page", CHUNKS_PAGE_SIZE)
+
+        # Bottom "Back to Sources" button for convenience
+        st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+        if st.button("← Back to Sources", key="back_to_sources_bottom", use_container_width=True):
+            st.session_state.pop("view_source_id", None)
+            st.session_state.pop("view_source_title", None)
+            st.session_state.pop("chunks_current_page", None)
+            st.rerun()
+
 
     except Exception as e:
         st.error(f"Error loading chunks: {e}")

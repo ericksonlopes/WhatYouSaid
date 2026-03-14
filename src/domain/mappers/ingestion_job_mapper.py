@@ -30,6 +30,7 @@ class IngestionJobMapper:
             finished_at=cast(Optional[datetime], getattr(model, "finished_at", None)),
             status=status_enum or IngestionJobStatus.STARTED,
             error_message=cast(Optional[str], getattr(model, "error_message", None)),
+            ingestion_type=cast(Optional[str], getattr(model, "ingestion_type", None)),
             chunks_count=cast(Optional[int], getattr(model, "chunks_count", None)),
             embedding_model=cast(Optional[str], getattr(model, "embedding_model", None)),
             pipeline_version=cast(Optional[str], getattr(model, "pipeline_version", None)),

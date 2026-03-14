@@ -16,10 +16,12 @@ class IngestionJobService:
         self._logger = logger or Logger()
 
     def create_job(self, content_source_id: Optional[UUID], status: IngestionJobStatus = IngestionJobStatus.STARTED,
-                   embedding_model: Optional[str] = None, pipeline_version: Optional[str] = None) -> IngestionJobEntity:
+                   embedding_model: Optional[str] = None, pipeline_version: Optional[str] = None,
+                   ingestion_type: Optional[str] = None) -> IngestionJobEntity:
         """Create an ingestion job. Accepts IngestionJobStatus enum and persists its string value."""
         job_id = self._repo.create_job(content_source_id=content_source_id, status=status.value,
-                                       embedding_model=embedding_model, pipeline_version=pipeline_version)
+                                       embedding_model=embedding_model, pipeline_version=pipeline_version,
+                                       ingestion_type=ingestion_type)
         model = self._repo.get_by_id(job_id)
         entity = IngestionJobMapper.model_to_entity(model)
         assert entity is not None

@@ -56,12 +56,12 @@ def _show_history_fragment(ig_service):
             all_cards_html += f"""
                 <div class="task-card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <b style="color: white; font-size: 0.9em;">Ingestion {job.id.hex[:8]}</b>
+                        <b style="color: white; font-size: 0.9em;">Ingestion | {job.ingestion_type.capitalize() if job.ingestion_type else 'Generic'}</b>
                         <span style="color: {s_info['color']}; font-size: 0.8em; font-weight: 500;">{s_info['label']}</span>
                     </div>
                     <div style="font-size: 0.8em; color: #71717a; margin-top: 6px; line-height: 1.4;">
-                        {ts} {f'• {dur_str}' if dur_str else ''} <br>
-                        {stats_display}
+                        ID: <span style="font-family: monospace; font-size: 0.85em;">{job.id}</span> <br>
+                        {stats_display} • {ts} {f'({dur_str})' if dur_str else ''}
                     </div>
                 </div>
             """

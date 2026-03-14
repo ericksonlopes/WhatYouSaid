@@ -177,7 +177,8 @@ def _youtube_tab_body(services, safe_rerun, selected_subject):
                     content_source_id=source_id_for_job,
                     status=IngestionJobStatus.STARTED,
                     embedding_model=settings.model_embedding.name,
-                    pipeline_version="1.0"
+                    pipeline_version="1.0",
+                    ingestion_type="youtube"
                 )
                 
                 # Submit to background executor

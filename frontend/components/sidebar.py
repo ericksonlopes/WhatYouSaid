@@ -6,11 +6,7 @@ from frontend.components.task_cards import render_ingestion_history
 
 def _handle_subject_change():
     """Callback when the subject selectbox changes."""
-    selected_name = st.session_state["sidebar_selected_subject"]
-    # We need to find the ID corresponding to this name. 
-    # Since we don't have the list here easily without re-fetching, 
-    # we'll let the main render function handle the ID sync but 
-    # ONLY if the name changed.
+    # Redirect to dashboard on change
     st.session_state["main_view"] = "dashboard"
 
 def render_sidebar(safe_rerun):
@@ -35,13 +31,12 @@ def render_sidebar(safe_rerun):
         if _side_subs:
             _options = [s.name for s in _side_subs]
             
-            # Ensure we have a valid selection in state
-            current_name = st.session_state.get("sidebar_selected_subject")
-            if current_name not in _options:
-                current_name = _options[0] if _options else None
-                st.session_state["sidebar_selected_subject"] = current_name
+            # Initial state setup
+            if "sidebar_selected_subject" not in st.session_state:
+                st.session_state["sidebar_selected_subject"] = _options[0] if _options else None
 
-            # Find current index for selectbox
+            # Find current index
+            current_name = st.session_state["sidebar_selected_subject"]
             try:
                 default_index = _options.index(current_name) if current_name in _options else 0
             except ValueError:
@@ -59,15 +54,19 @@ def render_sidebar(safe_rerun):
             # Sync the ID based on the selected name
             selected_subject_obj = next((s for s in _side_subs if s.name == selected_name), None)
             if selected_subject_obj:
-                st.session_state["selected_subject_id"] = str(selected_subject_obj.id)
+                new_id = str(selected_subject_obj.id)
+                if st.session_state.get("selected_subject_id") != new_id:
+                    st.session_state["selected_subject_id"] = new_id
+                    # Reset Dashboard page index on subject change
+                    st.session_state["cs_current_page"] = 1
         else:
             st.info("No subjects found. Create one to get started.")
 
         st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
         
-        # Dashboard Button
+        # Content Sources Button (formerly Dashboard)
         dash_active = st.session_state.get("main_view") == "dashboard"
-        if st.button("📊 Dashboard", key="sidebar_dashboard_btn", use_container_width=True, type="primary" if dash_active else "secondary"):
+        if st.button("📊 Content Sources", key="sidebar_dashboard_btn", use_container_width=True, type="primary" if dash_active else "secondary"):
             st.session_state["main_view"] = "dashboard"
             st.rerun()
 

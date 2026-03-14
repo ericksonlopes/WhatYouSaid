@@ -14,17 +14,19 @@ class IngestionJobSQLRepository:
     """Repository helpers for ingestion_jobs table."""
 
     def create_job(self, content_source_id: Optional[UUID], status: str = "started",
-                   embedding_model: Optional[str] = None, pipeline_version: Optional[str] = None) -> UUID:
+                   embedding_model: Optional[str] = None, pipeline_version: Optional[str] = None,
+                   ingestion_type: Optional[str] = None) -> UUID:
         with Connector() as session:
             try:
                 extra = {"content_source_id": content_source_id, "status": status, "embedding_model": embedding_model,
-                         "pipeline_version": pipeline_version}
+                         "pipeline_version": pipeline_version, "ingestion_type": ingestion_type}
                 logger.info("Creating ingestion job", context=extra)
                 job = IngestionJobModel(
                     content_source_id=content_source_id,
                     status=status,
                     embedding_model=embedding_model,
                     pipeline_version=pipeline_version,
+                    ingestion_type=ingestion_type
                 )
                 session.add(job)
                 session.commit()
