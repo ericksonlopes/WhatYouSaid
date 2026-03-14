@@ -23,6 +23,7 @@ class ChunkEntity(BaseModel):
     subject_id: Optional[UUID] = Field(default=None)
 
     content: Optional[str] = Field(default=None)
+    tokens_count: Optional[int] = Field(default=None)
     extra: Dict[str, Any] = Field(default_factory=dict)
 
     language: Optional[str] = Field(default=None)
@@ -30,4 +31,4 @@ class ChunkEntity(BaseModel):
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     version_number: int = Field(default=1)
-
+    score: Optional[float] = None

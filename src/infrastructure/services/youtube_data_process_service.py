@@ -211,13 +211,29 @@ class YoutubeDataProcessService:
     def _get_video_id(cls, transcript) -> str | None:
         return getattr(transcript, "video_id", None)
 
-    @classmethod
-    def _create_document(cls, text_segments: List[str], start: float, end: float, video_id: Optional[str]) -> Document:
+    def _create_document(self, text_segments: List[str], start: float, end: float, video_id: Optional[str]) -> Document:
+        content = " ".join(text_segments)
+        
+        # Calculate tokens if tokenizer is available
+        token_count = None
+        tokenizer = getattr(self.model_loader_service.model, "tokenizer", None)
+        if tokenizer:
+            try:
+                tokens = tokenizer.encode(content, add_special_tokens=False)
+                token_count = len(tokens)
+            except Exception:
+                try:
+                    tokens = tokenizer.encode(content)
+                    token_count = len(tokens)
+                except Exception:
+                    pass
+
         return Document(
-            page_content=" ".join(text_segments),
+            page_content=content,
             metadata={
                 "window_start": start,
                 "window_end": end,
                 "video_id": video_id,
+                "token_count": token_count,
             },
         )

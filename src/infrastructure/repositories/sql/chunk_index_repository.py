@@ -29,6 +29,7 @@ class ChunkIndexSQLRepository:
                         chunk_id=ch.get("chunk_id"),
                         content=content_val,
                         chars=ch.get("chars", content_size),
+                        tokens_count=ch.get("tokens_count"),
                         language=ch.get("language"),
                         version_number=ch.get("version_number", 1),
                     )

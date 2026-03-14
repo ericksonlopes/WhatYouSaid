@@ -314,6 +314,7 @@ class IngestYoutubeUseCase:
                 external_source=source.external_source,
                 subject_id=subject.id,
                 content=doc.page_content,
+                tokens_count=doc.metadata.get("token_count"),
                 extra=doc.metadata,
                 language=cmd.language,
                 embedding_model=self.model_loader_service.model_name,

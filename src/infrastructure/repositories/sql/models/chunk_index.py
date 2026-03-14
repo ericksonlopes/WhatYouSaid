@@ -26,6 +26,7 @@ class ChunkIndexModel(Base):
     chunk_id = Column(Text, nullable=False)
     content = Column(Text, nullable=True)
     chars = Column(Integer, nullable=False, server_default=text("0"))
+    tokens_count = Column(Integer, nullable=True)
     language = Column(Text, nullable=True)
     version_number = Column(Integer, nullable=False, server_default=text("1"))
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

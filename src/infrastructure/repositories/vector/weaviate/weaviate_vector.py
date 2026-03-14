@@ -22,6 +22,9 @@ class WeaviateVector:
         self._use_multi_tenancy = use_multi_tenancy
 
     def __enter__(self):
+        # Ensure collection with correct types exists
+        self._client.create_collection_if_not_exists(self._index_name)
+        
         self._client = self._client.__enter__()
 
         return WeaviateVectorStore(

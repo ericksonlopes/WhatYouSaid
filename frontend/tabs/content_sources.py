@@ -283,6 +283,7 @@ def _render_chunks_view(source_id, source_title, services):
                         <div>
                             <span class="chunk-title">Chunk {real_idx}</span>
                             <span class="chunk-meta">{char_count} chars</span>
+                            <span class="chunk-meta">{chunk.tokens_count or 'N/A'} tokens</span>
                             <span class="chunk-meta">{chunk.language or 'PT'}</span>
                         </div>
                         <span style="color: #3f3f46; font-size: 10px;">ID: {str(chunk.id)[:8]}</span>
@@ -290,7 +291,6 @@ def _render_chunks_view(source_id, source_title, services):
                     <div class="chunk-content">{content}</div>
                 </div>
             """, unsafe_allow_html=True)
-        
         # Pagination controls fixed below
         _render_pagination_controls(total_count, current_page, "chunks_current_page", CHUNKS_PAGE_SIZE)
 

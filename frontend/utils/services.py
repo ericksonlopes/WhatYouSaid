@@ -26,7 +26,7 @@ def get_raw_services():
         from src.infrastructure.services.embeddding_service import EmbeddingService
         from src.infrastructure.repositories.vector.weaviate.weaviate_client import WeaviateClient
         from src.infrastructure.repositories.vector.weaviate.chunk_repository import ChunkWeaviateRepository
-        from src.infrastructure.services.youtube_vector_service import YouTubeVectorService
+        from src.infrastructure.services.chunk_vector_service import ChunkVectorService
 
         model_loader = ModelLoaderService(settings.model_embedding.name)
         embedding_service = EmbeddingService(model_loader)
@@ -34,7 +34,7 @@ def get_raw_services():
         vector_repo = ChunkWeaviateRepository(weaviate_client=weaviate_client, embedding_service=embedding_service,
                                               collection_name=settings.vector.weaviate_collection_name_chunks,
                                               text_key="content")
-        vector_service = YouTubeVectorService(repository=vector_repo)
+        vector_service = ChunkVectorService(repository=vector_repo)
 
         full_services = {
             **basic,

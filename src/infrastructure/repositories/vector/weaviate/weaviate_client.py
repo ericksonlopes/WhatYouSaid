@@ -52,3 +52,41 @@ class WeaviateClient:
                 logger.error("Error closing WeaviateConfig connection", context={"error": str(e)})
             finally:
                 self._client = None
+
+    def create_collection_if_not_exists(self, collection_name: str):
+        """Creates the collection with explicit property types if it doesn't exist.
+        
+        This prevents Weaviate auto-schema from misidentifying types (e.g. tokens_count as text).
+        """
+        import weaviate.classes.config as wvc
+        
+        with self as client:
+            if not client.collections.exists(collection_name):
+                logger.info(f"Creating collection '{collection_name}' with explicit schema")
+                client.collections.create(
+                    name=collection_name,
+                    properties=[
+                        # Numeric fields
+                        wvc.Property(name="tokens_count", data_type=wvc.DataType.INT),
+                        wvc.Property(name="version_number", data_type=wvc.DataType.INT),
+                        
+                        # Text fields
+                        wvc.Property(name="source_type", data_type=wvc.DataType.TEXT),
+                        wvc.Property(name="external_source", data_type=wvc.DataType.TEXT),
+                        wvc.Property(name="language", data_type=wvc.DataType.TEXT),
+                        wvc.Property(name="content", data_type=wvc.DataType.TEXT),
+                        wvc.Property(name="embedding_model", data_type=wvc.DataType.TEXT),
+                        
+                        # ID fields (stored as TEXT for simplicity or UUID if supported by the client version)
+                        wvc.Property(name="job_id", data_type=wvc.DataType.TEXT),
+                        wvc.Property(name="content_source_id", data_type=wvc.DataType.TEXT),
+                        wvc.Property(name="subject_id", data_type=wvc.DataType.TEXT),
+                        
+                        # Extra metadata as text (JSON string)
+                        wvc.Property(name="extra_json", data_type=wvc.DataType.TEXT),
+                        
+                        # Date fields
+                        wvc.Property(name="created_at", data_type=wvc.DataType.DATE),
+                    ]
+                )
+                logger.info(f"Collection '{collection_name}' created successfully")

@@ -66,6 +66,7 @@ def _build_entity_kwargs(model: ChunkIndexModel, cs_meta: dict, source_type: Sou
         "external_source": cast(Optional[str], cs_meta.get("external_source") or getattr(model, "chunk_id", None)),
         "subject_id": cast(Optional[UUID], cs_meta.get("subject_id")),
         "content": cast(Optional[str], getattr(model, "content", None)),
+        "tokens_count": cast(Optional[int], getattr(model, "tokens_count", None)),
         "extra": {"chunk_id": getattr(model, "chunk_id", None)},
         "language": cast(Optional[str], getattr(model, "language", None)),
         "embedding_model": cast(Optional[str], cs_meta.get("embedding_model")),

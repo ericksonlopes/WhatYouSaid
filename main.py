@@ -60,25 +60,27 @@ if __name__ == '__main__':
 
     ks_service.create_subject(name=knowledge_subject_name, description="Conhecimento sobre Dr Enéas")
 
-    use_case = IngestYoutubeUseCase(
-        ks_service=ks_service,
-        cs_service=cs_service,
-        ingestion_service=ingestion_service,
-        model_loader_service=model_loader,
-        embedding_service=embedding_service,
-        chunk_service=chunk_service,
-        vector_service=vector_service,
-    )
+    # use_case = IngestYoutubeUseCase(
+    #     ks_service=ks_service,
+    #     cs_service=cs_service,
+    #     ingestion_service=ingestion_service,
+    #     model_loader_service=model_loader,
+    #     embedding_service=embedding_service,
+    #     chunk_service=chunk_service,
+    #     vector_service=vector_service,
+    # )
 
-    cmd = IngestYoutubeCommand(
-        video_url=video_id,
-        title=title,
-        subject_name=knowledge_subject_name,
-        data_type=youtube_data_type,
-        language=language,
-        tokens_per_chunk=512,
-        tokens_overlap=30,
-    )
+    # cmd = IngestYoutubeCommand(
+    #     video_url=video_id,
+    #     title=title,
+    #     subject_name=knowledge_subject_name,
+    #     data_type=youtube_data_type,
+    #     language=language,
+    #     tokens_per_chunk=512,
+    #     tokens_overlap=30,
+    # )
+    #
+    # result = use_case.execute(cmd)
+    # pprint({"ingest_result": result})
 
-    result = use_case.execute(cmd)
-    pprint({"ingest_result": result})
+
