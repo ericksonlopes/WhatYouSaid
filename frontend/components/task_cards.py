@@ -1,0 +1,83 @@
+"""Component for rendering ingestion task history."""
+
+import streamlit as st
+
+@st.fragment(run_every="5s")
+def _show_history_fragment(ig_service):
+    try:
+        selected_sid = st.session_state.get("selected_subject_id")
+        if not selected_sid:
+            st.caption("Select a subject to see history.")
+            return
+        
+        from uuid import UUID
+        try:
+            sid = UUID(selected_sid)
+        except Exception:
+            sid = selected_sid
+            
+        jobs = ig_service.list_recent_jobs_by_subject(sid, limit=20)
+        if not jobs:
+            st.caption("No recent ingestion jobs.")
+            return
+
+        all_cards_html = ""
+        for job in jobs:
+            # Extract clean status string
+            status_obj = job.status
+            status_val = status_obj.value if hasattr(status_obj, "value") else str(status_obj).lower()
+            
+            # Dynamic color and label mapping
+            status_map = {
+                "finished": {"color": "#10b981", "label": "Completed", "stats": "1 success, 0 failed"},
+                "processing": {"color": "#3b82f6", "label": "Processing", "stats": "In progress..."},
+                "started": {"color": "#f59e0b", "label": "Started", "stats": "Queued"},
+                "failed": {"color": "#ef4444", "label": "Failed", "stats": "0 success, 1 failed"}
+            }
+            
+            s_info = status_map.get(status_val, {"color": "#71717a", "label": status_val.capitalize(), "stats": ""})
+            
+            # Time formatting
+            ts = job.created_at.strftime("%H:%M")
+            
+            # Duration calculation
+            dur_str = ""
+            if job.finished_at and job.started_at:
+                dur = (job.finished_at - job.started_at).total_seconds()
+                if dur < 60:
+                    dur_str = f"{int(dur)}s"
+                else:
+                    dur_str = f"{int(dur // 60)}m {int(dur % 60)}s"
+            
+            stats_display = s_info["stats"]
+            if status_val == "failed" and job.error_message:
+                stats_display = f"Error: {job.error_message[:30]}..."
+
+            all_cards_html += f"""
+                <div class="task-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <b style="color: white; font-size: 0.9em;">Task {job.id.hex[:8]}</b>
+                        <span style="color: {s_info['color']}; font-size: 0.8em; font-weight: 500;">{s_info['label']}</span>
+                    </div>
+                    <div style="font-size: 0.8em; color: #71717a; margin-top: 6px; line-height: 1.4;">
+                        {ts} {f'• {dur_str}' if dur_str else ''} <br>
+                        {stats_display}
+                    </div>
+                </div>
+            """
+        
+        # Wrap all cards in a scrollable div
+        st.html(f"""
+            <div style="max-height: 450px; overflow-y: auto; padding-right: 10px; margin-bottom: 10px;">
+                {all_cards_html}
+            </div>
+        """)
+
+    except Exception as e:
+        st.error(f"Failed to load history: {e}")
+
+
+def render_ingestion_history(ig_service):
+    st.markdown("### 🔔 Tasks")
+    st.caption("RECENT TASKS")
+    _show_history_fragment(ig_service)
