@@ -30,7 +30,7 @@ class YoutubeExtractor(IYoutubeExtractor):
 
                 metadata = YoutubeMetadataDTO(**info_dict, video_id=self.video_id)
 
-                logger.info("Metadata successfully extracted", context={"video_id": self.video_id})
+                logger.info("Metadata successfully extracted", context={"video_id": self.video_id, "title": metadata.title})
                 return metadata
 
         except Exception as e:

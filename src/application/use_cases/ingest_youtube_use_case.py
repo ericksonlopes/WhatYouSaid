@@ -119,12 +119,23 @@ class IngestYoutubeUseCase:
             return {"video_url": video_url, "video_id": video_id, "skipped": True, "reason": "source_exists",
                     "source_id": existing.id}
 
-        source = self._create_content_source(subject, cmd, video_id)
+        # Extract metadata to get the actual video title
+        yt_extractor = YoutubeExtractor(video_id=video_id, language=cmd.language)
+        metadata = yt_extractor.extract_metadata()
+        extracted_title = metadata.full_title or metadata.title or cmd.title
+        
+        if not extracted_title or not str(extracted_title).strip():
+            logger.warning("No title extracted for video, using fallback", context={"video_id": video_id})
+            extracted_title = f"YouTube Video {video_id}"
+
+        logger.info("Video title determined", context={"video_id": video_id, "title": extracted_title})
+
+        source = self._create_content_source(subject, cmd, video_id, title=extracted_title)
         ingestion = self._create_ingestion_job(source)
 
         self._mark_source_processing(source)
 
-        docs = self._extract_and_split(cmd, video_id)
+        docs = self._extract_and_split(cmd, video_id, yt_extractor=yt_extractor)
         self._update_ingestion_processing(ingestion)
 
         chunks = self._build_chunk_entities(docs, source, subject, cmd)
@@ -196,12 +207,12 @@ class IngestYoutubeUseCase:
         logger.debug("Checking existing content source", context={"external_source": video_id})
         return self.cs_service.get_by_source_info(source_type=SourceType.YOUTUBE, external_source=video_id)
 
-    def _create_content_source(self, subject, cmd: IngestYoutubeCommand, video_id: str):
+    def _create_content_source(self, subject, cmd: IngestYoutubeCommand, video_id: str, title: Optional[str] = None):
         source = self.cs_service.create_source(
             subject_id=subject.id,
             source_type=SourceType.YOUTUBE,
             external_source=video_id,
-            title=cmd.title,
+            title=title or cmd.title,
             language=cmd.language,
             status=ContentSourceStatus.PENDING,
         )
@@ -223,9 +234,10 @@ class IngestYoutubeUseCase:
         self.cs_service.update_processing_status(content_source_id=source.id, status=ContentSourceStatus.PROCESSING)
         logger.info("Content source marked as PROCESSING", context={"content_source_id": str(source.id)})
 
-    def _extract_and_split(self, cmd: IngestYoutubeCommand, video_id: str) -> List[Document]:
+    def _extract_and_split(self, cmd: IngestYoutubeCommand, video_id: str, yt_extractor: Optional[YoutubeExtractor] = None) -> List[Document]:
         logger.info("Starting extraction and transcript split", context={"video_id": video_id})
-        yt_extractor = YoutubeExtractor(video_id=video_id, language=cmd.language)
+        if yt_extractor is None:
+            yt_extractor = YoutubeExtractor(video_id=video_id, language=cmd.language)
 
         ytts = YoutubeDataProcessService(model_loader_service=self.model_loader_service, yt_extractor=yt_extractor)
         docs: List[Document] = ytts.split_transcript(mode="tokens", tokens_per_chunk=cmd.tokens_per_chunk,
