@@ -16,7 +16,7 @@ def _show_history_fragment(ig_service):
         except Exception:
             sid = selected_sid
             
-        jobs = ig_service.list_recent_jobs_by_subject(sid, limit=20)
+        jobs = ig_service.list_recent_jobs_by_subject(sid, limit=4)
         if not jobs:
             st.caption("No recent ingestion jobs.")
             return
@@ -56,7 +56,7 @@ def _show_history_fragment(ig_service):
             all_cards_html += f"""
                 <div class="task-card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <b style="color: white; font-size: 0.9em;">Task {job.id.hex[:8]}</b>
+                        <b style="color: white; font-size: 0.9em;">Ingestion {job.id.hex[:8]}</b>
                         <span style="color: {s_info['color']}; font-size: 0.8em; font-weight: 500;">{s_info['label']}</span>
                     </div>
                     <div style="font-size: 0.8em; color: #71717a; margin-top: 6px; line-height: 1.4;">
@@ -74,10 +74,10 @@ def _show_history_fragment(ig_service):
         """)
 
     except Exception as e:
-        st.error(f"Failed to load history: {e}")
+        st.error(f"Failed to load notifications: {e}")
 
 
 def render_ingestion_history(ig_service):
-    st.markdown("### 🔔 Tasks")
-    st.caption("RECENT TASKS")
+    st.markdown("### 🔔 Notifications")
+    st.caption("RECENT NOTIFICATIONS")
     _show_history_fragment(ig_service)
