@@ -57,9 +57,12 @@ class ContentSourceService:
         model = self._repo.get_by_id(id)
         return ContentSourceMapper.model_to_entity(model)
 
-    def list_by_subject(self, subject_id: UUID) -> List[ContentSourceEntity]:
-        models = self._repo.list_by_subject(subject_id)
+    def list_by_subject(self, subject_id: UUID, limit: Optional[int] = None, offset: Optional[int] = None) -> List[ContentSourceEntity]:
+        models = self._repo.list_by_subject(subject_id, limit=limit, offset=offset)
         return ContentSourceMapper.model_list_to_entities(models)
+
+    def count_by_subject(self, subject_id: UUID) -> int:
+        return self._repo.count_by_subject(subject_id)
 
     def update_processing_status(self, content_source_id: UUID, status: ContentSourceStatus) -> None:
         """Update the processing_status field for a content source.

@@ -44,9 +44,18 @@ class ChunkIndexSQLRepository:
                 logger.error("Error creating chunk index rows", context={"error": str(e)})
                 raise
 
-    def list_by_content_source(self, content_source_id: UUID, limit: int = 1000) -> List[ChunkIndexModel]:
+    def list_by_content_source(self, content_source_id: UUID, limit: Optional[int] = None, offset: Optional[int] = None) -> List[ChunkIndexModel]:
         with Connector() as session:
-            return session.query(ChunkIndexModel).filter_by(content_source_id=content_source_id).limit(limit).all()
+            query = session.query(ChunkIndexModel).filter_by(content_source_id=content_source_id).order_by(ChunkIndexModel.created_at.asc())
+            if offset is not None:
+                query = query.offset(offset)
+            if limit is not None:
+                query = query.limit(limit)
+            return query.all()
+
+    def count_by_content_source(self, content_source_id: UUID) -> int:
+        with Connector() as session:
+            return session.query(ChunkIndexModel).filter_by(content_source_id=content_source_id).count()
 
     def delete_by_content_source(self, content_source_id: UUID) -> int:
         with Connector() as session:

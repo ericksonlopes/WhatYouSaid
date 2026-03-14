@@ -72,16 +72,35 @@ class ContentSourceSQLRepository:
                 logger.error("Error fetching ContentSources by source info", context={**extra, "error": str(e)})
                 raise
 
-    def list_by_subject(self, subject_id: UUID) -> List[ContentSourceModel]:
+    def list_by_subject(self, subject_id: UUID, limit: Optional[int] = None, offset: Optional[int] = None) -> List[ContentSourceModel]:
         with Connector() as session:
             try:
-                extra = {"subject_id": subject_id}
+                extra = {"subject_id": subject_id, "limit": limit, "offset": offset}
                 logger.info("Listing ContentSources by subject ID", context=extra)
-                result = session.query(ContentSourceModel).filter_by(subject_id=subject_id).order_by(ContentSourceModel.created_at.desc()).all()
+                query = session.query(ContentSourceModel).filter_by(subject_id=subject_id).order_by(ContentSourceModel.created_at.desc())
+                
+                if offset is not None:
+                    query = query.offset(offset)
+                if limit is not None:
+                    query = query.limit(limit)
+                    
+                result = query.all()
                 logger.info("List successful", context={**extra, "count": len(result)})
                 return result
             except Exception as e:
                 logger.error("Error listing ContentSources by subject ID", context={**extra, "error": str(e)})
+                raise
+
+    def count_by_subject(self, subject_id: UUID) -> int:
+        with Connector() as session:
+            try:
+                extra = {"subject_id": subject_id}
+                logger.info("Counting ContentSources by subject ID", context=extra)
+                result = session.query(ContentSourceModel).filter_by(subject_id=subject_id).count()
+                logger.info("Count successful", context={**extra, "count": result})
+                return result
+            except Exception as e:
+                logger.error("Error counting ContentSources by subject ID", context={**extra, "error": str(e)})
                 raise
 
     def update_status(self, content_source_id: UUID, status: str) -> None:

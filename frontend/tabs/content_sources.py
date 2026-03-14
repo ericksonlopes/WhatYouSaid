@@ -1,9 +1,11 @@
-"""Content Sources tab renderer."""
+"""Content Sources tab renderer with pagination."""
 
 from uuid import UUID
-
+import math
 import streamlit as st
 
+PAGE_SIZE = 5
+CHUNKS_PAGE_SIZE = 5
 
 def _render_header_and_button(services, safe_rerun):
     with st.container(horizontal=True):
@@ -21,22 +23,27 @@ def _render_header_and_button(services, safe_rerun):
                 st.error(f"Error opening Add Knowledge dialog: {e}")
 
 
-def _fetch_content_sources(services):
+def _fetch_content_sources(services, page=1):
     cs = services["cs_service"]
     selected_subject_id = st.session_state.get("selected_subject_id")
     
     if not selected_subject_id:
-        return []
+        return [], 0
 
     try:
         try:
             sid = UUID(selected_subject_id)
         except Exception:
             sid = selected_subject_id
-        return cs.list_by_subject(subject_id=sid)
+            
+        offset = (page - 1) * PAGE_SIZE
+        total_count = cs.count_by_subject(subject_id=sid)
+        sources = cs.list_by_subject(subject_id=sid, limit=PAGE_SIZE, offset=offset)
+        
+        return sources, total_count
     except Exception as e:
         st.error(f"Error listing content sources: {e}")
-        return []
+        return [], 0
 
 
 def _build_rows(content_sources):
@@ -176,6 +183,7 @@ def _render_table(table_rows, source_ids, selected_subject_name):
                 if st.button(r['title'], key=f"btn_title_{src_id}", type="tertiary"):
                     st.session_state["view_source_id"] = src_id
                     st.session_state["view_source_title"] = r['title']
+                    st.session_state["chunks_current_page"] = 1
                     st.rerun()
                 st.markdown(f'<span class="source-sub">{r["external_source"]}</span>', unsafe_allow_html=True)
             
@@ -206,15 +214,40 @@ def _render_table(table_rows, source_ids, selected_subject_name):
             # Row divider
             st.markdown("<div style='border-bottom: 1px solid rgba(255,255,255,0.05); margin: 8px 0;'></div>", unsafe_allow_html=True)
 
-    # Footer
-    st.caption(f"Total: {len(table_rows)} items")
+
+def _render_pagination_controls(total_count, current_page, state_key, page_size=PAGE_SIZE):
+    total_pages = max(1, math.ceil(total_count / page_size))
+    
+    # Navigation container at the bottom
+    st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col1:
+        if current_page > 1:
+            if st.button("← Previous", key=f"prev_{state_key}", use_container_width=True):
+                st.session_state[state_key] = current_page - 1
+                st.rerun()
+        else:
+            st.button("← Previous", key=f"prev_{state_key}_disabled", use_container_width=True, disabled=True)
+    
+    with col2:
+        st.markdown(f"<p style='text-align: center; color: #9aa4ad; font-size: 0.9rem; margin-top: 5px; font-weight: 500;'>Page {current_page} of {total_pages}<br><span style='font-size: 0.75rem; font-weight: 400;'>({total_count} total items)</span></p>", unsafe_allow_html=True)
+        
+    with col3:
+        if current_page < total_pages:
+            if st.button("Next →", key=f"next_{state_key}", use_container_width=True):
+                st.session_state[state_key] = current_page + 1
+                st.rerun()
+        else:
+            st.button("Next →", key=f"next_{state_key}_disabled", use_container_width=True, disabled=True)
 
 
 def _render_chunks_view(source_id, source_title, services):
-    """Render the chunk cards view for a specific source."""
+    """Render the chunk cards view for a specific source with pagination."""
     if st.button("← Back to Sources", key="back_to_sources"):
         st.session_state.pop("view_source_id", None)
         st.session_state.pop("view_source_title", None)
+        st.session_state.pop("chunks_current_page", None)
         st.rerun()
 
     st.title(source_title)
@@ -223,26 +256,32 @@ def _render_chunks_view(source_id, source_title, services):
     chunk_service = services["chunk_service"]
     try:
         from uuid import UUID
-        chunks = chunk_service.list_by_content_source(content_source_id=UUID(str(source_id)))
+        sid_uuid = UUID(str(source_id))
+        
+        # Pagination logic
+        current_page = st.session_state.get("chunks_current_page", 1)
+        offset = (current_page - 1) * CHUNKS_PAGE_SIZE
+        
+        total_count = chunk_service.count_by_content_source(sid_uuid)
+        chunks = chunk_service.list_by_content_source(content_source_id=sid_uuid, limit=CHUNKS_PAGE_SIZE, offset=offset)
 
-        if not chunks:
+        if not chunks and total_count == 0:
             st.info("No chunks found for this source.")
             return
 
-        # Technical details summary (Optional, can be improved)
-        st.markdown(f"Total chunks: **{len(chunks)}**")
-        st.text_input("Search chunks", label_visibility="collapsed", placeholder="Search in chunks...", key="chunk_search")
-
+        st.markdown(f"Total chunks: **{total_count}**")
+        
+        # Render chunks naturally without fixed height container
         for idx, chunk in enumerate(chunks):
+            real_idx = offset + idx + 1
             content = chunk.content or ""
             char_count = len(content)
 
-            # Style as the requested example
             st.markdown(f"""
                 <div class="chunk-card">
                     <div class="chunk-header">
                         <div>
-                            <span class="chunk-title">Chunk {idx + 1}</span>
+                            <span class="chunk-title">Chunk {real_idx}</span>
                             <span class="chunk-meta">{char_count} chars</span>
                             <span class="chunk-meta">{chunk.language or 'PT'}</span>
                         </div>
@@ -251,6 +290,9 @@ def _render_chunks_view(source_id, source_title, services):
                     <div class="chunk-content">{content}</div>
                 </div>
             """, unsafe_allow_html=True)
+        
+        # Pagination controls at the bottom
+        _render_pagination_controls(total_count, current_page, "chunks_current_page", CHUNKS_PAGE_SIZE)
 
     except Exception as e:
         st.error(f"Error loading chunks: {e}")
@@ -265,16 +307,28 @@ def _table_fragment_internal(services, safe_rerun):
         source_title = st.session_state.get("view_source_title", "Selected Source")
         _render_chunks_view(view_source_id, source_title, services)
     else:
-        # Wrap table in a scrollable container
-        with st.container(height=600, border=False):
-            selected_subject_name = st.session_state.get("sidebar_selected_subject")
-            content_sources = _fetch_content_sources(services)
-            table_rows, source_ids = _build_rows(content_sources)
-            _render_table(table_rows, source_ids, selected_subject_name)
+        selected_subject_name = st.session_state.get("sidebar_selected_subject")
+        
+        # Handle Pagination State
+        current_page = st.session_state.get("cs_current_page", 1)
+        content_sources, total_count = _fetch_content_sources(services, page=current_page)
+        table_rows, source_ids = _build_rows(content_sources)
+        
+        # Render table naturally without fixed height container
+        _render_table(table_rows, source_ids, selected_subject_name)
+        
+        # Show pagination controls
+        _render_pagination_controls(total_count, current_page, "cs_current_page", PAGE_SIZE)
 
 
 def render(services, safe_rerun):
-    # Fixed Header (Only shown when NOT in chunks view to keep chunks view title fixed naturally)
+    # Reset page if subject changes
+    selected_sid = st.session_state.get("selected_subject_id")
+    if st.session_state.get("last_sid_cs") != selected_sid:
+        st.session_state["cs_current_page"] = 1
+        st.session_state["last_sid_cs"] = selected_sid
+
+    # Fixed Header (Only shown when NOT in chunks view)
     if not st.session_state.get("view_source_id"):
         _render_header_and_button(services, safe_rerun)
     

@@ -30,10 +30,13 @@ class ChunkIndexService:
             })
         return self._repo.create_chunks(rows)
 
-    def list_by_content_source(self, content_source_id: UUID, limit: int = 1000) -> List[ChunkEntity]:
-        models = self._repo.list_by_content_source(content_source_id=content_source_id, limit=limit)
+    def list_by_content_source(self, content_source_id: UUID, limit: Optional[int] = None, offset: Optional[int] = None) -> List[ChunkEntity]:
+        models = self._repo.list_by_content_source(content_source_id=content_source_id, limit=limit, offset=offset)
         temp = [self._mapper.model_to_entity(m) for m in models]
         return [e for e in temp if e is not None]
+
+    def count_by_content_source(self, content_source_id: UUID) -> int:
+        return self._repo.count_by_content_source(content_source_id)
 
     def delete_by_content_source(self, content_source_id: UUID) -> int:
         return self._repo.delete_by_content_source(content_source_id=content_source_id)
