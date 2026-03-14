@@ -24,6 +24,8 @@ def _create_subject_body(sidebar_ks, safe_rerun):
                 try:
                     created = sidebar_ks.create_subject(name=str(_new_name).strip(), description=_new_desc)
                     st.success(f"Criado: {created.name}")
+                    # Update session state so the sidebar selectbox picks it up
+                    st.session_state["sidebar_selected_subject"] = created.name
                     # trigger a rerun so the sidebar list updates
                     safe_rerun()
                 except Exception as e:

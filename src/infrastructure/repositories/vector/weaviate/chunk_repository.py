@@ -85,9 +85,23 @@ class ChunkWeaviateRepository(IVectorRepository):
                 docs: List[Document] = retriever.invoke(query)
 
                 mapper = ChunkMapper()
-                models: List[ChunkModel] = [mapper.document_to_model(doc) for doc in docs]
+                all_models: List[ChunkModel] = [mapper.document_to_model(doc) for doc in docs]
 
-                logger.info("Retrieved documents", context={"query": query, "results": len(models)})
+                # Deduplicate results while preserving order
+                seen = set()
+                models = []
+                for m in all_models:
+                    # Use content preview + external_source as a unique key for deduplication
+                    # if the database has duplicates or very similar overlapping chunks.
+                    content_preview = (m.content or "")[:500].strip()
+                    source_id = str(m.external_source or "")
+                    key = (content_preview, source_id)
+                    
+                    if key not in seen:
+                        seen.add(key)
+                        models.append(m)
+
+                logger.info("Retrieved documents", context={"query": query, "total_found": len(all_models), "unique_results": len(models)})
                 return models
         except Exception as e:
             logger.error("Error retrieving documents", context={"query": query, "error": str(e)})

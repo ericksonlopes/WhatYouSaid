@@ -8,6 +8,9 @@ are present as placeholder tabs.
 from urllib.parse import urlparse, parse_qs
 
 import streamlit as st
+import json
+from streamlit.components.v1 import html as components_html
+from frontend.utils.background_jobs import submit_job, ensure_status_server_running, mark_notified
 
 
 def _extract_video_id_from_url(url: str) -> str | None:
@@ -96,38 +99,52 @@ def _youtube_tab_body(services, safe_rerun, selected_subject):
             st.error(f"Não foi possível inicializar serviços: {fs.get('error') if fs else 'unknown error'}")
             return
 
-        svc = fs["services"]
 
         try:
-            # Build and run the use case
-            from src.application.dtos.commands.ingest_youtube_command import IngestYoutubeCommand
-            from src.application.dtos.enums.youtube_data_type import YoutubeDataType
-            from src.application.use_cases.ingest_youtube_use_case import IngestYoutubeUseCase
+            # Start ingestion in background (runs in a worker thread; do not call Streamlit APIs inside it)
+            def _background_run_ingest(init_full_services_func, video_url, subject_id):
+                # Initialize heavy services inside the worker thread
+                fs = init_full_services_func()
+                if not fs or not fs.get('ok'):
+                    raise RuntimeError(f"Failed to initialize services: {fs.get('error') if fs else 'unknown'}")
+                svc = fs['services']
 
-            use_case = IngestYoutubeUseCase(
-                ks_service=svc.get("ks_service"),
-                cs_service=svc.get("cs_service"),
-                ingestion_service=svc.get("ingestion_service"),
-                model_loader_service=svc.get("model_loader"),
-                embedding_service=svc.get("embedding_service"),
-                chunk_service=svc.get("chunk_service"),
-                vector_service=svc.get("vector_service"),
-            )
+                from src.application.dtos.commands.ingest_youtube_command import IngestYoutubeCommand
+                from src.application.dtos.enums.youtube_data_type import YoutubeDataType
+                from src.application.use_cases.ingest_youtube_use_case import IngestYoutubeUseCase
 
-            cmd = IngestYoutubeCommand(
-                video_url=yt_url.strip(),
-                subject_id=str(selected_subject.id),
-                data_type=YoutubeDataType.VIDEO,
-            )
+                use_case = IngestYoutubeUseCase(
+                    ks_service=svc.get("ks_service"),
+                    cs_service=svc.get("cs_service"),
+                    ingestion_service=svc.get("ingestion_service"),
+                    model_loader_service=svc.get("model_loader"),
+                    embedding_service=svc.get("embedding_service"),
+                    chunk_service=svc.get("chunk_service"),
+                    vector_service=svc.get("vector_service"),
+                )
 
-            with st.spinner("Executando ingestão do YouTube..."):
+                cmd = IngestYoutubeCommand(
+                    video_url=video_url,
+                    subject_id=subject_id,
+                    data_type=YoutubeDataType.VIDEO,
+                )
+
                 result = use_case.execute(cmd)
+                created_chunks = getattr(result, 'created_chunks', None)
+                return f"Ingest finished — created_chunks: {created_chunks}"
 
-            created_chunks = getattr(result, "created_chunks", 0)
-            st.success(f"Ingestão concluída — chunks criados: {created_chunks}")
-            st.write("Detalhes:")
-            st.write(getattr(result, "video_results", []))
-            safe_rerun()
+            try:
+                job_id = submit_job(_background_run_ingest, init_full_services, yt_url.strip(),
+                                    str(selected_subject.id))
+                st.session_state['add_knowledge_jobs'] = st.session_state.get('add_knowledge_jobs', []) + [job_id]
+                
+                st.info(f"Ingest started in background (job id: {job_id}). You will be notified when it completes.")
+                
+                # We no longer need the HTML polling hack here. 
+                # The main app has a @st.fragment that polls all jobs and shows toasts.
+                
+            except Exception as be:
+                st.error(f"Erro ao iniciar ingestão em background: {be}")
         except Exception as e:
             st.error(f"Erro durante ingestão: {e}")
 

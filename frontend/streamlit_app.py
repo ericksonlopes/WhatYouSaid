@@ -30,9 +30,9 @@ st.markdown(TABLE_CSS, unsafe_allow_html=True)
 
 def safe_rerun():
     try:
-        st.experimental_rerun()
+        st.rerun()
     except Exception:
-        # Fallback for Streamlit versions without experimental_rerun
+        # Fallback for older Streamlit versions
         st.session_state["_rerun_token"] = st.session_state.get("_rerun_token", 0) + 1
         try:
             st.stop()
@@ -40,9 +40,9 @@ def safe_rerun():
             pass
 
 
-@st.cache_resource
 def init_basic_services():
-    # Imports that are safe/lightweight are done lazily here
+    # Removed @st.cache_resource to ensure fresh connections during development if needed, 
+    # but services are lightweight anyway.
     from src.infrastructure.repositories.sql.knowledge_subject_repository import KnowledgeSubjectSQLRepository
     from src.infrastructure.services.knowledge_subject_service import KnowledgeSubjectService
     from src.infrastructure.repositories.sql.content_source_repository import ContentSourceSQLRepository
@@ -119,6 +119,41 @@ def list_subjects(ks_service):
 
 st.title("WhatYouSaid — Interface (Streamlit)")
 
+# 1. Global Notification Logic (Runs on every app rerun)
+try:
+    from frontend.utils.background_jobs import list_jobs, mark_notified
+    _jobs = list_jobs()
+    for _jid, _meta in _jobs.items():
+        _status = _meta.get("status")
+        if not _meta.get("notified", False) and _status in ("done", "error"):
+            if _status == "done":
+                _res = _meta.get("result") or "Completed successfully"
+                st.toast(f"Background job finished: {_res}", icon="✅")
+            else:
+                _exc = _meta.get("exception") or "Unknown error"
+                st.toast(f"Background job failed: {_exc}", icon="❌")
+            mark_notified(_jid)
+except Exception:
+    pass
+
+# 2. Polling Fragment (Triggers rerun when a job finishes)
+@st.fragment(run_every=3)
+def job_polling_fragment():
+    """Polls background jobs and triggers a full app rerun when any job finishes."""
+    try:
+        from frontend.utils.background_jobs import list_jobs
+        jobs = list_jobs()
+        for jid, meta in jobs.items():
+            status = meta.get("status")
+            # If we find a finished job that hasn't been notified yet, trigger a full rerun
+            if not meta.get("notified", False) and status in ("done", "error"):
+                st.rerun()
+    except Exception:
+        pass
+
+# Initialize polling fragment
+job_polling_fragment()
+
 tabs = st.tabs(["Content Sources", "Search", "Diagnostics"])
 
 # Sidebar subjects: always visible
@@ -127,7 +162,20 @@ sidebar_ks = services_for_sidebar["ks_service"]
 _side_subs = list_subjects(sidebar_ks)
 if _side_subs:
     _options = [s.name for s in _side_subs]
-    selected_name = st.sidebar.selectbox("Subjects", options=_options, key="sidebar_selected_subject")
+    
+    # Explicitly find the index for the selected subject to ensure robustness
+    current_selected = st.session_state.get("sidebar_selected_subject")
+    try:
+        default_index = _options.index(current_selected) if current_selected in _options else 0
+    except ValueError:
+        default_index = 0
+
+    selected_name = st.sidebar.selectbox(
+        "Subjects", 
+        options=_options, 
+        index=default_index,
+        key="sidebar_selected_subject"
+    )
     selected_subject_obj = next((s for s in _side_subs if s.name == selected_name), None)
     if selected_subject_obj:
         st.session_state["selected_subject_id"] = str(selected_subject_obj.id)
@@ -163,6 +211,7 @@ if st.sidebar.button("New Subject", key="open_create_subject_btn"):
                         try:
                             created = sidebar_ks.create_subject(name=str(_new_name).strip(), description=_new_desc)
                             st.success(f"Created: {created.name}")
+                            st.session_state["sidebar_selected_subject"] = created.name
                             safe_rerun()
                         except Exception as e:
                             st.error(f"Error creating subject: {e}")
