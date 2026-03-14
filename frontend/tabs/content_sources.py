@@ -135,8 +135,26 @@ def _render_table(table_rows, source_ids, selected_subject_name):
             white-space: nowrap;
             margin-top: -2px;
         }
+        
+        /* Efeito de Hover no Título */
+        div.stButton > button[kind="tertiary"]:hover {
+            color: #3b82f6 !important;
+            background: transparent !important;
+            text-decoration: none !important;
+        }
+        
+        /* Feedback ao clicar */
+        div.stButton > button[kind="tertiary"]:active {
+            transform: translateY(1px);
+            color: #2563eb !important;
+        }
 
-    # Header da "Tabela" (Adjusted widths for Date/Time column)
+        /* Ajuste do container do botão para evitar pulos de layout */
+        [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
+            gap: 0px !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
     h_cols = st.columns([28, 8, 8, 15, 8, 12, 16, 5])
     headers = ["Source", "Type", "Chunks", "Model", "Dims", "Status", "Date", ""]
     for col, header in zip(h_cols, headers):
