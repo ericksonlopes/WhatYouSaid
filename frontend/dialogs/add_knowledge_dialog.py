@@ -59,10 +59,19 @@ def _render_subject_selector(services):
         subjects = []
 
     subject_names = [s.name for s in subjects] if subjects else []
+    
+    # Try to find the index of the subject currently selected in the sidebar
+    sidebar_selection = st.session_state.get("sidebar_selected_subject")
+    default_index = 0
+    if sidebar_selection in subject_names:
+        default_index = subject_names.index(sidebar_selection)
+    elif not subject_names:
+        default_index = None
+
     selected_subject_name = st.selectbox(
         "Subject",
         options=subject_names,
-        index=0 if subject_names else None,
+        index=default_index,
         key="add_knowledge_subject_select",
     )
     selected_subject = (
@@ -89,7 +98,7 @@ def _youtube_tab_body(services, safe_rerun, selected_subject):
         elif not selected_subject:
             st.error("Selecione um Subject válido")
         else:
-            from frontend.streamlit_app import get_raw_services
+            from frontend.utils.services import get_raw_services
             try:
                 video_id = _extract_video_id_from_url(url)
                 if not video_id:
@@ -168,12 +177,6 @@ def _youtube_tab_body(services, safe_rerun, selected_subject):
                 
             except Exception as e:
                 st.error(f"Erro ao iniciar: {e}")
-
-    # Render success message if just happened
-    if "ingest_success_job" in st.session_state:
-        jid = st.session_state.pop("ingest_success_job")
-        st.toast(f"Iniciando ingestão... (Job: {jid})", icon="🚀")
-
 
 
 def _upload_tab_body():
