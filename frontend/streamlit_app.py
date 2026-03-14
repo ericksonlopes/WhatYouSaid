@@ -1,5 +1,4 @@
 import sys
-import traceback
 from pathlib import Path
 
 import streamlit as st
@@ -17,8 +16,7 @@ from frontend.utils.services import (
     init_basic_services, 
     get_raw_services, 
     init_full_services, 
-    list_subjects, 
-    log_toast
+    list_subjects
 )
 
 st.set_page_config(page_title="WhatYouSaid UI", layout="wide")
@@ -273,13 +271,10 @@ with st.sidebar:
 
     st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
     
-    try:
-        from frontend.dialogs.subject_dialog import open_create_subject
-    except Exception:
-        open_create_subject = None
+    from frontend.dialogs.subject_dialog import open_create_subject
 
     if st.button("➕ New Subject", key="open_create_subject_btn", use_container_width=True):
-        if open_create_subject:
+        if callable(open_create_subject):
             open_create_subject(sidebar_ks, safe_rerun)
 
     st.markdown("---")
@@ -302,7 +297,7 @@ tabs = st.tabs(["Content Sources", "Search", "Diagnostics"])
 with tabs[0]:
     services = init_basic_services()
     services["init_full_services"] = get_raw_services
-    render_content_sources(services, settings, safe_rerun)
+    render_content_sources(services, safe_rerun)
 
 with tabs[1]:
     render_search(init_full_services)

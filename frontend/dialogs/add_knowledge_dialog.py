@@ -16,7 +16,7 @@ def _extract_video_id_from_url(url: str) -> str | None:
         return None
     import re
     m = re.search(
-        r"(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([A-Za-z0-9_-]{11})",
+                r"(?:youtu\.be/|youtube(?:-nocookie)?\.com/(?:embed/|v/|watch\?v=|watch\?.+&v=))([A-Za-z0-9_-]{11})",
         url,
     )
     if m:
@@ -99,8 +99,8 @@ def _youtube_tab_body(services, safe_rerun, selected_subject):
     st.markdown("#### YouTube")
     st.write("Cole o link do vídeo ou playlist do YouTube que deseja ingerir.")
     
-    yt_url = st.text_input("YouTube URL", key="add_knowledge_youtube_url")
-    data_type_label = st.radio("Tipo de Conteúdo", options=["Vídeo Único", "Playlist"], horizontal=True, key="add_knowledge_youtube_type")
+    st.text_input("YouTube URL", key="add_knowledge_youtube_url")
+    st.radio("Tipo de Conteúdo", options=["Vídeo Único", "Playlist"], horizontal=True, key="add_knowledge_youtube_type")
 
     if st.button("Adicionar YouTube", key="add_knowledge_youtube_ingest"):
         url = st.session_state.get("add_knowledge_youtube_url", "").strip()
@@ -163,7 +163,6 @@ def _youtube_tab_body(services, safe_rerun, selected_subject):
                     source_id_for_job = source_entity.id
                 else:
                     # Generic source for playlist ingestion task
-                    playlist_id = "playlist_" + str(uuid.uuid4())[:8]
                     source_entity = cs_service.create_source(
                         subject_id=selected_subject.id,
                         source_type=SourceType.YOUTUBE,
@@ -191,7 +190,7 @@ def _youtube_tab_body(services, safe_rerun, selected_subject):
                 st.error(f"Erro ao iniciar: {e}")
 
 
-def _upload_tab_body(services, selected_subject):
+def _upload_tab_body(selected_subject):
     st.markdown("#### Upload File")
     uploaded = st.file_uploader("Escolha um arquivo para upload", key="add_knowledge_file_uploader", type=["txt", "md", "pdf"])
     
@@ -204,10 +203,10 @@ def _upload_tab_body(services, selected_subject):
                 
             # Basic implementation for Upload: Create ContentSource and Job (Simulation)
             st.warning("O processamento real de arquivos via upload será implementado em breve.")
-            # TODO: Implement FileExtractor and FileProcessService
+            raise NotImplementedError("TODO: Implement FileExtractor and FileProcessService")
 
 
-def _site_tab_body(services, selected_subject):
+def _site_tab_body(selected_subject):
     st.markdown("#### Site / URL")
     site_url = st.text_input("Site URL", key="add_knowledge_site_url", placeholder="https://exemplo.com/artigo")
     
@@ -219,7 +218,7 @@ def _site_tab_body(services, selected_subject):
         else:
             st.info(f"Site recebido: {site_url}")
             st.warning("O web scraping será implementado em breve.")
-            # TODO: Implement WebExtractor and WebProcessService
+            raise NotImplementedError("TODO: Implement WebExtractor and WebProcessService")
 
 
 def _create_body(services, safe_rerun):
@@ -236,9 +235,9 @@ def _create_body(services, safe_rerun):
     with tabs[0]:
         _youtube_tab_body(services, safe_rerun, selected_subject)
     with tabs[1]:
-        _upload_tab_body(services, selected_subject)
+        _upload_tab_body(selected_subject)
     with tabs[2]:
-        _site_tab_body(services, selected_subject)
+        _site_tab_body(selected_subject)
 
 
 def open_add_knowledge(services, safe_rerun):

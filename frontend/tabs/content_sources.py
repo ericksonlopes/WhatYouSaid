@@ -39,7 +39,7 @@ def _fetch_content_sources(services):
         return []
 
 
-def _build_rows(content_sources, settings):
+def _build_rows(content_sources):
     table_rows = []
     source_ids = []
     if content_sources:
@@ -62,6 +62,10 @@ def _build_rows(content_sources, settings):
             dims = getattr(c, 'dimensions', 0)
             status = getattr(c, 'processing_status', getattr(c, 'status', 'pending'))
             
+            # Format date and time
+            created_at = getattr(c, 'created_at', None)
+            date_str = created_at.strftime("%d/%m/%Y %H:%M") if created_at else "N/A"
+            
             table_rows.append({
                 "title": title,
                 "external_source": ext_source,
@@ -70,6 +74,7 @@ def _build_rows(content_sources, settings):
                 "embedding": embedding,
                 "dims": dims,
                 "status": str(status).lower(),
+                "date": date_str,
             })
             source_ids.append(str(getattr(c, 'id', '')))
     return table_rows, source_ids
@@ -106,36 +111,34 @@ def _render_table(table_rows, source_ids, selected_subject_name):
             color: #e6eef7 !important;
             text-align: left !important;
             font-weight: 600 !important;
-            font-size: 0.9rem !important;
+            font-size: 0.85rem !important;
             transition: color 0.2s ease, transform 0.1s ease !important;
             min-height: unset !important;
-            line-height: 1.4 !important;
+            line-height: 1.2 !important;
             box-shadow: none !important;
+            
+            /* Truncamento para evitar quebra de linha */
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+            display: block !important;
+            width: 100% !important;
         }
         
-        /* Efeito de Hover no Título */
-        div.stButton > button[kind="tertiary"]:hover {
-            color: #3b82f6 !important;
-            background: transparent !important;
-            text-decoration: none !important;
-        }
-        
-        /* Feedback ao clicar */
-        div.stButton > button[kind="tertiary"]:active {
-            transform: translateY(1px);
-            color: #2563eb !important;
+        /* Estilo para o subtexto (URL/ID) também não quebrar */
+        .source-sub {
+            color: #6a737d;
+            font-size: 0.7rem;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-top: -2px;
         }
 
-        /* Ajuste do container do botão para evitar pulos de layout */
-        [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
-            gap: 0px !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    # Header da "Tabela"
-    h_cols = st.columns([35, 10, 8, 17, 10, 15, 5])
-    headers = ["Source", "Type", "Chunks", "Model", "Dims", "Status", ""]
+    # Header da "Tabela" (Adjusted widths for Date/Time column)
+    h_cols = st.columns([28, 8, 8, 15, 8, 12, 16, 5])
+    headers = ["Source", "Type", "Chunks", "Model", "Dims", "Status", "Date", ""]
     for col, header in zip(h_cols, headers):
         if header:
             col.markdown(f'<span style="color: #9aa4ad; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">{header}</span>', unsafe_allow_html=True)
@@ -148,7 +151,7 @@ def _render_table(table_rows, source_ids, selected_subject_name):
         
         # Container para simular a linha (tr)
         with st.container():
-            c_src, c_type, c_chunks, c_model, c_dims, c_status, c_actions = st.columns([35, 10, 8, 17, 10, 15, 5])
+            c_src, c_type, c_chunks, c_model, c_dims, c_status, c_date, c_actions = st.columns([28, 8, 8, 15, 8, 12, 16, 5])
             
             with c_src:
                 # Botão estilizado como link (Título) que agora troca para a vista de chunks
@@ -176,6 +179,9 @@ def _render_table(table_rows, source_ids, selected_subject_name):
                 s_class = f"badge-{r['status']}" if r['status'] in ['done', 'processing', 'pending', 'error'] else "badge-active"
                 st.markdown(f'<span class="badge {s_class}">{r["status"]}</span>', unsafe_allow_html=True)
             
+            with c_date:
+                st.markdown(f'<span class="meta-text">{r["date"]}</span>', unsafe_allow_html=True)
+            
             with c_actions:
                 st.markdown('<span class="action-dots">⋮</span>', unsafe_allow_html=True)
             
@@ -186,7 +192,7 @@ def _render_table(table_rows, source_ids, selected_subject_name):
     st.caption(f"Total: {len(table_rows)} items")
 
 
-def _render_chunks_view(source_id, source_title, services, settings):
+def _render_chunks_view(source_id, source_title, services):
     """Render the chunk cards view for a specific source."""
     if st.button("← Back to Sources", key="back_to_sources"):
         st.session_state.pop("view_source_id", None)
@@ -232,13 +238,13 @@ def _render_chunks_view(source_id, source_title, services, settings):
         st.error(f"Error loading chunks: {e}")
 
 
-def render(services, settings, safe_rerun):
+def render(services, safe_rerun):
     # Determine view state
     view_source_id = st.session_state.get("view_source_id")
 
     if view_source_id:
         source_title = st.session_state.get("view_source_title", "Selected Source")
-        _render_chunks_view(view_source_id, source_title, services, settings)
+        _render_chunks_view(view_source_id, source_title, services)
         return
 
     # Header + Add Knowledge button
@@ -247,7 +253,7 @@ def render(services, settings, safe_rerun):
     @st.fragment(run_every="3s")
     def table_fragment():
         content_sources = _fetch_content_sources(services)
-        table_rows, source_ids = _build_rows(content_sources, settings)
+        table_rows, source_ids = _build_rows(content_sources)
 
         selected_subject_name = st.session_state.get("sidebar_selected_subject")
         _render_table(table_rows, source_ids, selected_subject_name)
