@@ -174,6 +174,7 @@ def render_ingestion_history(ingestion_service):
                 st.caption("No recent ingestion jobs.")
                 return
 
+            all_cards_html = ""
             for job in jobs:
                 # Extract clean status string
                 status_obj = job.status
@@ -205,7 +206,7 @@ def render_ingestion_history(ingestion_service):
                 if status_val == "failed" and job.error_message:
                     stats_display = f"Error: {job.error_message[:30]}..."
 
-                card_html = f"""
+                all_cards_html += f"""
                     <div class="task-card">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <b style="color: white; font-size: 0.9em;">Task {job.id.hex[:8]}</b>
@@ -217,9 +218,14 @@ def render_ingestion_history(ingestion_service):
                         </div>
                     </div>
                 """
-                st.html(card_html)
-        except Exception as e:
-            st.error(f"Failed to load history: {e}")
+            
+            # Wrap all cards in a scrollable div
+            st.html(f"""
+                <div style="max-height: 450px; overflow-y: auto; padding-right: 10px; margin-bottom: 10px;">
+                    {all_cards_html}
+                </div>
+            """)
+
         except Exception as e:
             st.error(f"Failed to load history: {e}")
 
@@ -227,8 +233,6 @@ def render_ingestion_history(ingestion_service):
 
 
 # --- App Body ---
-st.title("WhatYouSaid — Interface (Streamlit)")
-
 with st.spinner("Iniciando modelos de IA e serviços..."):
     startup_check = init_full_services()
     if not startup_check.get("ok"):
@@ -284,44 +288,24 @@ with st.sidebar:
         st.caption(f"Vector Store: {settings.vector.store_type}")
         st.code("streamlit run frontend/streamlit_app.py", language="bash")
 
+    st.markdown("---")
+    # Move history/tasks to sidebar for better layout
+    from src.infrastructure.repositories.sql.ingestion_job_repository import IngestionJobSQLRepository
+    from src.infrastructure.services.ingestion_job_service import IngestionJobService
+    ingestion_service = IngestionJobService(IngestionJobSQLRepository())
+    render_ingestion_history(ingestion_service)
 
-# --- Main Layout ---
-main_col, history_col = st.columns([4, 1])
 
-with main_col:
-    tabs = st.tabs(["Content Sources", "Search", "Diagnostics"])
+# --- Main Layout (Fixed Full Width Tabs) ---
+tabs = st.tabs(["Content Sources", "Search", "Diagnostics"])
 
-    with tabs[0]:
-        services = init_basic_services()
-        services["init_full_services"] = get_raw_services
-        render_content_sources(services, settings, safe_rerun)
+with tabs[0]:
+    services = init_basic_services()
+    services["init_full_services"] = get_raw_services
+    render_content_sources(services, settings, safe_rerun)
 
-    with tabs[1]:
-        render_search(init_full_services)
+with tabs[1]:
+    render_search(init_full_services)
 
-    with tabs[2]:
-        render_diagnostics(init_full_services, settings)
-
-with history_col:
-    # Adding a bit of top margin to align with headers
-    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-    
-    # Check if we are in chunks view to show Technical Details instead of History
-    view_source_id = st.session_state.get("view_source_id")
-    
-    if view_source_id:
-        st.subheader("🛠️ Technical details")
-        st.write("---")
-        # Placeholder for real stats (could be fetched)
-        st.markdown(f"Source ID: `{str(view_source_id)[:8]}`")
-        st.info("Additional metadata and stats can be displayed here.")
-        
-        st.write("---")
-        if st.button("Refresh Details", use_container_width=True):
-            st.rerun()
-    else:
-        # Using fresh instances in this column to ensure all new service methods are available
-        from src.infrastructure.repositories.sql.ingestion_job_repository import IngestionJobSQLRepository
-        from src.infrastructure.services.ingestion_job_service import IngestionJobService
-        ingestion_service = IngestionJobService(IngestionJobSQLRepository())
-        render_ingestion_history(ingestion_service)
+with tabs[2]:
+    render_diagnostics(init_full_services, settings)

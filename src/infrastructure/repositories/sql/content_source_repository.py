@@ -66,7 +66,7 @@ class ContentSourceSQLRepository:
             try:
                 extra = {"source_type": source_type, "external_source": external_source}
                 logger.info("Fetching ContentSources by source info", context=extra)
-                result = session.query(ContentSourceModel).filter_by(source_type=source_type, external_source=external_source).all()
+                result = session.query(ContentSourceModel).filter_by(source_type=source_type, external_source=external_source).order_by(ContentSourceModel.created_at.desc()).all()
                 logger.info("Fetch successful", context={**extra, "count": len(result)})
                 return result
             except Exception as e:
@@ -78,7 +78,7 @@ class ContentSourceSQLRepository:
             try:
                 extra = {"subject_id": subject_id}
                 logger.info("Listing ContentSources by subject ID", context=extra)
-                result = session.query(ContentSourceModel).filter_by(subject_id=subject_id).all()
+                result = session.query(ContentSourceModel).filter_by(subject_id=subject_id).order_by(ContentSourceModel.created_at.desc()).all()
                 logger.info("List successful", context={**extra, "count": len(result)})
                 return result
             except Exception as e:

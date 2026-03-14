@@ -72,18 +72,23 @@ class IngestYoutubeUseCase:
                         context={"subject_id": str(subject.id), "subject_name": subject.name})
 
             if cmd.data_type == YoutubeDataType.PLAYLIST:
-                raise NotImplementedError("Playlist ingestion is not implemented yet")
-
-            # determine list of video URLs to process
-            video_list: List[str] = []
-            if cmd.video_urls:
-                # filter out any None values defensively
-                video_list = [v for v in cmd.video_urls if v is not None]
-            elif cmd.video_url:
-                # mypy recognizes the truthiness check and treats cmd.video_url as str
-                video_list = [cmd.video_url]
+                logger.info("Processing playlist", context={"playlist_url": cmd.video_url or (cmd.video_urls[0] if cmd.video_urls else None)})
+                playlist_url = cmd.video_url or (cmd.video_urls[0] if cmd.video_urls else None)
+                if not playlist_url:
+                    raise ValueError("No video_url provided for playlist ingestion")
+                video_list = YoutubeExtractor.extract_playlist_videos(playlist_url)
+                if not video_list:
+                    logger.warning("No videos found in playlist", context={"playlist_url": playlist_url})
             else:
-                raise ValueError("No video_url(s) provided in command")
+                # determine list of video URLs to process
+                if cmd.video_urls:
+                    # filter out any None values defensively
+                    video_list = [v for v in cmd.video_urls if v is not None]
+                elif cmd.video_url:
+                    # mypy recognizes the truthiness check and treats cmd.video_url as str
+                    video_list = [cmd.video_url]
+                else:
+                    raise ValueError("No video_url(s) provided in command")
 
             result = IngestYoutubeResult()
 

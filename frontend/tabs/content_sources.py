@@ -96,8 +96,9 @@ def _render_table(table_rows, source_ids, selected_subject_name):
             transition: background 0.2s;
         }
         
-        /* Reset total do botão do Streamlit para o título */
-        div.stButton > button[kind="secondary"] {
+        /* Modificando apenas os botões tertiary (para os títulos da tabela)
+           assim não quebramos os botões default (secondary) do resto do app */
+        div.stButton > button[kind="tertiary"] {
             background: transparent !important;
             border: none !important;
             padding: 0 !important;
@@ -113,14 +114,14 @@ def _render_table(table_rows, source_ids, selected_subject_name):
         }
         
         /* Efeito de Hover no Título */
-        div.stButton > button[kind="secondary"]:hover {
+        div.stButton > button[kind="tertiary"]:hover {
             color: #3b82f6 !important;
             background: transparent !important;
             text-decoration: none !important;
         }
         
         /* Feedback ao clicar */
-        div.stButton > button[kind="secondary"]:active {
+        div.stButton > button[kind="tertiary"]:active {
             transform: translateY(1px);
             color: #2563eb !important;
         }
@@ -151,7 +152,7 @@ def _render_table(table_rows, source_ids, selected_subject_name):
             
             with c_src:
                 # Botão estilizado como link (Título) que agora troca para a vista de chunks
-                if st.button(r['title'], key=f"btn_title_{src_id}"):
+                if st.button(r['title'], key=f"btn_title_{src_id}", type="tertiary"):
                     st.session_state["view_source_id"] = src_id
                     st.session_state["view_source_title"] = r['title']
                     st.rerun()
