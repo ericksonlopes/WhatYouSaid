@@ -36,12 +36,13 @@ def get_raw_services():
                                               text_key="content")
         vector_service = YouTubeVectorService(repository=vector_repo)
 
-        basic.update({
+        full_services = {
+            **basic,
             "model_loader": model_loader,
             "embedding_service": embedding_service,
             "vector_service": vector_service,
-        })
-        return {"ok": True, "services": basic}
+        }
+        return {"ok": True, "services": full_services}
     except Exception as e:
         return {"ok": False, "error": str(e), "traceback": traceback.format_exc()}
 

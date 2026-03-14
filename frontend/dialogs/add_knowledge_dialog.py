@@ -61,9 +61,8 @@ def _render_subject_selector(services):
     return next((s for s in subjects if s.name == selected_subject_name), None) if selected_subject_name else None
 
 
-@st.fragment(run_every="2s")
 def _job_status_poller(job_id: str, safe_rerun):
-    """Poll for background job status and show progress/success/error."""
+    """Show background job status. Auto-refresh is handled by the main app containers."""
     if not job_id:
         return
 
@@ -74,16 +73,18 @@ def _job_status_poller(job_id: str, safe_rerun):
 
     status = job.get("status")
     if status == "running":
-        st.info("🔄 Processando em segundo plano...")
-        st.spinner("Isso pode levar alguns minutos dependendo do tamanho do conteúdo.")
+        st.info("🔄 Processing in background...")
+        st.spinner("This may take a few minutes...")
+        if st.button("Refresh Status", key="refresh_status_manual"):
+            st.rerun()
     elif status == "done":
-        st.success("✅ Ingestão concluída com sucesso!")
-        if st.button("Fechar e Atualizar", key="close_dialog_success"):
+        st.success("✅ Ingestion completed successfully!")
+        if st.button("Close and Refresh", key="close_dialog_success"):
             st.session_state.pop("current_ingestion_job_id", None)
             safe_rerun()
     elif status == "error":
-        st.error(f"❌ Erro na ingestão: {job.get('exception')}")
-        if st.button("Voltar", key="close_dialog_error"):
+        st.error(f"❌ Ingestion error: {job.get('exception')}")
+        if st.button("Back", key="close_dialog_error"):
             st.session_state.pop("current_ingestion_job_id", None)
             st.rerun()
 
@@ -97,19 +98,19 @@ def _youtube_tab_body(services, safe_rerun, selected_subject):
         return
 
     st.markdown("#### YouTube")
-    st.write("Cole o link do vídeo ou playlist do YouTube que deseja ingerir.")
+    st.write("Paste the link to the YouTube video or playlist you want to ingest.")
     
     st.text_input("YouTube URL", key="add_knowledge_youtube_url")
-    st.radio("Tipo de Conteúdo", options=["Vídeo Único", "Playlist"], horizontal=True, key="add_knowledge_youtube_type")
+    st.radio("Content Type", options=["Single Video", "Playlist"], horizontal=True, key="add_knowledge_youtube_type")
 
-    if st.button("Adicionar YouTube", key="add_knowledge_youtube_ingest"):
+    if st.button("Add YouTube", key="add_knowledge_youtube_ingest"):
         url = st.session_state.get("add_knowledge_youtube_url", "").strip()
         is_playlist = st.session_state.get("add_knowledge_youtube_type") == "Playlist"
         
         if not url:
-            st.error("URL do YouTube é obrigatória")
+            st.error("YouTube URL is required")
         elif not selected_subject:
-            st.error("Selecione um Subject válido")
+            st.error("Select a valid Subject")
         else:
             try:
                 from src.application.dtos.enums.youtube_data_type import YoutubeDataType
@@ -119,7 +120,7 @@ def _youtube_tab_body(services, safe_rerun, selected_subject):
                 if not is_playlist:
                     video_id = _extract_video_id_from_url(url)
                     if not video_id:
-                        st.error("Não foi possível extrair o ID do vídeo desta URL.")
+                        st.error("Could not extract video ID from this URL.")
                         return
                 
                 cs_service = services.get("cs_service")
@@ -137,7 +138,7 @@ def _youtube_tab_body(services, safe_rerun, selected_subject):
                     video_id = _extract_video_id_from_url(url)
                     existing = cs_service.get_by_source_info(source_type=SourceType.YOUTUBE, external_source=video_id)
                     if existing and existing.processing_status == "done":
-                        st.info("Este vídeo já foi processado anteriormente.")
+                        st.info("This video has already been processed.")
                         return
                 
                 # 2. For playlist, we don't create a ContentSource upfront here 
@@ -146,8 +147,7 @@ def _youtube_tab_body(services, safe_rerun, selected_subject):
                 # We'll create a dummy content source for the playlist task itself?
                 # Or just let the use case handle it. 
                 # Let's create a "Playlist Source" to track the overall job.
-                
-                source_id_for_job = None
+
                 if not is_playlist:
                     video_id = _extract_video_id_from_url(url)
                     source_entity = cs_service.get_by_source_info(source_type=SourceType.YOUTUBE, external_source=video_id)
@@ -187,37 +187,37 @@ def _youtube_tab_body(services, safe_rerun, selected_subject):
                 st.rerun()
                 
             except Exception as e:
-                st.error(f"Erro ao iniciar: {e}")
+                st.error(f"Error starting: {e}")
 
 
 def _upload_tab_body(selected_subject):
     st.markdown("#### Upload File")
-    uploaded = st.file_uploader("Escolha um arquivo para upload", key="add_knowledge_file_uploader", type=["txt", "md", "pdf"])
+    uploaded = st.file_uploader("Choose a file to upload", key="add_knowledge_file_uploader", type=["txt", "md", "pdf"])
     
     if uploaded is not None:
-        st.info(f"Arquivo '{uploaded.name}' selecionado.")
-        if st.button("Processar Arquivo", key="add_knowledge_file_process"):
+        st.info(f"File '{uploaded.name}' selected.")
+        if st.button("Process File", key="add_knowledge_file_process"):
             if not selected_subject:
-                st.error("Selecione um Subject válido")
+                st.error("Select a valid Subject")
                 return
                 
             # Basic implementation for Upload: Create ContentSource and Job (Simulation)
-            st.warning("O processamento real de arquivos via upload será implementado em breve.")
+            st.warning("File upload processing will be implemented soon.")
             raise NotImplementedError("TODO: Implement FileExtractor and FileProcessService")
 
 
 def _site_tab_body(selected_subject):
     st.markdown("#### Site / URL")
-    site_url = st.text_input("Site URL", key="add_knowledge_site_url", placeholder="https://exemplo.com/artigo")
+    site_url = st.text_input("Site URL", key="add_knowledge_site_url", placeholder="https://example.com/article")
     
-    if st.button("Adicionar site", key="add_knowledge_site_add"):
+    if st.button("Add Site", key="add_knowledge_site_add"):
         if not site_url or not str(site_url).strip():
-            st.error("Site URL é obrigatória")
+            st.error("Site URL is required")
         elif not selected_subject:
-            st.error("Selecione um Subject válido")
+            st.error("Select a valid Subject")
         else:
-            st.info(f"Site recebido: {site_url}")
-            st.warning("O web scraping será implementado em breve.")
+            st.info(f"Site received: {site_url}")
+            st.warning("Web scraping will be implemented soon.")
             raise NotImplementedError("TODO: Implement WebExtractor and WebProcessService")
 
 
@@ -250,3 +250,4 @@ def open_add_knowledge(services, safe_rerun):
     else:
         with st.expander("Add Knowledge", expanded=True):
             _create_body(services, safe_rerun)
+            return None

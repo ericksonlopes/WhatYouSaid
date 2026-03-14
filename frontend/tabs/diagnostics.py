@@ -20,7 +20,7 @@ def render(init_full_services, settings):
     })
 
     if st.button("Check Model Loading"):
-        with st.spinner("Loading model (this may take a while)..."):
+        with st.spinner("Loading model (this may take a while)..."):  # type: ignore
             try:
                 full = init_full_services()
                 if not full.get("ok"):
@@ -39,7 +39,7 @@ def render(init_full_services, settings):
                 st.code(traceback.format_exc())
 
     if st.button("Check Weaviate Connection"):
-        with st.spinner("Checking Weaviate..."):
+        with st.spinner("Checking Weaviate..."):  # type: ignore
             try:
                 from src.infrastructure.repositories.vector.weaviate.weaviate_client import WeaviateClient
 

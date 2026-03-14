@@ -18,7 +18,7 @@ def _render_header_and_button(services, safe_rerun):
                 from frontend.dialogs.add_knowledge_dialog import open_add_knowledge
                 open_add_knowledge(services, safe_rerun)
             except Exception as e:
-                st.error(f"Erro ao abrir diálogo de Add Knowledge: {e}")
+                st.error(f"Error opening Add Knowledge dialog: {e}")
 
 
 def _fetch_content_sources(services):
@@ -91,18 +91,18 @@ def _render_table(table_rows, source_ids, selected_subject_name):
         st.info(f"No content sources found for '{selected_subject_name}'.")
         return
 
-    # Injetar CSS para fazer os componentes nativos parecerem a tabela HTML original
+    # Inject CSS to make native components look like the original HTML table
     st.markdown("""
         <style>
-        /* Estilo para simular as linhas da tabela */
+        /* Style to simulate table rows */
         .source-row {
             border-bottom: 1px solid rgba(255,255,255,0.05);
             padding: 10px 0;
             transition: background 0.2s;
         }
         
-        /* Modificando apenas os botões tertiary (para os títulos da tabela)
-           assim não quebramos os botões default (secondary) do resto do app */
+        /* Modifying only tertiary buttons (for table titles)
+           so we don't break default (secondary) buttons in the rest of the app */
         div.stButton > button[kind="tertiary"] {
             background: transparent !important;
             border: none !important;
@@ -117,7 +117,7 @@ def _render_table(table_rows, source_ids, selected_subject_name):
             line-height: 1.2 !important;
             box-shadow: none !important;
             
-            /* Truncamento para evitar quebra de linha */
+            /* Truncation to avoid line breaks */
             overflow: hidden !important;
             text-overflow: ellipsis !important;
             white-space: nowrap !important;
@@ -125,7 +125,7 @@ def _render_table(table_rows, source_ids, selected_subject_name):
             width: 100% !important;
         }
         
-        /* Estilo para o subtexto (URL/ID) também não quebrar */
+        /* Style for subtext (URL/ID) to also avoid breaking */
         .source-sub {
             color: #6a737d;
             font-size: 0.7rem;
@@ -136,20 +136,20 @@ def _render_table(table_rows, source_ids, selected_subject_name):
             margin-top: -2px;
         }
         
-        /* Efeito de Hover no Título */
+        /* Title Hover Effect */
         div.stButton > button[kind="tertiary"]:hover {
             color: #3b82f6 !important;
             background: transparent !important;
             text-decoration: none !important;
         }
         
-        /* Feedback ao clicar */
+        /* Click feedback */
         div.stButton > button[kind="tertiary"]:active {
             transform: translateY(1px);
             color: #2563eb !important;
         }
 
-        /* Ajuste do container do botão para evitar pulos de layout */
+        /* Button container adjustment to avoid layout jumps */
         [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
             gap: 0px !important;
         }
@@ -203,7 +203,7 @@ def _render_table(table_rows, source_ids, selected_subject_name):
             with c_actions:
                 st.markdown('<span class="action-dots">⋮</span>', unsafe_allow_html=True)
             
-            # Divisor de linha
+            # Row divider
             st.markdown("<div style='border-bottom: 1px solid rgba(255,255,255,0.05); margin: 8px 0;'></div>", unsafe_allow_html=True)
 
     # Footer
@@ -256,24 +256,24 @@ def _render_chunks_view(source_id, source_title, services):
         st.error(f"Error loading chunks: {e}")
 
 
-def render(services, safe_rerun):
-    # Determine view state
+@st.fragment(run_every="5s")
+def _table_fragment_internal(services, safe_rerun):
+    # Determine view state inside fragment to ensure fragment is always in the execution path
     view_source_id = st.session_state.get("view_source_id")
 
     if view_source_id:
         source_title = st.session_state.get("view_source_title", "Selected Source")
         _render_chunks_view(view_source_id, source_title, services)
-        return
-
-    # Header + Add Knowledge button
-    _render_header_and_button(services, safe_rerun)
-
-    @st.fragment(run_every="3s")
-    def table_fragment():
+    else:
+        # Header + Add Knowledge button
+        _render_header_and_button(services, safe_rerun)
+        
+        selected_subject_name = st.session_state.get("sidebar_selected_subject")
         content_sources = _fetch_content_sources(services)
         table_rows, source_ids = _build_rows(content_sources)
-
-        selected_subject_name = st.session_state.get("sidebar_selected_subject")
         _render_table(table_rows, source_ids, selected_subject_name)
 
-    table_fragment()
+
+def render(services, safe_rerun):
+    # Always call the fragment
+    _table_fragment_internal(services, safe_rerun)
