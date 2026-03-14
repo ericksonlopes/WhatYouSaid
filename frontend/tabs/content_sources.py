@@ -95,23 +95,39 @@ def _render_table(table_rows, source_ids, selected_subject_name):
             padding: 10px 0;
             transition: background 0.2s;
         }
-        .source-row:hover {
-            background: rgba(255,255,255,0.02);
-        }
         
-        /* Ajuste do botão para parecer um link de título */
-        div.stButton > button.st-key-btn_title {
-            background: none !important;
+        /* Reset total do botão do Streamlit para o título */
+        div.stButton > button[kind="secondary"] {
+            background: transparent !important;
             border: none !important;
             padding: 0 !important;
-            color: #3b82f6 !important;
+            margin: 0 !important;
+            color: #e6eef7 !important;
             text-align: left !important;
-            font-weight: 500 !important;
+            font-weight: 600 !important;
             font-size: 0.9rem !important;
+            transition: color 0.2s ease, transform 0.1s ease !important;
+            min-height: unset !important;
+            line-height: 1.4 !important;
+            box-shadow: none !important;
         }
-        div.stButton > button.st-key-btn_title:hover {
-            text-decoration: underline !important;
-            background: none !important;
+        
+        /* Efeito de Hover no Título */
+        div.stButton > button[kind="secondary"]:hover {
+            color: #3b82f6 !important;
+            background: transparent !important;
+            text-decoration: none !important;
+        }
+        
+        /* Feedback ao clicar */
+        div.stButton > button[kind="secondary"]:active {
+            transform: translateY(1px);
+            color: #2563eb !important;
+        }
+
+        /* Ajuste do container do botão para evitar pulos de layout */
+        [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
+            gap: 0px !important;
         }
         </style>
     """, unsafe_allow_html=True)
