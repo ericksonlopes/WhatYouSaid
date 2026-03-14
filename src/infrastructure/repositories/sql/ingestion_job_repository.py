@@ -74,6 +74,34 @@ class IngestionJobSQLRepository:
                 logger.error("Error fetching ingestion job by ID", context={**extra, "error": str(e)})
                 raise
 
+    def list_recent_jobs(self, limit: int = 50) -> List[IngestionJobModel]:
+        with Connector() as session:
+            try:
+                logger.info("Listing recent ingestion jobs", context={"limit": limit})
+                result = session.query(IngestionJobModel).order_by(IngestionJobModel.created_at.desc()).limit(limit).all()
+                return result
+            except Exception as e:
+                logger.error("Error listing recent ingestion jobs", context={"error": str(e)})
+                raise
+
+    def list_recent_jobs_by_subject(self, subject_id: UUID, limit: int = 50) -> List[IngestionJobModel]:
+        from src.infrastructure.repositories.sql.models.content_source import ContentSourceModel
+        with Connector() as session:
+            try:
+                logger.info("Listing recent jobs by subject", context={"subject_id": subject_id, "limit": limit})
+                result = (
+                    session.query(IngestionJobModel)
+                    .join(ContentSourceModel, IngestionJobModel.content_source_id == ContentSourceModel.id)
+                    .filter(ContentSourceModel.subject_id == subject_id)
+                    .order_by(IngestionJobModel.created_at.desc())
+                    .limit(limit)
+                    .all()
+                )
+                return result
+            except Exception as e:
+                logger.error("Error listing jobs by subject", context={"subject_id": subject_id, "error": str(e)})
+                raise
+
     def list_by_content_source(self, content_source_id: UUID) -> List[IngestionJobModel]:
         with Connector() as session:
             try:

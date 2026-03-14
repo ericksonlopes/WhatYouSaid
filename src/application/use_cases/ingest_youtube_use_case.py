@@ -119,35 +119,65 @@ class IngestYoutubeUseCase:
             return {"video_url": video_url, "video_id": video_id, "skipped": True, "reason": "source_exists",
                     "source_id": existing.id}
 
-        # Extract metadata to get the actual video title
-        yt_extractor = YoutubeExtractor(video_id=video_id, language=cmd.language)
-        metadata = yt_extractor.extract_metadata()
-        extracted_title = metadata.full_title or metadata.title or cmd.title
+        source = None
+        ingestion = None
+        try:
+            # Extract metadata to get the actual video title
+            yt_extractor = YoutubeExtractor(video_id=video_id, language=cmd.language)
+            metadata = yt_extractor.extract_metadata()
+            extracted_title = metadata.full_title or metadata.title or cmd.title
+            
+            if not extracted_title or not str(extracted_title).strip():
+                logger.warning("No title extracted for video, using fallback", context={"video_id": video_id})
+                extracted_title = f"YouTube Video {video_id}"
+
+            logger.info("Video title determined", context={"video_id": video_id, "title": extracted_title})
+
+            source = self._create_content_source(subject, cmd, video_id, title=extracted_title)
+            ingestion = self._create_ingestion_job(source)
+
+            self._mark_source_processing(source)
+
+            docs = self._extract_and_split(cmd, video_id, yt_extractor=yt_extractor)
+            self._update_ingestion_processing(ingestion)
+
+            chunks = self._build_chunk_entities(docs, source, subject, cmd)
+            self._persist_chunks(chunks)
+
+            created_ids = self._index_chunks(chunks)
+
+            self._finish_ingestion(source, len(chunks))
+            self._finish_job(ingestion)
+
+            return {"video_url": video_url, "video_id": video_id, "skipped": False, "created_chunks": len(chunks),
+                    "vector_ids": created_ids, "source_id": source.id}
         
-        if not extracted_title or not str(extracted_title).strip():
-            logger.warning("No title extracted for video, using fallback", context={"video_id": video_id})
-            extracted_title = f"YouTube Video {video_id}"
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Error processing video {video_id}: {error_msg}", context={"video_url": video_url})
+            
+            if source:
+                try:
+                    self._fail_ingestion(source)
+                except Exception as ef:
+                    logger.error(f"Failed to mark source as FAILED: {ef}")
+            
+            if ingestion:
+                try:
+                    self._fail_job(ingestion, error_msg)
+                except Exception as ej:
+                    logger.error(f"Failed to mark job as FAILED: {ej}")
+            
+            # Re-raise to be caught by the outer loop
+            raise e
 
-        logger.info("Video title determined", context={"video_id": video_id, "title": extracted_title})
+    def _fail_ingestion(self, source) -> None:
+        self.cs_service.update_processing_status(content_source_id=source.id, status=ContentSourceStatus.FAILED)
+        logger.info("Content source marked as FAILED", context={"content_source_id": str(source.id)})
 
-        source = self._create_content_source(subject, cmd, video_id, title=extracted_title)
-        ingestion = self._create_ingestion_job(source)
-
-        self._mark_source_processing(source)
-
-        docs = self._extract_and_split(cmd, video_id, yt_extractor=yt_extractor)
-        self._update_ingestion_processing(ingestion)
-
-        chunks = self._build_chunk_entities(docs, source, subject, cmd)
-        self._persist_chunks(chunks)
-
-        created_ids = self._index_chunks(chunks)
-
-        self._finish_ingestion(source, len(chunks))
-        self._finish_job(ingestion)
-
-        return {"video_url": video_url, "video_id": video_id, "skipped": False, "created_chunks": len(chunks),
-                "vector_ids": created_ids, "source_id": source.id}
+    def _fail_job(self, ingestion, error_message: str) -> None:
+        self.ingestion_service.update_job(job_id=ingestion.id, status=IngestionJobStatus.FAILED, error_message=error_message)
+        logger.info("Ingestion job updated to FAILED", context={"job_id": str(ingestion.id), "error": error_message})
 
     @classmethod
     def _extract_video_id_from_url(cls, url: str) -> Optional[str]:

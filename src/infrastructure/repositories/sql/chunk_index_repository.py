@@ -1,11 +1,12 @@
 from typing import List, Optional, Any
 from typing import cast
+from uuid import UUID
 
 from src.config.logger import Logger
 from src.infrastructure.repositories.sql.connector import Connector
 from src.infrastructure.repositories.sql.models.chunk_index import ChunkIndexModel
 from src.infrastructure.repositories.sql.models.content_source import ContentSourceModel
-from uuid import UUID
+
 logger = Logger()
 
 
@@ -18,13 +19,16 @@ class ChunkIndexSQLRepository:
             try:
                 orm_objs = []
                 for ch in chunks:
+                    content_val = ch.get("content")
+                    content_size = len(content_val) if content_val else 0
+                    
                     obj = ChunkIndexModel(
                         id=ch.get("id"),
                         content_source_id=ch.get("content_source_id"),
                         job_id=ch.get("job_id"),
                         chunk_id=ch.get("chunk_id"),
-                        content=ch.get("content"),
-                        chars=ch.get("chars", 0),
+                        content=content_val,
+                        chars=ch.get("chars", content_size),
                         language=ch.get("language"),
                         version_number=ch.get("version_number", 1),
                     )
@@ -32,6 +36,7 @@ class ChunkIndexSQLRepository:
                     orm_objs.append(obj)
 
                 session.commit()
+                logger.info("Created chunk index rows", context={"count": len(orm_objs)})
 
                 return [cast(UUID, o.id) for o in orm_objs]
             except Exception as e:

@@ -10,6 +10,7 @@ class IngestionJobEntity(BaseModel):
     id: UUID = Field(default_factory=lambda: uuid4())
     content_source_id: Optional[UUID] = None
     started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     finished_at: Optional[datetime] = None
     status: IngestionJobStatus = Field(default=IngestionJobStatus.STARTED)
     error_message: Optional[str] = None

@@ -26,6 +26,7 @@ class IngestionJobMapper:
             id=cast(UUID, getattr(model, "id")),
             content_source_id=cast(Optional[UUID], getattr(model, "content_source_id", None)),
             started_at=cast(datetime, getattr(model, "started_at")),
+            created_at=cast(datetime, getattr(model, "created_at")),
             finished_at=cast(Optional[datetime], getattr(model, "finished_at", None)),
             status=status_enum or IngestionJobStatus.STARTED,
             error_message=cast(Optional[str], getattr(model, "error_message", None)),
