@@ -102,6 +102,23 @@ class ContentSourceSQLRepository:
                 session.rollback()
                 raise
 
+    def update_title(self, content_source_id: UUID, title: str) -> None:
+        with Connector() as session:
+            try:
+                extra = {"content_source_id": content_source_id, "title": title}
+                logger.info("Updating title for ContentSource", context=extra)
+                cs = session.get(ContentSourceModel, content_source_id)
+                if cs is None:
+                    logger.warning("ContentSource not found for title update", context=extra)
+                    return
+                cs.title = title
+                session.commit()
+                logger.info("Title updated successfully", context=extra)
+            except Exception as e:
+                logger.error("Error updating title for ContentSource", context={**extra, "error": str(e)})
+                session.rollback()
+                raise
+
     def finish_ingestion(self, content_source_id: UUID, embedding_model: str, dimensions: int, chunks: int) -> None:
         with Connector() as session:
             try:

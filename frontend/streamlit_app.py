@@ -94,6 +94,15 @@ TABLE_CSS = """<style>
         font-size: 1.1rem;
         text-align: right;
     }
+    
+    /* Task Cards for Ingestion History */
+    .task-card {
+        background-color: #121212;
+        border: 1px solid #27272a;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
 </style>"""
 st.markdown(TABLE_CSS, unsafe_allow_html=True)
 
@@ -173,7 +182,8 @@ def log_toast(message, icon="ℹ️"):
 
 
 def render_ingestion_history(ingestion_service):
-    st.subheader("Ingestion History")
+    st.markdown("### 🔔 Tasks")
+    st.caption("RECENT TASKS")
 
     @st.fragment(run_every="3s")
     def show_history():
@@ -195,17 +205,51 @@ def render_ingestion_history(ingestion_service):
                 return
 
             for job in jobs:
-                status_val = job.status.value
-                status_icon = "✅" if status_val == "finished" else ("⚙️" if status_val == "processing" else ("⏳" if status_val == "started" else "❌"))
+                # Extract clean status string
+                status_obj = job.status
+                status_val = status_obj.value if hasattr(status_obj, "value") else str(status_obj).lower()
+                
+                # Dynamic color and label mapping
+                status_map = {
+                    "finished": {"color": "#10b981", "label": "Completed", "stats": "1 success, 0 failed"},
+                    "processing": {"color": "#3b82f6", "label": "Processing", "stats": "In progress..."},
+                    "started": {"color": "#f59e0b", "label": "Started", "stats": "Queued"},
+                    "failed": {"color": "#ef4444", "label": "Failed", "stats": "0 success, 1 failed"}
+                }
+                
+                s_info = status_map.get(status_val, {"color": "#71717a", "label": status_val.capitalize(), "stats": ""})
+                
+                # Time formatting
                 ts = job.created_at.strftime("%H:%M")
-
-                # Compact single-line display
-                st.markdown(f"{status_icon} **{status_val.upper()}** `{job.id.hex[:6]}` <small>{ts}</small>", unsafe_allow_html=True)
-
+                
+                # Duration calculation
+                dur_str = ""
+                if job.finished_at and job.started_at:
+                    dur = (job.finished_at - job.started_at).total_seconds()
+                    if dur < 60:
+                        dur_str = f"{int(dur)}s"
+                    else:
+                        dur_str = f"{int(dur // 60)}m {int(dur % 60)}s"
+                
+                stats_display = s_info["stats"]
                 if status_val == "failed" and job.error_message:
-                    st.caption(f"Error: {job.error_message[:50]}...")
+                    stats_display = f"Error: {job.error_message[:30]}..."
 
-                st.divider()
+                card_html = f"""
+                    <div class="task-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <b style="color: white; font-size: 0.9em;">Task {job.id.hex[:8]}</b>
+                            <span style="color: {s_info['color']}; font-size: 0.8em; font-weight: 500;">{s_info['label']}</span>
+                        </div>
+                        <div style="font-size: 0.8em; color: #71717a; margin-top: 6px; line-height: 1.4;">
+                            {ts} {f'• {dur_str}' if dur_str else ''} <br>
+                            {stats_display}
+                        </div>
+                    </div>
+                """
+                st.html(card_html)
+        except Exception as e:
+            st.error(f"Failed to load history: {e}")
         except Exception as e:
             st.error(f"Failed to load history: {e}")
 
@@ -254,7 +298,7 @@ if st.sidebar.button("New Subject", key="open_create_subject_btn"):
     if open_create_subject:
         open_create_subject(sidebar_ks, safe_rerun)
 
-st.sidebar.markdown("Run: `streamlit run frontend\streamlit_app.py`")
+st.sidebar.markdown("Run: `streamlit run frontend/streamlit_app.py`")
 
 # --- Main Layout ---
 main_col, history_col = st.columns([3, 1])

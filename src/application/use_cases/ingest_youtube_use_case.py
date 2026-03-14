@@ -113,13 +113,13 @@ class IngestYoutubeUseCase:
         logger.info("Processing single video", context={"video_id": video_id, "video_url": video_url})
 
         existing = self._check_existing_source(video_id)
-        if existing:
-            logger.info("Source already exists, skipping ingestion",
+        if existing and existing.processing_status == "done":
+            logger.info("Source already exists and is DONE, skipping ingestion",
                         context={"source_id": str(existing.id), "external_source": video_id, "video_url": video_url})
-            return {"video_url": video_url, "video_id": video_id, "skipped": True, "reason": "source_exists",
+            return {"video_url": video_url, "video_id": video_id, "skipped": True, "reason": "source_exists_and_done",
                     "source_id": existing.id}
 
-        source = None
+        source = existing # Use existing if it was pre-created by the UI
         ingestion = None
         try:
             # Extract metadata to get the actual video title
@@ -133,8 +133,24 @@ class IngestYoutubeUseCase:
 
             logger.info("Video title determined", context={"video_id": video_id, "title": extracted_title})
 
-            source = self._create_content_source(subject, cmd, video_id, title=extracted_title)
-            ingestion = self._create_ingestion_job(source)
+            if source is None:
+                source = self._create_content_source(subject, cmd, video_id, title=extracted_title)
+            else:
+                # Update title of pre-created source if we found a better one
+                self.cs_service._repo.update_title(content_source_id=source.id, title=extracted_title)
+
+            # Reuse pre-created job if provided, otherwise create a new one
+            if cmd.ingestion_job_id:
+                try:
+                    from uuid import UUID
+                    jid = UUID(cmd.ingestion_job_id) if isinstance(cmd.ingestion_job_id, str) else cmd.ingestion_job_id
+                    ingestion = self.ingestion_service.get_by_id(jid)
+                    logger.info("Reusing pre-created ingestion job", context={"job_id": str(jid)})
+                except Exception as ej:
+                    logger.warning(f"Failed to retrieve pre-created job {cmd.ingestion_job_id}, creating new one: {ej}")
+                    ingestion = self._create_ingestion_job(source)
+            else:
+                ingestion = self._create_ingestion_job(source)
 
             self._mark_source_processing(source)
 
