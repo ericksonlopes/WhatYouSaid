@@ -86,99 +86,109 @@ def _render_table(table_rows, source_ids, selected_subject_name):
         st.info(f"No content sources found for '{selected_subject_name}'.")
         return
 
-    # Build the entire table as a single HTML string
-    rows_html = ""
+    # Injetar CSS para fazer os componentes nativos parecerem a tabela HTML original
+    st.markdown("""
+        <style>
+        /* Estilo para simular as linhas da tabela */
+        .source-row {
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding: 10px 0;
+            transition: background 0.2s;
+        }
+        .source-row:hover {
+            background: rgba(255,255,255,0.02);
+        }
+        
+        /* Ajuste do botão para parecer um link de título */
+        div.stButton > button.st-key-btn_title {
+            background: none !important;
+            border: none !important;
+            padding: 0 !important;
+            color: #3b82f6 !important;
+            text-align: left !important;
+            font-weight: 500 !important;
+            font-size: 0.9rem !important;
+        }
+        div.stButton > button.st-key-btn_title:hover {
+            text-decoration: underline !important;
+            background: none !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Header da "Tabela"
+    h_cols = st.columns([35, 10, 8, 17, 10, 15, 5])
+    headers = ["Source", "Type", "Chunks", "Model", "Dims", "Status", ""]
+    for col, header in zip(h_cols, headers):
+        if header:
+            col.markdown(f'<span style="color: #9aa4ad; font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">{header}</span>', unsafe_allow_html=True)
+    
+    st.markdown("<div style='margin-top: 8px; border-bottom: 1px solid rgba(255,255,255,0.1);'></div>", unsafe_allow_html=True)
+
+    # Linhas da "Tabela"
     for i, r in enumerate(table_rows):
         src_id = source_ids[i]
-        # Use query parameter to trigger dialog without full rerun issues
-        link = f"?source={src_id}"
-        status_class = f"badge-{r['status']}" if r['status'] in ['done', 'processing', 'pending', 'error'] else "badge-active"
         
-        raw_embedding = r.get('embedding')
-        if raw_embedding and isinstance(raw_embedding, str):
-            model_name = raw_embedding.split('/')[-1] if '/' in raw_embedding else raw_embedding
-        else:
-            model_name = "N/A"
+        # Container para simular a linha (tr)
+        with st.container():
+            c_src, c_type, c_chunks, c_model, c_dims, c_status, c_actions = st.columns([35, 10, 8, 17, 10, 15, 5])
+            
+            with c_src:
+                # Botão estilizado como link (Título)
+                if st.button(r['title'], key=f"btn_title_{src_id}"):
+                    st.session_state["source_id_to_view"] = src_id
+                    st.session_state["source_title_to_view"] = r['title']
+                    st.rerun()
+                st.markdown(f'<span class="source-sub">{r["external_source"]}</span>', unsafe_allow_html=True)
+            
+            with c_type:
+                st.markdown(f'<span class="meta-text">{r["type"].upper()}</span>', unsafe_allow_html=True)
+            
+            with c_chunks:
+                st.markdown(f'<span class="meta-text">{r["chunks"]}</span>', unsafe_allow_html=True)
+            
+            with c_model:
+                raw_emb = r.get('embedding')
+                m_name = raw_emb.split('/')[-1] if raw_emb and '/' in raw_emb else (raw_emb or "N/A")
+                st.markdown(f'<span class="meta-text" title="{raw_emb or ""}">{m_name}</span>', unsafe_allow_html=True)
+            
+            with c_dims:
+                st.markdown(f'<span class="meta-text">{r["dims"]}</span>', unsafe_allow_html=True)
+            
+            with c_status:
+                s_class = f"badge-{r['status']}" if r['status'] in ['done', 'processing', 'pending', 'error'] else "badge-active"
+                st.markdown(f'<span class="badge {s_class}">{r["status"]}</span>', unsafe_allow_html=True)
+            
+            with c_actions:
+                st.markdown('<span class="action-dots">⋮</span>', unsafe_allow_html=True)
+            
+            # Divisor de linha
+            st.markdown("<div style='border-bottom: 1px solid rgba(255,255,255,0.05); margin: 8px 0;'></div>", unsafe_allow_html=True)
 
-        table_html_row = f"""
-            <tr>
-                <td>
-                    <div class="source-info">
-                        <a href="{link}" class="source-title" target="_self">{r['title']}</a>
-                        <span class="source-sub">{r['external_source']}</span>
-                    </div>
-                </td>
-                <td><span class="meta-text">{r['type'].upper()}</span></td>
-                <td><span class="meta-text">{r['chunks']}</span></td>
-                <td><span class="meta-text" title="{raw_embedding or ''}">{model_name}</span></td>
-                <td><span class="meta-text">{r['dims']}</span></td>
-                <td><span class="badge {status_class}">{r['status']}</span></td>
-                <td style="text-align: right;"><span class="action-dots">⋮</span></td>
-            </tr>
-        """
-        rows_html += table_html_row
-
-    table_html = f"""
-    <table class="content-table">
-        <thead>
-            <tr>
-                <th style="width: 35%;">Source</th>
-                <th style="width: 10%;">Type</th>
-                <th style="width: 8%;">Chunks</th>
-                <th style="width: 17%;">Model</th>
-                <th style="width: 10%;">Dims</th>
-                <th style="width: 15%;">Status</th>
-                <th style="width: 5%; text-align: right;"></th>
-            </tr>
-        </thead>
-        <tbody>
-            {rows_html}
-        </tbody>
-    </table>
-    """
-    
-    st.html(table_html)
-
-    # Footer / Pagination
-    st.markdown("<div style='margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;'></div>", unsafe_allow_html=True)
+    # Footer
     st.caption(f"Total: {len(table_rows)} items")
 
 
 def render(services, settings, safe_rerun):
-    # Header + Add Knowledge button (Keep outside fragment to avoid widget issues)
+    # Header + Add Knowledge button (Keep outside fragment)
     _render_header_and_button(services, safe_rerun)
 
     chunk_service = services["chunk_service"]
 
     @st.fragment(run_every="3s")
     def table_fragment():
-        # Detect if we should show the chunks dialog based on query params INSIDE the fragment
-        source_id_to_view = None
-        try:
-            params = st.query_params
-            if 'source' in params:
-                source_id_to_view = params['source']
-        except Exception:
-            pass
-
         content_sources = _fetch_content_sources(services)
         table_rows, source_ids = _build_rows(content_sources, settings)
 
-        # If a source is selected via URL, show the dialog
-        if source_id_to_view:
-            source_title = "Selected Source"
-            for i, sid in enumerate(source_ids):
-                if sid == source_id_to_view:
-                    source_title = table_rows[i]['title']
-                    break
-            
-            # Clear the query param so the dialog doesn't keep popping up on every rerun
-            st.query_params.clear()
-            
-            from frontend.dialogs.source_chunks_dialog import show_source_chunks_dialog
-            show_source_chunks_dialog(source_id_to_view, source_title, chunk_service)
-
         selected_subject_name = st.session_state.get("sidebar_selected_subject")
         _render_table(table_rows, source_ids, selected_subject_name)
+
+        # Trigger dialog se houver seleção no session_state
+        if "source_id_to_view" in st.session_state:
+            sid = st.session_state.pop("source_id_to_view")
+            title = st.session_state.pop("source_title_to_view")
+            
+            from frontend.dialogs.source_chunks_dialog import show_source_chunks_dialog
+            show_source_chunks_dialog(sid, title, chunk_service)
 
     table_fragment()
