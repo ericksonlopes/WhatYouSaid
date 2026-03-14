@@ -110,6 +110,32 @@ TABLE_CSS = """<style>
         border-radius: 8px;
         margin-bottom: 10px;
     }
+
+    /* Chunk Cards */
+    .chunk-card {
+        background-color: #121212;
+        border: 1px solid #27272a;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 15px;
+    }
+    .chunk-header { 
+        display: flex; 
+        justify-content: space-between; 
+        margin-bottom: 12px; 
+        align-items: center;
+    }
+    .chunk-title { color: white; font-weight: bold; font-size: 14px; }
+    .chunk-meta { 
+        background: #18181b; 
+        color: #71717a; 
+        font-size: 10px; 
+        padding: 2px 8px; 
+        border-radius: 4px; 
+        border: 1px solid #27272a; 
+        margin-left: 8px;
+    }
+    .chunk-content { color: #a1a1aa; font-size: 14px; line-height: 1.6; }
 </style>"""
 st.markdown(TABLE_CSS, unsafe_allow_html=True)
 
@@ -279,8 +305,23 @@ with main_col:
 with history_col:
     # Adding a bit of top margin to align with headers
     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-    # Using fresh instances in this column to ensure all new service methods are available
-    from src.infrastructure.repositories.sql.ingestion_job_repository import IngestionJobSQLRepository
-    from src.infrastructure.services.ingestion_job_service import IngestionJobService
-    ingestion_service = IngestionJobService(IngestionJobSQLRepository())
-    render_ingestion_history(ingestion_service)
+    
+    # Check if we are in chunks view to show Technical Details instead of History
+    view_source_id = st.session_state.get("view_source_id")
+    
+    if view_source_id:
+        st.subheader("🛠️ Technical details")
+        st.write("---")
+        # Placeholder for real stats (could be fetched)
+        st.markdown(f"Source ID: `{str(view_source_id)[:8]}`")
+        st.info("Additional metadata and stats can be displayed here.")
+        
+        st.write("---")
+        if st.button("Refresh Details", use_container_width=True):
+            st.rerun()
+    else:
+        # Using fresh instances in this column to ensure all new service methods are available
+        from src.infrastructure.repositories.sql.ingestion_job_repository import IngestionJobSQLRepository
+        from src.infrastructure.services.ingestion_job_service import IngestionJobService
+        ingestion_service = IngestionJobService(IngestionJobSQLRepository())
+        render_ingestion_history(ingestion_service)

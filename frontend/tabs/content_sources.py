@@ -150,10 +150,10 @@ def _render_table(table_rows, source_ids, selected_subject_name):
             c_src, c_type, c_chunks, c_model, c_dims, c_status, c_actions = st.columns([35, 10, 8, 17, 10, 15, 5])
             
             with c_src:
-                # Botão estilizado como link (Título)
+                # Botão estilizado como link (Título) que agora troca para a vista de chunks
                 if st.button(r['title'], key=f"btn_title_{src_id}"):
-                    st.session_state["source_id_to_view"] = src_id
-                    st.session_state["source_title_to_view"] = r['title']
+                    st.session_state["view_source_id"] = src_id
+                    st.session_state["view_source_title"] = r['title']
                     st.rerun()
                 st.markdown(f'<span class="source-sub">{r["external_source"]}</span>', unsafe_allow_html=True)
             
@@ -185,11 +185,63 @@ def _render_table(table_rows, source_ids, selected_subject_name):
     st.caption(f"Total: {len(table_rows)} items")
 
 
-def render(services, settings, safe_rerun):
-    # Header + Add Knowledge button (Keep outside fragment)
-    _render_header_and_button(services, safe_rerun)
+def _render_chunks_view(source_id, source_title, services, settings):
+    """Render the chunk cards view for a specific source."""
+    if st.button("← Back to Sources", key="back_to_sources"):
+        st.session_state.pop("view_source_id", None)
+        st.session_state.pop("view_source_title", None)
+        st.rerun()
+
+    st.title(source_title)
+    st.caption(f"Source ID: {source_id}")
 
     chunk_service = services["chunk_service"]
+    try:
+        from uuid import UUID
+        chunks = chunk_service.list_by_content_source(content_source_id=UUID(str(source_id)))
+
+        if not chunks:
+            st.info("No chunks found for this source.")
+            return
+
+        # Technical details summary (Optional, can be improved)
+        st.markdown(f"Total chunks: **{len(chunks)}**")
+        st.text_input("Search chunks", label_visibility="collapsed", placeholder="Search in chunks...", key="chunk_search")
+
+        for idx, chunk in enumerate(chunks):
+            content = chunk.content or ""
+            char_count = len(content)
+
+            # Style as the requested example
+            st.markdown(f"""
+                <div class="chunk-card">
+                    <div class="chunk-header">
+                        <div>
+                            <span class="chunk-title">Chunk {idx + 1}</span>
+                            <span class="chunk-meta">{char_count} chars</span>
+                            <span class="chunk-meta">{chunk.language or 'PT'}</span>
+                        </div>
+                        <span style="color: #3f3f46; font-size: 10px;">ID: {str(chunk.id)[:8]}</span>
+                    </div>
+                    <div class="chunk-content">{content}</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+    except Exception as e:
+        st.error(f"Error loading chunks: {e}")
+
+
+def render(services, settings, safe_rerun):
+    # Determine view state
+    view_source_id = st.session_state.get("view_source_id")
+
+    if view_source_id:
+        source_title = st.session_state.get("view_source_title", "Selected Source")
+        _render_chunks_view(view_source_id, source_title, services, settings)
+        return
+
+    # Header + Add Knowledge button
+    _render_header_and_button(services, safe_rerun)
 
     @st.fragment(run_every="3s")
     def table_fragment():
@@ -198,13 +250,5 @@ def render(services, settings, safe_rerun):
 
         selected_subject_name = st.session_state.get("sidebar_selected_subject")
         _render_table(table_rows, source_ids, selected_subject_name)
-
-        # Trigger dialog se houver seleção no session_state
-        if "source_id_to_view" in st.session_state:
-            sid = st.session_state.pop("source_id_to_view")
-            title = st.session_state.pop("source_title_to_view")
-            
-            from frontend.dialogs.source_chunks_dialog import show_source_chunks_dialog
-            show_source_chunks_dialog(sid, title, chunk_service)
 
     table_fragment()
