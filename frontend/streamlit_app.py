@@ -13,6 +13,7 @@ from frontend.assets.styles import TABLE_CSS
 from frontend.components.sidebar import render_sidebar
 from frontend.views.dashboard import render_dashboard_view
 from frontend.views.settings import render_settings_view
+from frontend.views.chat import render_chat_view
 from frontend.utils.services import init_full_services
 
 # Page Configuration
@@ -43,21 +44,28 @@ with st.spinner("Starting AI models and services..."):  # type: ignore
 # --- Sidebar ---
 render_sidebar(safe_rerun)
 
-# --- Main Layout with Right Column for Notifications ---
-main_col, right_col = st.columns([4, 1.2])
-
-with main_col:
-    if st.session_state["main_view"] == "dashboard":
+# --- Main Layout ---
+if st.session_state["main_view"] == "dashboard":
+    # Dashboard uses the 2-column layout with Notifications
+    main_col, right_col = st.columns([4, 1.2])
+    
+    with main_col:
         render_dashboard_view(safe_rerun, settings)
-    else:
-        render_settings_view(settings)
+        
+    with right_col:
+        st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+        from src.infrastructure.repositories.sql.ingestion_job_repository import IngestionJobSQLRepository
+        from src.infrastructure.services.ingestion_job_service import IngestionJobService
+        from frontend.components.task_cards import render_ingestion_history
+        
+        ingestion_service = IngestionJobService(IngestionJobSQLRepository())
+        render_ingestion_history(ingestion_service)
 
-with right_col:
-    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-    from src.infrastructure.repositories.sql.ingestion_job_repository import IngestionJobSQLRepository
-    from src.infrastructure.services.ingestion_job_service import IngestionJobService
-    from frontend.components.task_cards import render_ingestion_history
+elif st.session_state["main_view"] == "chat":
+    # Chat uses the full width
+    render_chat_view()
 
-    ingestion_service = IngestionJobService(IngestionJobSQLRepository())
-    render_ingestion_history(ingestion_service)
+else:
+    # Settings uses the full width
+    render_settings_view(settings)
 

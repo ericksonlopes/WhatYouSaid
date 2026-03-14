@@ -6,11 +6,6 @@ from frontend.utils.services import init_full_services
 
 def render_settings_view(settings):
     """Renders the settings and information view."""
-    # Back button to return to content sources
-    if st.button("← Back to Content Sources"):
-        st.session_state["main_view"] = "dashboard"
-        st.rerun()
-        
     st.title("⚙️ Settings & Diagnostics")
     st.markdown("---")
     
