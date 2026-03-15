@@ -7,7 +7,7 @@ import streamlit as st
 PAGE_SIZE = 10
 CHUNKS_PAGE_SIZE = 5
 
-def _render_header_and_button(services):
+def _render_header_and_button(services, safe_rerun):
     with st.container(horizontal=True):
         st.header("Content Sources")
         st.space("stretch")
@@ -18,7 +18,7 @@ def _render_header_and_button(services):
         if st.button("Add Knowledge", key="add_knowledge_btn", type="primary"):
             try:
                 from frontend.dialogs.add_knowledge_dialog import open_add_knowledge
-                open_add_knowledge(services)
+                open_add_knowledge(services, safe_rerun)
             except Exception as e:
                 st.error(f"Error opening Add Knowledge dialog: {e}")
 
@@ -365,7 +365,7 @@ def render(services, safe_rerun):
 
     # Fixed Header (Only shown when NOT in chunks view)
     if not st.session_state.get("view_source_id"):
-        _render_header_and_button(services)
+        _render_header_and_button(services, safe_rerun)
     
     # Always call the fragment for the main content area
     _table_fragment_internal(services, safe_rerun)

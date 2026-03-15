@@ -46,30 +46,26 @@ with st.spinner("Starting AI models and services..."):  # type: ignore
 render_sidebar(safe_rerun)
 
 # --- Main Layout Orchestration ---
-# We use a single layout logic to keep fragment definitions stable
 main_view = st.session_state["main_view"]
 
+# Common logic for history tracking (for st.toast)
+from src.infrastructure.repositories.sql.ingestion_job_repository import IngestionJobSQLRepository
+from src.infrastructure.services.ingestion_job_service import IngestionJobService
+ingestion_service = IngestionJobService(IngestionJobSQLRepository())
+
 if main_view == "dashboard":
-    # Dashboard uses the 2-column layout with Notifications
-    main_col, right_col = st.columns([4, 1.2])
+    # Full width dashboard
+    render_dashboard_view(safe_rerun, settings)
     
-    with main_col:
-        render_dashboard_view(safe_rerun)
-        
-    with right_col:
-        st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-        from src.infrastructure.repositories.sql.ingestion_job_repository import IngestionJobSQLRepository
-        from src.infrastructure.services.ingestion_job_service import IngestionJobService
-        ingestion_service = IngestionJobService(IngestionJobSQLRepository())
-        # Always call the history fragment when in Dashboard
-        _show_history_fragment(ingestion_service)
+    # Run the history fragment invisibly to trigger toasts
+    _show_history_fragment(ingestion_service, visible=False)
 
 elif main_view == "chat":
     render_chat_view()
-    # Hidden history fragment to maintain its ID/Timer state if needed,
-    # but since it's not rendered here, we usually just let it go.
-    # To TRULY stop the warning, we'd need to call it everywhere,
-    # but let's first fix the most common transition.
+    # Also track history in chat to show toasts while chatting
+    _show_history_fragment(ingestion_service, visible=False)
 
 else:
     render_settings_view(settings)
+    # Track history in settings too
+    _show_history_fragment(ingestion_service, visible=False)
