@@ -17,12 +17,12 @@ class ChunkVectorService:
         self._mapper = ChunkMapper()
 
     def index_documents(self, documents: List[ChunkEntity]) -> List[str]:
-        """Index a list of chunk entities into the vector repository."""
+        """Index a list of chunk entities into the vector store."""
         if not documents:
             logger.warning("Attempted to index empty documents list")
             return []
 
-        logger.info("Indexing documents", context={"count": len(documents)})
+        logger.debug("Indexing documents", context={"count": len(documents)})
         models = [self._mapper.entity_to_model(doc) for doc in documents]
         return self._repository.create_documents(models)
 
@@ -31,7 +31,7 @@ class ChunkVectorService:
         if not query:
             raise ValueError("Query must be provided for retrieval")
 
-        logger.info("Retrieving chunks", context={"query": query, "top_k": top_k})
+        logger.debug("Retrieving chunks", context={"query": query, "top_k": top_k})
         models: List[ChunkModel] = self._repository.retriever(query=query, top_kn=top_k, filters=filters)
 
         entities = [self._mapper.model_to_entity(m) for m in models]
@@ -51,5 +51,5 @@ class ChunkVectorService:
 
     def delete(self, filters: Optional[Any]) -> int:
         """Delete documents from the vector store based on provided filters."""
-        logger.info("Deleting documents from vector store", context={"filters": str(filters)})
+        logger.debug("Deleting documents from vector store", context={"filters": str(filters)})
         return self._repository.delete(filters=filters)

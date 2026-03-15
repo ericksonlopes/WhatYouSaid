@@ -37,7 +37,7 @@ class ChunkIndexSQLRepository:
                     orm_objs.append(obj)
 
                 session.commit()
-                logger.info("Created chunk index rows", context={"count": len(orm_objs)})
+                logger.debug("Created chunk index rows", context={"count": len(orm_objs)})
 
                 return [cast(UUID, o.id) for o in orm_objs]
             except Exception as e:

@@ -62,7 +62,7 @@ class WeaviateClient:
         
         with self as client:
             if not client.collections.exists(collection_name):
-                logger.info(f"Creating collection '{collection_name}' with explicit schema")
+                logger.debug(f"Creating collection '{collection_name}' with explicit schema")
                 client.collections.create(
                     name=collection_name,
                     properties=[
@@ -89,4 +89,4 @@ class WeaviateClient:
                         wvc.Property(name="created_at", data_type=wvc.DataType.DATE),
                     ]
                 )
-                logger.info(f"Collection '{collection_name}' created successfully")
+                logger.debug(f"Collection '{collection_name}' created successfully")

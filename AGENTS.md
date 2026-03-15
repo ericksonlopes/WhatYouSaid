@@ -20,7 +20,7 @@ This document provides essential knowledge for AI coding agents to be productive
 1. **Extractors**: Located in `src/infrastructure/extractors`, these modules handle data ingestion from sources like YouTube, audio, and text.
 2. **Services**: Found in `src/infrastructure/services`, these orchestrate tasks like transcript splitting, embedding generation, and model loading.
 3. **Repositories**: Adapters for vector stores (e.g., Weaviate, FAISS) are in
-   `src/infrastructure/repository/vector_stores`.
+   `src/infrastructure/repositories/vector/` (with subfolders for each backend, e.g., `weaviate/`, `models/`).
 4. **Domain Layer**: Defines entities and enums (e.g., `ChunkEntity`, `SourceType`) in `src/domain`.
 5. **Configuration**: Managed via `src/config/settings.py` using `pydantic-settings`.
 6. **Frontend (Streamlit)**: Dashboard UI located in `frontend/`.
@@ -127,8 +127,8 @@ This document provides essential knowledge for AI coding agents to be productive
   ```
 
 ### Vector Store Integration
-- Adapters for vector databases are in `src/infrastructure/repositories/vector_stores`.
-- Examples include Weaviate, FAISS, and Pinecone.
+Adapters for vector databases are in `src/infrastructure/repositories/vector/` (with subfolders for each backend).
+Examples include Weaviate, FAISS, and Pinecone.
 
 ### Logging
 - Configured in `src/config/logger.py`.
@@ -171,21 +171,20 @@ This document is a living guide. Update it as the project evolves.
 
 ## Copilot / Contributors instructions (consolidated)
 
-O conteúdo de orientação para Copilot/Contributors que estava em `copilot-instructions.md` foi consolidado aqui para
-evitar duplicação. Principais pontos resumidos:
+The guidance content for Copilot/Contributors that was in `copilot-instructions.md` has been consolidated here to
+avoid duplication. Key points summarized:
 
-- Ambiente e instalação: Python 3.12+, python -m venv .venv, .\.venv\Scripts\Activate, python -m pip install -e .; use
-  `uv sync --group dev` para instalar dependências de desenvolvimento.
-- Testes e qualidade: uv run pytest -v, uv run mypy src tests, uv run ruff check .
-- Migrações: alembic upgrade head; alembic revision --autogenerate -m "description"
-- Convenções: Faça mudanças cirúrgicas; planeje alterações complexas (use plan.md); atualize docs e testes ao alterar
-  comportamento público.
-- Fluxo de planejamento: use `plan.md` na sessão para mudanças complexas e a tabela `todos` para acompanhamento.
-- Ferramentas do Copilot CLI: prefira `create`/`edit` para mudanças em arquivos; use backslash em caminhos no Windows.
-- Commit/PR: mensagens curtas; inclua este trailer obrigatório em todos os commits quando aplicável:
+- Environment and installation: Python 3.12+, python -m venv .venv, .\.venv\Scripts\Activate, python -m pip install -e .; use
+  `uv sync --group dev` to install development dependencies.
+- Tests and quality: uv run pytest -v, uv run mypy src tests, uv run ruff check .
+- Migrations: alembic upgrade head; alembic revision --autogenerate -m "description"
+- Conventions: Make surgical changes; plan complex changes (use plan.md); update docs and tests when changing
+  public behavior.
+- Planning flow: for complex changes, use the `todos` table for tracking. (The `plan.md` file is not present.)
+- Copilot CLI tools: prefer `create`/`edit` for file changes; use backslash in paths on Windows.
+- Commit/PR: short messages; include this mandatory trailer in all applicable commits:
 
-- Checklist rápido antes do commit: todos os testes passam; mypy sem erros relevantes; código formatado (black, isort);
-  documentação atualizada.
+- Quick checklist before commit: all tests pass; mypy without relevant errors; formatted code (black, isort);
+  updated documentation.
 
-Para uma cópia completa e histórica das instruções, verifique `.github/copilot-instructions.md`.
-
+For a complete and historical copy of the instructions, check `.github/copilot-instructions.md`.

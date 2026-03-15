@@ -24,7 +24,7 @@ class ContentSourceSQLRepository:
                          "title": title, "language": language, "embedding_model": embedding_model,
                          "dimensions": dimensions, "status": status, "processing_status": processing_status,
                          "chunks": chunks, "chars": chars}
-                logger.info("Creating ContentSource", context=extra)
+                logger.debug("Creating ContentSource", context=extra)
                 cs = ContentSourceModel(
                     subject_id=subject_id,
                     source_type=source_type,
@@ -40,7 +40,7 @@ class ContentSourceSQLRepository:
                 session.add(cs)
                 session.commit()
                 session.refresh(cs)
-                logger.info("ContentSource created successfully", context={"id": cs.id, "processing_status": cs.processing_status})
+                logger.debug("ContentSource created successfully", context={"id": cs.id, "processing_status": cs.processing_status})
 
                 return cast(UUID, cs.id)
             except Exception as e:
@@ -52,9 +52,9 @@ class ContentSourceSQLRepository:
         with Connector() as session:
             try:
                 extra = {"id": id}
-                logger.info("Fetching ContentSource by ID", context=extra)
+                logger.debug("Fetching ContentSource by ID", context=extra)
                 result = session.get(ContentSourceModel, id)
-                logger.info("Fetch successful", context={**extra, "result": result})
+                logger.debug("Fetch successful", context={**extra, "result": result})
                 return result
             except Exception as e:
                 logger.error("Error fetching ContentSource by ID", context={**extra, "error": str(e)})
@@ -64,9 +64,9 @@ class ContentSourceSQLRepository:
         with Connector() as session:
             try:
                 extra = {"source_type": source_type, "external_source": external_source}
-                logger.info("Fetching ContentSources by source info", context=extra)
+                logger.debug("Fetching ContentSources by source info", context=extra)
                 result = session.query(ContentSourceModel).filter_by(source_type=source_type, external_source=external_source).order_by(ContentSourceModel.created_at.desc()).all()
-                logger.info("Fetch successful", context={**extra, "count": len(result)})
+                logger.debug("Fetch successful", context={**extra, "count": len(result)})
                 return result
             except Exception as e:
                 logger.error("Error fetching ContentSources by source info", context={**extra, "error": str(e)})
@@ -76,7 +76,7 @@ class ContentSourceSQLRepository:
         with Connector() as session:
             try:
                 extra = {"subject_id": subject_id, "limit": limit, "offset": offset}
-                logger.info("Listing ContentSources by subject ID", context=extra)
+                logger.debug("Listing ContentSources by subject ID", context=extra)
                 query = session.query(ContentSourceModel).filter_by(subject_id=subject_id).order_by(ContentSourceModel.created_at.desc())
                 
                 if offset is not None:
@@ -85,7 +85,7 @@ class ContentSourceSQLRepository:
                     query = query.limit(limit)
                     
                 result = query.all()
-                logger.info("List successful", context={**extra, "count": len(result)})
+                logger.debug("List successful", context={**extra, "count": len(result)})
                 return result
             except Exception as e:
                 logger.error("Error listing ContentSources by subject ID", context={**extra, "error": str(e)})
@@ -95,9 +95,9 @@ class ContentSourceSQLRepository:
         with Connector() as session:
             try:
                 extra = {"subject_id": subject_id}
-                logger.info("Counting ContentSources by subject ID", context=extra)
+                logger.debug("Counting ContentSources by subject ID", context=extra)
                 result = session.query(ContentSourceModel).filter_by(subject_id=subject_id).count()
-                logger.info("Count successful", context={**extra, "count": result})
+                logger.debug("Count successful", context={**extra, "count": result})
                 return result
             except Exception as e:
                 logger.error("Error counting ContentSources by subject ID", context={**extra, "error": str(e)})
@@ -107,14 +107,14 @@ class ContentSourceSQLRepository:
         with Connector() as session:
             try:
                 extra = {"content_source_id": content_source_id, "status": status}
-                logger.info("Updating processing status for ContentSource", context=extra)
+                logger.debug("Updating processing status for ContentSource", context=extra)
                 cs = session.get(ContentSourceModel, content_source_id)
                 if cs is None:
                     logger.warning("ContentSource not found for update", context=extra)
                     return
                 cs.processing_status = status
                 session.commit()
-                logger.info("Processing status updated successfully", context=extra)
+                logger.debug("Processing status updated successfully", context=extra)
             except Exception as e:
                 logger.error("Error updating processing status for ContentSource", context={**extra, "error": str(e)})
                 session.rollback()
@@ -124,14 +124,14 @@ class ContentSourceSQLRepository:
         with Connector() as session:
             try:
                 extra = {"content_source_id": content_source_id, "title": title}
-                logger.info("Updating title for ContentSource", context=extra)
+                logger.debug("Updating title for ContentSource", context=extra)
                 cs = session.get(ContentSourceModel, content_source_id)
                 if cs is None:
                     logger.warning("ContentSource not found for title update", context=extra)
                     return
                 cs.title = title
                 session.commit()
-                logger.info("Title updated successfully", context=extra)
+                logger.debug("Title updated successfully", context=extra)
             except Exception as e:
                 logger.error("Error updating title for ContentSource", context={**extra, "error": str(e)})
                 session.rollback()
@@ -142,7 +142,7 @@ class ContentSourceSQLRepository:
             try:
                 extra = {"content_source_id": content_source_id, "embedding_model": embedding_model,
                          "dimensions": dimensions, "chunks": chunks}
-                logger.info("Finishing ingestion for ContentSource", context=extra)
+                logger.debug("Finishing ingestion for ContentSource", context=extra)
                 cs = session.get(ContentSourceModel, content_source_id)
                 if cs is None:
                     logger.warning("ContentSource not found for finishing ingestion", context=extra)
@@ -156,7 +156,7 @@ class ContentSourceSQLRepository:
                 cs.chunks = chunks
                 
                 session.commit()
-                logger.info("Ingestion finished successfully", context={"id": content_source_id, "new_status": "done"})
+                logger.debug("Ingestion finished successfully", context={"id": content_source_id, "new_status": "done"})
             except Exception as e:
                 logger.error("Error finishing ingestion for ContentSource", context={**extra, "error": str(e)})
                 session.rollback()

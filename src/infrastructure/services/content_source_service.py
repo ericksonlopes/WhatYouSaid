@@ -30,7 +30,7 @@ class ContentSourceService:
 
                       ) -> ContentSourceEntity:
         """Create a content source and return a domain entity."""
-        self._logger.info("Creating content source", context={"external_source": external_source})
+        self._logger.debug("Creating content source", context={"external_source": external_source})
         
         effective_processing_status = processing_status or (status.value if status is not None else "pending")
         
@@ -46,7 +46,7 @@ class ContentSourceService:
 
     def get_by_source_info(self, source_type: SourceType, external_source: str) -> Optional[ContentSourceEntity]:
         """Get a content source by its source_type and external_source."""
-        self._logger.info("Getting content source by source_type and external_source",
+        self._logger.debug("Getting content source by source_type and external_source",
                           context={"source_type": source_type.value, "external_source": external_source})
         list_models = self._repo.get_by_source_info(source_type=source_type.value, external_source=external_source)
 

@@ -33,7 +33,7 @@ class ChunkWeaviateRepository(IVectorRepository):
         )
 
     def create_documents(self, documents: List[ChunkModel]) -> List[str]:
-        logger.info("Creating documents in Weaviate", context={"num_documents": len(documents)})
+        logger.debug("Creating documents in Weaviate", context={"num_documents": len(documents)})
 
         try:
             texts = [doc.content for doc in documents]
@@ -72,7 +72,7 @@ class ChunkWeaviateRepository(IVectorRepository):
             with self.vector_store as vector_store:
                 created_ids = vector_store.add_texts(texts=texts, metadatas=meta_datas, ids=ids)
 
-            logger.info("Created documents in Weaviate", context={"num_documents": len(documents),
+            logger.debug("Created documents in Weaviate", context={"num_documents": len(documents),
                                                                   "created_ids_count": len(
                                                                       created_ids) if created_ids is not None else 0})
             return created_ids if created_ids is not None else []
@@ -83,7 +83,7 @@ class ChunkWeaviateRepository(IVectorRepository):
             raise e
 
     def retriever(self, query: str, top_kn: int = 5, filters: Optional[Filters] = None) -> List[ChunkModel]:
-        logger.info("Retrieving with scores", context={
+        logger.debug("Retrieving with scores", context={
             "filters": filters,
             "query": query,
             "top_kn": top_kn
@@ -116,7 +116,7 @@ class ChunkWeaviateRepository(IVectorRepository):
                         seen.add(key)
                         models.append(m)
 
-                logger.info("Retrieved documents with scores",
+                logger.debug("Retrieved documents with scores",
                             context={"query": query, "total_found": len(all_models), "unique_results": len(models)})
                 return models
         except Exception as e:
@@ -124,7 +124,7 @@ class ChunkWeaviateRepository(IVectorRepository):
             raise e
 
     def delete(self, filters: Optional[Filters]) -> int:
-        logger.info("Deleting documents", context={"filters": filters})
+        logger.debug("Deleting documents", context={"filters": filters})
         try:
             with self._weaviate_client as client:
                 collection = client.collections.get(self._collection_name)
@@ -132,7 +132,7 @@ class ChunkWeaviateRepository(IVectorRepository):
 
                 deleted = result.matches if result is not None else 0
 
-                logger.info("Deleted documents", context={"filters": filters, "deleted": deleted})
+                logger.debug("Deleted documents", context={"filters": filters, "deleted": deleted})
                 return deleted
         except Exception as e:
             logger.error("Error deleting documents",
@@ -140,7 +140,7 @@ class ChunkWeaviateRepository(IVectorRepository):
             raise e
 
     def list_chunks(self, filters: Optional[Any], limit: int = 1000) -> List[ChunkModel]:
-        logger.info("Listing chunks", context={"filters": filters, "limit": limit})
+        logger.debug("Listing chunks", context={"filters": filters, "limit": limit})
 
         try:
             with self._weaviate_client as client:
@@ -169,7 +169,7 @@ class ChunkWeaviateRepository(IVectorRepository):
                     )
                     chunks.append(chunk_model)
 
-                logger.info("Listed chunks", context={"filters": filters, "num_chunks": len(chunks)})
+                logger.debug("Listed chunks", context={"filters": filters, "num_chunks": len(chunks)})
                 return chunks
 
         except Exception as e:
