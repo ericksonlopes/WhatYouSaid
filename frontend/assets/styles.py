@@ -3,7 +3,20 @@
 TABLE_CSS = """<style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
     
-    .main { font-family: 'Inter', sans-serif; }
+    .main { 
+        font-family: 'Inter', sans-serif; 
+        background-color: #121212;
+    }
+
+    /* Set background for the entire main container */
+    [data-testid="stAppViewContainer"] {
+        background-color: #121212;
+    }
+
+    /* Ensure tabs and dashboard area also use the same background */
+    [data-testid="stMain"] {
+        background-color: #121212;
+    }
     
     .content-table {
         width: 100%;

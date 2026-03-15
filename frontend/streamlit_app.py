@@ -3,7 +3,7 @@ from pathlib import Path
 
 import streamlit as st
 
-# Ensure repository root is on sys.path so 'frontend' package imports work when running this file directly
+# Ensure repository root is on sys.path
 root = Path(__file__).resolve().parents[1]
 if str(root) not in sys.path:
     sys.path.insert(0, str(root))
@@ -15,6 +15,7 @@ from frontend.views.dashboard import render_dashboard_view
 from frontend.views.settings import render_settings_view
 from frontend.views.chat import render_chat_view
 from frontend.utils.services import init_full_services
+from frontend.components.task_cards import _show_history_fragment
 
 # Page Configuration
 st.set_page_config(page_title="WhatYouSaid UI", layout="wide")
@@ -44,8 +45,11 @@ with st.spinner("Starting AI models and services..."):  # type: ignore
 # --- Sidebar ---
 render_sidebar(safe_rerun)
 
-# --- Main Layout ---
-if st.session_state["main_view"] == "dashboard":
+# --- Main Layout Orchestration ---
+# We use a single layout logic to keep fragment definitions stable
+main_view = st.session_state["main_view"]
+
+if main_view == "dashboard":
     # Dashboard uses the 2-column layout with Notifications
     main_col, right_col = st.columns([4, 1.2])
     
@@ -56,16 +60,16 @@ if st.session_state["main_view"] == "dashboard":
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
         from src.infrastructure.repositories.sql.ingestion_job_repository import IngestionJobSQLRepository
         from src.infrastructure.services.ingestion_job_service import IngestionJobService
-        from frontend.components.task_cards import render_ingestion_history
-        
         ingestion_service = IngestionJobService(IngestionJobSQLRepository())
-        render_ingestion_history(ingestion_service)
+        # Always call the history fragment when in Dashboard
+        _show_history_fragment(ingestion_service)
 
-elif st.session_state["main_view"] == "chat":
-    # Chat uses the full width
+elif main_view == "chat":
     render_chat_view()
+    # Hidden history fragment to maintain its ID/Timer state if needed, 
+    # but since it's not rendered here, we usually just let it go.
+    # To TRULY stop the warning, we'd need to call it everywhere, 
+    # but let's first fix the most common transition.
 
 else:
-    # Settings uses the full width
     render_settings_view(settings)
-
