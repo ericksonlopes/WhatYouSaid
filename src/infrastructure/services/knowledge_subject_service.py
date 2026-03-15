@@ -24,7 +24,7 @@ class KnowledgeSubjectService:
     def create_subject(self, name: str, external_ref: Optional[str] = None,
                        description: Optional[str] = None) -> KnowledgeSubjectEntity:
         """Create a new knowledge subject and return it as a Domain Entity."""
-        self._logger.info("Creating knowledge subject", context={"name": name, "external_ref": external_ref})
+        self._logger.debug("Creating knowledge subject", context={"name": name, "external_ref": external_ref})
         created_id = self._repo.create_subject(name=name, external_ref=external_ref, description=description)
         model = self._repo.get_by_id(created_id)
         entity = KnowledgeSubjectMapper.model_to_entity(model)
@@ -33,7 +33,7 @@ class KnowledgeSubjectService:
 
     def get_by_name(self, name: str) -> Optional[KnowledgeSubjectEntity]:
         """Fetch a knowledge subject by name and return as an Entity."""
-        self._logger.info("get_by_name", context={"name": name})
+        self._logger.debug("get_by_name", context={"name": name})
         model = self._repo.get_by_name(name)
         return KnowledgeSubjectMapper.model_to_entity(model)
 
@@ -54,7 +54,7 @@ class KnowledgeSubjectService:
         If name is not provided when creating, external_ref is used as the name.
         Returns a Domain Entity representing the subject.
         """
-        self._logger.info("get_or_create_by_external_ref", context={"external_ref": external_ref})
+        self._logger.debug("get_or_create_by_external_ref", context={"external_ref": external_ref})
         existing = self._repo.get_by_external_ref(external_ref)
         if existing is not None:
             entity = KnowledgeSubjectMapper.model_to_entity(existing)

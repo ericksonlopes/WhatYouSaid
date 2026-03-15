@@ -1,27 +1,23 @@
-from typing import List, Optional, Union, Protocol, Any
+from typing import Optional, Union
 from uuid import UUID
 
 from weaviate.collections.classes.filters import _Filters as Filters, Filter
 
+from src.config.logger import Logger
+from src.application.dtos.results.search_chunks_result import SearchChunksResult
+from src.infrastructure.services.chunk_vector_service import ChunkVectorService
 
-class VectorRetriever(Protocol):
-    """Protocol for objects that expose a retriever method used by the use case.
-
-    This is intentionally narrow (structural typing) so tests can pass simple fakes.
-    """
-
-    def retriever(self, query: str, top_kn: int = 5, filters: Optional[Any] = None) -> List[Any]:
-        ...
+logger = Logger()
 
 
 class SearchChunksUseCase:
-    """Use case para pesquisa de chunks via vector service com filtro por knowledge_subject.
+    """Use case for semantic search of chunks via vector service with knowledge_subject filtering.
 
-    Pode filtrar por subject_id (UUID ou str) ou por subject_name (requer ks_service).
+    Can filter by subject_id (UUID or str) or by subject_name (requires ks_service).
     """
 
-    def __init__(self, vector_service: VectorRetriever, ks_service=None):
-        self.vector_service: VectorRetriever = vector_service
+    def __init__(self, vector_service: ChunkVectorService, ks_service=None):
+        self.vector_service = vector_service
         self.ks_service = ks_service
 
     def execute(
@@ -30,29 +26,41 @@ class SearchChunksUseCase:
             top_k: int = 5,
             subject_id: Optional[Union[str, UUID]] = None,
             subject_name: Optional[str] = None,
-    ) -> List:
-        # validações
+    ) -> SearchChunksResult:
+        logger.info("Executing search chunks use case", context={"query": query, "top_k": top_k, "subject_id": str(subject_id) if subject_id else None, "subject_name": subject_name})
+        
+        # Validations
         if subject_id and subject_name:
             raise ValueError("Provide only one of subject_id or subject_name")
 
         filters: Optional[Filters] = None
         filters_list = []
 
-        # se passado subject_name, resolve para id usando ks_service
+        # Resolve subject_name to ID if provided
         if subject_name:
+            logger.debug("Resolving subject name", context={"subject_name": subject_name})
             if not self.ks_service:
                 raise ValueError("ks_service is required to filter by subject_name")
             subject = self.ks_service.get_by_name(subject_name)
             if subject is None:
-                # não encontrou subject: retorna lista vazia
-                return []
+                logger.warning("Subject not found during search", context={"subject_name": subject_name})
+                return SearchChunksResult(query=query, results=[], total_count=0)
             subject_id = subject.id
 
         if subject_id is not None:
-            # weaviate espera o valor comparável - usar string do UUID
             filters_list.append(Filter.by_property("subject_id").equal(str(subject_id)))
 
         if filters_list:
             filters = Filter.all_of(filters_list)
 
-        return self.vector_service.retriever(query, top_kn=top_k, filters=filters)
+        # Execute retrieval
+        logger.debug("Calling vector service for retrieval", context={"query": query, "top_k": top_k})
+        results = self.vector_service.retrieve(query, top_k=top_k, filters=filters)
+        
+        logger.info("Search completed", context={"query": query, "results_count": len(results)})
+        
+        return SearchChunksResult(
+            query=query,
+            results=results,
+            total_count=len(results)
+        )

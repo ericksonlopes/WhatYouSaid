@@ -1,9 +1,11 @@
 from typing import Optional, List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class YoutubeMetadataDTO(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
     video_id: Optional[str] = Field(default=None, description="ID do vídeo do YouTube")
     original_url: Optional[str] = Field(default=None, description="URL original do vídeo")
     title: Optional[str] = Field(default=None, description="Título do vídeo")

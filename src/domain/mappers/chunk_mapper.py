@@ -73,6 +73,11 @@ class ChunkMapper:
         if content is not None:
             data["content"] = content
 
+        # Capture the ID from the document object if it's not in metadata
+        doc_id = getattr(document, "id", None)
+        if doc_id is not None and "id" not in data:
+            data["id"] = doc_id
+
         # Convert UUID-like fields if present and valid, otherwise remove them
         for key in ["id", "job_id", "content_source_id", "subject_id"]:
             val = data.get(key)

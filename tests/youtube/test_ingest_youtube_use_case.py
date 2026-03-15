@@ -26,14 +26,15 @@ def make_cs_service(existing: bool = False):
     class CS:
         def __init__(self):
             self.created = None
+            self._repo = SimpleNamespace(update_title=lambda **kwargs: None)
 
         def get_by_source_info(self, source_type, external_source):
-            return SimpleNamespace(id=uuid.uuid4()) if existing else None
+            return SimpleNamespace(id=uuid.uuid4(), processing_status="done", source_type="youtube", external_source=external_source) if existing else None
 
-        def create_source(self, subject_id, source_type, external_source, title, language, status):
+        def create_source(self, subject_id, source_type, external_source, title, language, status, processing_status=None):
             # ensure source_type is a value the use case can handle
             val = source_type.value if hasattr(source_type, "value") else str(source_type)
-            src = SimpleNamespace(id=uuid.uuid4(), source_type=val, external_source=external_source)
+            src = SimpleNamespace(id=uuid.uuid4(), source_type=val, external_source=external_source, processing_status=processing_status or "pending")
             self.created = src
             return src
 
@@ -54,9 +55,12 @@ def make_ingestion_service():
         def create_job(self, content_source_id, status, embedding_model, pipeline_version):
             return SimpleNamespace(id=uuid.uuid4())
 
-        def update_job(self, job_id, status):
+        def update_job(self, job_id, status, error_message=None):
             # noop for tests
             return None
+
+        def get_by_id(self, id):
+            return SimpleNamespace(id=id)
 
 
     return IS()
@@ -99,7 +103,7 @@ def test_ingest_single_url_processes_chunks(monkeypatch):
     docs = [DummyDoc("chunk1", {"start": 0, "end": 10}), DummyDoc("chunk2", {"start": 10, "end": 20})]
     # patch instance methods
     monkeypatch.setattr(use_case, "_extract_video_id_from_url", lambda url: "dQw4w9WgXcQ")
-    monkeypatch.setattr(use_case, "_extract_and_split", lambda cmd, video_id: docs)
+    monkeypatch.setattr(use_case, "_extract_and_split", lambda cmd, video_id, yt_extractor=None: docs)
 
     cmd = IngestYoutubeCommand(video_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ", subject_name="s",
                                send_transcript=False)
@@ -125,5 +129,5 @@ def test_ingest_skips_existing_source(monkeypatch):
     cmd = IngestYoutubeCommand(video_url="dQw4w9WgXcQ", subject_name="s")
     result = use_case.execute(cmd)
     assert result.video_results[0]["skipped"] is True
-    assert result.video_results[0]["reason"] == "source_exists"
+    assert result.video_results[0]["reason"] == "source_exists_and_done"
     assert chunk_svc.chunks_created is None
