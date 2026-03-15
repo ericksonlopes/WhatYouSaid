@@ -1,12 +1,29 @@
 from typing import Optional
 
+import os
 import torch
 from sentence_transformers import SentenceTransformer
+import logging
+import transformers.utils.logging as transformers_logging
+from huggingface_hub.utils import disable_progress_bars
+
+# Force disable progress bars via environment variable before any imports
+os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
 
 from src.config.logger import Logger
 from src.domain.interfaces.services.mode_loader_service import IModelLoaderService
 
 logger = Logger()
+
+# Redirect transformers logs to our custom logger
+# Using ERROR level to silence the verbose loading reports and configs
+transformers_logging.set_verbosity_error()
+transformers_logging.disable_progress_bar() # Explicitly disable transformers progress bars
+transformers_logger = logging.getLogger("transformers")
+transformers_logger.addHandler(logger.get_intercept_handler())
+transformers_logger.propagate = False # Prevent double logging
+
+disable_progress_bars()
 
 
 class ModelLoaderService(IModelLoaderService):
@@ -32,6 +49,11 @@ class ModelLoaderService(IModelLoaderService):
         if dims is None:
             raise RuntimeError("Failed to determine model embedding dimensions")
         return int(dims)
+
+    @property
+    def max_seq_length(self) -> int:
+        """Returns the maximum sequence length (tokens) the model can process."""
+        return int(getattr(self.model, "max_seq_length", 512))
 
     @property
     def model(self) -> SentenceTransformer:

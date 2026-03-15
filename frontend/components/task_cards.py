@@ -1,9 +1,13 @@
 """Component for rendering ingestion task history."""
 
 import streamlit as st
+import textwrap
 
 @st.fragment(run_every="5s")
 def _show_history_fragment(ig_service):
+    st.markdown("### 🔔 Notifications")
+    st.caption("RECENT NOTIFICATIONS")
+    
     try:
         selected_sid = st.session_state.get("selected_subject_id")
         if not selected_sid:
@@ -65,7 +69,7 @@ def _show_history_fragment(ig_service):
                 </div>
             """
         
-        # Render all cards at once to ensure consistent spacing controlled by CSS
+        # Render all cards at once
         st.html(f'<div class="notifications-container">{all_cards_html}</div>')
 
     except Exception as e:
@@ -73,6 +77,6 @@ def _show_history_fragment(ig_service):
 
 
 def render_ingestion_history(ig_service):
-    st.markdown("### 🔔 Notifications")
-    st.caption("RECENT NOTIFICATIONS")
+    # This wrapper is kept for backward compatibility if needed, 
+    # but the logic is now inside the fragment to ensure header stability.
     _show_history_fragment(ig_service)

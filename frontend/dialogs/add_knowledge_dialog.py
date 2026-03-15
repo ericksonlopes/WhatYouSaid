@@ -105,9 +105,13 @@ def _youtube_tab_body(services, safe_rerun, selected_subject):
     with data_col1:
         st.radio("Content Type", options=["Single Video", "Playlist"], horizontal=True, key="add_knowledge_youtube_type")
     
+    # Dynamic limit from model loader
+    model_loader = services.get("model_loader")
+    max_tokens = getattr(model_loader, "max_seq_length", 512)
+    
     with st.expander("🛠️ Splitting Configuration", expanded=False):
-        st.slider("Tokens per chunk", min_value=128, max_value=2048, value=512, step=128, key="add_knowledge_tokens")
-        st.slider("Chunk overlap (tokens)", min_value=0, max_value=512, value=50, step=10, key="add_knowledge_overlap")
+        st.slider("Tokens per chunk", min_value=128, max_value=max_tokens, value=min(512, max_tokens), step=128, key="add_knowledge_tokens")
+        st.slider("Chunk overlap (tokens)", min_value=0, max_value=max_tokens // 4, value=min(50, max_tokens // 10), step=10, key="add_knowledge_overlap")
 
     if st.button("Add YouTube", key="add_knowledge_youtube_ingest"):
         url = st.session_state.get("add_knowledge_youtube_url", "").strip()
