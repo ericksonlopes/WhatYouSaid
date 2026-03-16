@@ -42,7 +42,6 @@ class YoutubeExtractor(IYoutubeExtractor):
     @staticmethod
     def extract_playlist_videos(playlist_url: str) -> list[str]:
         """Extracts all video URLs from a YouTube playlist using yt_dlp."""
-        import re
         from urllib.parse import urlparse, parse_qs
         
         # Normalize the URL: if it contains a list=ID, use the standard playlist URL

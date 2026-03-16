@@ -184,12 +184,19 @@ class IngestYoutubeUseCase:
                     from uuid import UUID
                     jid = UUID(cmd.ingestion_job_id) if isinstance(cmd.ingestion_job_id, str) else cmd.ingestion_job_id
                     ingestion = self.ingestion_service.get_by_id(jid)
-                    logger.debug("Reusing pre-created ingestion job", context={"job_id": str(jid)})
+                    if ingestion is None:
+                        logger.warning(f"Job {cmd.ingestion_job_id} not found, creating new one")
+                        ingestion = self._create_ingestion_job(source)
+                    else:
+                        logger.debug("Reusing pre-created ingestion job", context={"job_id": str(jid)})
                 except Exception as ej:
                     logger.warning(f"Failed to retrieve pre-created job {cmd.ingestion_job_id}, creating new one: {ej}")
                     ingestion = self._create_ingestion_job(source)
             else:
                 ingestion = self._create_ingestion_job(source)
+
+            if ingestion is None:
+                raise ValueError("Failed to create or retrieve ingestion job")
 
             # 2. Extract metadata
             yt_extractor = YoutubeExtractor(video_id=video_id, language=cmd.language)
