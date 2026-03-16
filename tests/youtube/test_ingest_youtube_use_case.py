@@ -59,8 +59,12 @@ def make_ingestion_service():
             # noop for tests
             return None
 
+        def link_job_to_source(self, job_id, content_source_id):
+            # noop for tests
+            return None
+
         def get_by_id(self, id):
-            return SimpleNamespace(id=id)
+            return SimpleNamespace(id=id, content_source_id=None)
 
 
     return IS()
