@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+
 import pytest
 
 from src.infrastructure.repositories.vector.weaviate.weaviate_vector import WeaviateVector
@@ -15,6 +16,10 @@ class DummyClientContext:
 
     def __exit__(self, exc_type, exc, tb):
         self.exited_args = (exc_type, exc, tb)
+
+    def create_collection_if_not_exists(self, collection_name):
+        # Mock method: no implementation needed for this specific test case
+        pass
 
 
 class DummyEmbedding:

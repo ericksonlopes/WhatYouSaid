@@ -1,11 +1,12 @@
 from typing import List, Optional, Any
 from typing import cast
+from uuid import UUID
 
 from src.config.logger import Logger
 from src.infrastructure.repositories.sql.connector import Connector
 from src.infrastructure.repositories.sql.models.chunk_index import ChunkIndexModel
 from src.infrastructure.repositories.sql.models.content_source import ContentSourceModel
-from uuid import UUID
+
 logger = Logger()
 
 
@@ -18,12 +19,17 @@ class ChunkIndexSQLRepository:
             try:
                 orm_objs = []
                 for ch in chunks:
+                    content_val = ch.get("content")
+                    content_size = len(content_val) if content_val else 0
+                    
                     obj = ChunkIndexModel(
                         id=ch.get("id"),
                         content_source_id=ch.get("content_source_id"),
                         job_id=ch.get("job_id"),
                         chunk_id=ch.get("chunk_id"),
-                        chars=ch.get("chars", 0),
+                        content=content_val,
+                        chars=ch.get("chars", content_size),
+                        tokens_count=ch.get("tokens_count"),
                         language=ch.get("language"),
                         version_number=ch.get("version_number", 1),
                     )
@@ -31,6 +37,7 @@ class ChunkIndexSQLRepository:
                     orm_objs.append(obj)
 
                 session.commit()
+                logger.debug("Created chunk index rows", context={"count": len(orm_objs)})
 
                 return [cast(UUID, o.id) for o in orm_objs]
             except Exception as e:
@@ -38,9 +45,18 @@ class ChunkIndexSQLRepository:
                 logger.error("Error creating chunk index rows", context={"error": str(e)})
                 raise
 
-    def list_by_content_source(self, content_source_id: UUID, limit: int = 1000) -> List[ChunkIndexModel]:
+    def list_by_content_source(self, content_source_id: UUID, limit: Optional[int] = None, offset: Optional[int] = None) -> List[ChunkIndexModel]:
         with Connector() as session:
-            return session.query(ChunkIndexModel).filter_by(content_source_id=content_source_id).limit(limit).all()
+            query = session.query(ChunkIndexModel).filter_by(content_source_id=content_source_id).order_by(ChunkIndexModel.created_at.asc())
+            if offset is not None:
+                query = query.offset(offset)
+            if limit is not None:
+                query = query.limit(limit)
+            return query.all()
+
+    def count_by_content_source(self, content_source_id: UUID) -> int:
+        with Connector() as session:
+            return session.query(ChunkIndexModel).filter_by(content_source_id=content_source_id).count()
 
     def delete_by_content_source(self, content_source_id: UUID) -> int:
         with Connector() as session:

@@ -160,3 +160,32 @@ class StdLogger(ILogger):
     def critical(self, message: str, context: dict[str, Any] | None = None) -> None:
         """Log at CRITICAL level."""
         self._log("CRITICAL", message, context)
+
+
+class InterceptHandler(logging.Handler):
+    """
+    Standard logging handler that intercepts logs and redirects them to our custom Logger.
+    """
+
+    def __init__(self, custom_logger):
+        super().__init__()
+        self.custom_logger = custom_logger
+
+    def emit(self, record):
+        # Get corresponding Loguru level if it exists
+        level = record.levelname
+        message = record.getMessage()
+        
+        # Determine which method to call on custom_logger
+        if level == "DEBUG":
+            self.custom_logger.debug(message)
+        elif level == "INFO":
+            self.custom_logger.info(message)
+        elif level == "WARNING":
+            self.custom_logger.warning(message)
+        elif level == "ERROR":
+            self.custom_logger.error(Exception(message))
+        elif level == "CRITICAL":
+            self.custom_logger.critical(message)
+        else:
+            self.custom_logger.info(message)

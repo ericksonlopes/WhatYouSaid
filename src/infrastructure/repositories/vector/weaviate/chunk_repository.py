@@ -1,7 +1,6 @@
 from typing import List, Optional, Any
 from uuid import UUID
 
-from langchain_core.documents import Document
 from weaviate.collections.classes.filters import _Filters as Filters
 
 from src.config.logger import Logger
@@ -34,18 +33,34 @@ class ChunkWeaviateRepository(IVectorRepository):
         )
 
     def create_documents(self, documents: List[ChunkModel]) -> List[str]:
-        logger.info("Creating documents in Weaviate", context={"num_documents": len(documents)})
+        logger.debug("Creating documents in Weaviate", context={"num_documents": len(documents)})
 
         try:
             texts = [doc.content for doc in documents]
-            meta_datas = [doc.model_dump(exclude={"content", "id"}) for doc in documents]
             ids = [doc.id for doc in documents]
-
-            logger.debug("Prepared data for Weaviate", context={
-                "texts": texts,
-                "meta_datas": meta_datas,
-                "ids": ids
-            })
+            
+            # Prepare metadata with explicit type conversions for Weaviate stability
+            import json
+            from datetime import datetime
+            
+            meta_datas = []
+            for doc in documents:
+                meta = doc.model_dump(exclude={"content", "id", "score"})
+                
+                # Convert UUIDs to strings
+                for uuid_key in ["job_id", "content_source_id", "subject_id"]:
+                    if meta.get(uuid_key):
+                        meta[uuid_key] = str(meta[uuid_key])
+                
+                # Convert datetime to ISO string
+                if isinstance(meta.get("created_at"), datetime):
+                    meta["created_at"] = meta["created_at"].isoformat()
+                
+                # Serialize 'extra' dict to a JSON string if it exists
+                if "extra" in meta:
+                    meta["extra_json"] = json.dumps(meta.pop("extra"))
+                
+                meta_datas.append(meta)
 
             if not all(isinstance(text, str) for text in texts):
                 raise ValueError("All 'texts' must be strings.")
@@ -57,7 +72,7 @@ class ChunkWeaviateRepository(IVectorRepository):
             with self.vector_store as vector_store:
                 created_ids = vector_store.add_texts(texts=texts, metadatas=meta_datas, ids=ids)
 
-            logger.info("Created documents in Weaviate", context={"num_documents": len(documents),
+            logger.debug("Created documents in Weaviate", context={"num_documents": len(documents),
                                                                   "created_ids_count": len(
                                                                       created_ids) if created_ids is not None else 0})
             return created_ids if created_ids is not None else []
@@ -68,7 +83,7 @@ class ChunkWeaviateRepository(IVectorRepository):
             raise e
 
     def retriever(self, query: str, top_kn: int = 5, filters: Optional[Filters] = None) -> List[ChunkModel]:
-        logger.info("Retrieving", context={
+        logger.debug("Retrieving with scores", context={
             "filters": filters,
             "query": query,
             "top_kn": top_kn
@@ -76,25 +91,40 @@ class ChunkWeaviateRepository(IVectorRepository):
 
         try:
             with self.vector_store as vector_store:
-                retriever = vector_store.as_retriever(
-                    search_kwargs={
-                        "k": top_kn,
-                        "filters": filters
-                    }
+                docs_with_scores = vector_store.similarity_search_with_score(
+                    query,
+                    k=top_kn,
+                    filters=filters
                 )
-                docs: List[Document] = retriever.invoke(query)
 
                 mapper = ChunkMapper()
-                models: List[ChunkModel] = [mapper.document_to_model(doc) for doc in docs]
+                all_models: List[ChunkModel] = []
 
-                logger.info("Retrieved documents", context={"query": query, "results": len(models)})
+                for doc, score in docs_with_scores:
+                    model = mapper.document_to_model(doc)
+                    model.score = score
+                    all_models.append(model)
+
+                seen = set()
+                models = []
+                for m in all_models:
+                    content_preview = (m.content or "")[:500].strip()
+                    source_id = str(m.external_source or "")
+                    key = (content_preview, source_id)
+                    
+                    if key not in seen:
+                        seen.add(key)
+                        models.append(m)
+
+                logger.debug("Retrieved documents with scores",
+                            context={"query": query, "total_found": len(all_models), "unique_results": len(models)})
                 return models
         except Exception as e:
             logger.error("Error retrieving documents", context={"query": query, "error": str(e)})
             raise e
 
     def delete(self, filters: Optional[Filters]) -> int:
-        logger.info("Deleting documents", context={"filters": filters})
+        logger.debug("Deleting documents", context={"filters": filters})
         try:
             with self._weaviate_client as client:
                 collection = client.collections.get(self._collection_name)
@@ -102,7 +132,7 @@ class ChunkWeaviateRepository(IVectorRepository):
 
                 deleted = result.matches if result is not None else 0
 
-                logger.info("Deleted documents", context={"filters": filters, "deleted": deleted})
+                logger.debug("Deleted documents", context={"filters": filters, "deleted": deleted})
                 return deleted
         except Exception as e:
             logger.error("Error deleting documents",
@@ -110,7 +140,7 @@ class ChunkWeaviateRepository(IVectorRepository):
             raise e
 
     def list_chunks(self, filters: Optional[Any], limit: int = 1000) -> List[ChunkModel]:
-        logger.info("Listing chunks", context={"filters": filters, "limit": limit})
+        logger.debug("Listing chunks", context={"filters": filters, "limit": limit})
 
         try:
             with self._weaviate_client as client:
@@ -139,7 +169,7 @@ class ChunkWeaviateRepository(IVectorRepository):
                     )
                     chunks.append(chunk_model)
 
-                logger.info("Listed chunks", context={"filters": filters, "num_chunks": len(chunks)})
+                logger.debug("Listed chunks", context={"filters": filters, "num_chunks": len(chunks)})
                 return chunks
 
         except Exception as e:

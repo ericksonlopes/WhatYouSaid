@@ -105,5 +105,5 @@ def test_sql_repositories_and_services():
 
     lst = chunk_service.list_by_content_source(cs_entity.id)
     assert isinstance(lst, list)
-    # content for chunk index rows is stored in the vector store; SQL mapper leaves content as None
-    assert all(c.content is None for c in lst)
+    assert len(lst) == 1
+    assert lst[0].content == "hello"

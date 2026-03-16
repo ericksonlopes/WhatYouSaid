@@ -44,7 +44,7 @@ class YoutubeDataProcessService:
             "token_overlap": tokens_overlap,
             "video_id": video_id
         }
-        logger.info("Starting transcript splitting into windows...", context=context)
+        logger.debug("Starting transcript splitting into windows...", context=context)
 
         transcript: FetchedTranscript = self.yt_extractor.extract_transcript()
 
@@ -74,7 +74,7 @@ class YoutubeDataProcessService:
         windows = math.ceil(total_duration / step)
         documents: List[Document] = []
 
-        logger.info("Splitting transcript by time windows",
+        logger.debug("Splitting transcript by time windows",
                     context={**context, "total_duration": total_duration, "windows": windows})
         for i in range(windows):
             start = i * step
@@ -92,7 +92,7 @@ class YoutubeDataProcessService:
                     self._create_document(window_text, start, end, self._get_video_id(transcript))
                 )
 
-        logger.info(f"Transcript split into {len(documents)} windows.",
+        logger.debug(f"Transcript split into {len(documents)} windows.",
                     context={**context, "windows_created": len(documents)})
         return documents
 
@@ -111,7 +111,7 @@ class YoutubeDataProcessService:
 
         token_ids, token_meta = self._tokenize_transcript(transcript, tokenizer, context)
         documents = self._create_token_chunks(token_ids, token_meta, tokens_per_chunk, step, transcript, context)
-        logger.info(f"Transcript split into {len(documents)} token windows.",
+        logger.debug(f"Transcript split into {len(documents)} token windows.",
                     context={**context, "token_windows_created": len(documents)})
         return documents
 
@@ -126,7 +126,7 @@ class YoutubeDataProcessService:
             except TypeError:
                 return tokenizer.encode(txt)
 
-        logger.info("Tokenizing transcript", context={**context, "transcript_length": len(transcript)})
+        logger.debug("Tokenizing transcript", context={**context, "transcript_length": len(transcript)})
         for idx, snippet in enumerate(transcript):
             text = self._get_text(snippet)
             start_time = self._get_start(snippet)
@@ -142,7 +142,7 @@ class YoutubeDataProcessService:
             for t_id in ids:
                 token_ids.append(t_id)
                 token_meta.append({"start": start_time, "end": end_time, "snippet_index": idx})
-        logger.info("Tokenization complete", context={**context, "total_tokens": len(token_ids)})
+        logger.debug("Tokenization complete", context={**context, "total_tokens": len(token_ids)})
         return token_ids, token_meta
 
     def _create_token_chunks(self, token_ids: List[int], token_meta: List[Dict], tokens_per_chunk: int, step: int,
@@ -159,7 +159,7 @@ class YoutubeDataProcessService:
             except AttributeError:
                 return str(_ids)
 
-        logger.info("Creating token chunks",
+        logger.debug("Creating token chunks",
                     context={**context, "total_tokens": n, "tokens_per_chunk": tokens_per_chunk, "step": step})
         while i < n:
             chunk_ids = token_ids[i: i + tokens_per_chunk]
@@ -189,7 +189,7 @@ class YoutubeDataProcessService:
                 )
             )
             i += step
-        logger.info("Token chunk creation complete", context={**context, "chunks_created": len(documents)})
+        logger.debug("Token chunk creation complete", context={**context, "chunks_created": len(documents)})
         return documents
 
     @classmethod
@@ -211,13 +211,29 @@ class YoutubeDataProcessService:
     def _get_video_id(cls, transcript) -> str | None:
         return getattr(transcript, "video_id", None)
 
-    @classmethod
-    def _create_document(cls, text_segments: List[str], start: float, end: float, video_id: Optional[str]) -> Document:
+    def _create_document(self, text_segments: List[str], start: float, end: float, video_id: Optional[str]) -> Document:
+        content = " ".join(text_segments)
+        
+        # Calculate tokens if tokenizer is available
+        token_count = None
+        tokenizer = getattr(self.model_loader_service.model, "tokenizer", None)
+        if tokenizer:
+            try:
+                tokens = tokenizer.encode(content, add_special_tokens=False)
+                token_count = len(tokens)
+            except Exception:
+                try:
+                    tokens = tokenizer.encode(content)
+                    token_count = len(tokens)
+                except Exception:
+                    pass
+
         return Document(
-            page_content=" ".join(text_segments),
+            page_content=content,
             metadata={
                 "window_start": start,
                 "window_end": end,
                 "video_id": video_id,
+                "token_count": token_count,
             },
         )
