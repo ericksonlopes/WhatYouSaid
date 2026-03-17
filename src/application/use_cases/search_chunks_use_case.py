@@ -40,7 +40,6 @@ class SearchChunksUseCase:
         if subject_id and subject_name:
             raise ValueError("Provide only one of subject_id or subject_name")
 
-
         filters: Optional[Any] = None
         # Resolve subject_name to ID if provided
         if subject_name:

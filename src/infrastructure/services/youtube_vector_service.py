@@ -51,7 +51,7 @@ class YouTubeVectorService:
             if isinstance(filters, dict):
                 combined_filters.update(filters)
             else:
-                # If it's already a specialized filter object from another repo, 
+                # If it's already a specialized filter object from another repo,
                 # we just pass it through, but we prefer dicts now.
                 combined_filters = filters
 

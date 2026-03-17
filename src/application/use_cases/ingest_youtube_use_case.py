@@ -554,7 +554,10 @@ class IngestYoutubeUseCase:
         if ingestion:
             logger.debug(
                 "Ingestion job created",
-                context={"job_id": str(ingestion.id), "content_source_id": str(source_id)},
+                context={
+                    "job_id": str(ingestion.id),
+                    "content_source_id": str(source_id),
+                },
             )
         return ingestion
 

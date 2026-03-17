@@ -1,8 +1,10 @@
 from uuid import uuid4, UUID
 import pytest
-from src.infrastructure.repositories.sql.content_source_repository import ContentSourceSQLRepository
+from src.infrastructure.repositories.sql.content_source_repository import (
+    ContentSourceSQLRepository,
+)
 from src.domain.entities.enums.source_type_enum_entity import SourceType
-from src.domain.entities.enums.content_source_status_enum import ContentSourceStatus
+
 
 @pytest.mark.ContentSourceRepository
 @pytest.mark.usefixtures("sqlite_memory")
@@ -17,10 +19,10 @@ class TestContentSourceSQLRepository:
             source_type=SourceType.YOUTUBE.value,
             external_source="ext-1",
             title="Title",
-            language="en"
+            language="en",
         )
         assert isinstance(cs_id, UUID)
-        
+
         cs = self.repo.get_by_id(cs_id)
         assert cs.subject_id == subject_id
         assert cs.external_source == "ext-1"
@@ -28,7 +30,9 @@ class TestContentSourceSQLRepository:
 
     def test_create_error(self):
         with pytest.raises(Exception):
-            self.repo.create(subject_id="invalid", source_type=None, external_source=None)
+            self.repo.create(
+                subject_id="invalid", source_type=None, external_source=None
+            )
 
     def test_get_by_id_error(self):
         # We need to trigger the exception in get_by_id to hit the logger.error line
@@ -46,7 +50,7 @@ class TestContentSourceSQLRepository:
         subject_id = uuid4()
         self.repo.create(subject_id, SourceType.YOUTUBE.value, "ext-1")
         self.repo.create(subject_id, SourceType.YOUTUBE.value, "ext-2")
-        
+
         results = self.repo.list_by_subject(subject_id, limit=1)
         assert len(results) == 1
 
@@ -63,7 +67,7 @@ class TestContentSourceSQLRepository:
     def test_update_status(self):
         cs_id = self.repo.create(uuid4(), SourceType.YOUTUBE.value, "ext-1")
         self.repo.update_status(cs_id, "processing")
-        
+
         cs = self.repo.get_by_id(cs_id)
         assert cs.processing_status == "processing"
 
@@ -73,7 +77,7 @@ class TestContentSourceSQLRepository:
     def test_update_title(self):
         cs_id = self.repo.create(uuid4(), SourceType.YOUTUBE.value, "ext-1")
         self.repo.update_title(cs_id, "New Title")
-        
+
         cs = self.repo.get_by_id(cs_id)
         assert cs.title == "New Title"
 
@@ -83,7 +87,7 @@ class TestContentSourceSQLRepository:
     def test_finish_ingestion(self):
         cs_id = self.repo.create(uuid4(), SourceType.YOUTUBE.value, "ext-1")
         self.repo.finish_ingestion(cs_id, "model-x", 128, 5)
-        
+
         cs = self.repo.get_by_id(cs_id)
         assert cs.processing_status == "done"
         assert cs.embedding_model == "model-x"

@@ -17,10 +17,11 @@ from src.presentation.api.dependencies import (
     get_chunk_index_service,
     get_youtube_vector_service,
     get_search_chunks_use_case,
-    get_ingest_youtube_use_case
+    get_ingest_youtube_use_case,
 )
 from src.config.settings import Settings
 from src.domain.entities.enums.vector_store_type_enum import VectorStoreType
+
 
 @pytest.mark.Dependencies
 class TestDependencies:
@@ -37,7 +38,9 @@ class TestDependencies:
     def test_get_model_loader(self):
         settings = MagicMock()
         settings.model_embedding.name = "test-model"
-        with patch("src.infrastructure.services.model_loader_service.SentenceTransformer"):
+        with patch(
+            "src.infrastructure.services.model_loader_service.SentenceTransformer"
+        ):
             loader = get_model_loader(settings)
             assert loader is not None
 
@@ -48,7 +51,9 @@ class TestDependencies:
 
     def test_get_weaviate_client(self):
         settings = MagicMock()
-        with patch("src.infrastructure.repositories.vector.weaviate.weaviate_client.WeaviateClient") as _:
+        with patch(
+            "src.infrastructure.repositories.vector.weaviate.weaviate_client.WeaviateClient"
+        ) as _:
             client = get_weaviate_client(settings)
             assert client is not None
 
@@ -57,9 +62,15 @@ class TestDependencies:
         settings.vector.store_type = VectorStoreType.WEAVIATE
         settings.vector.collection_name_chunks = "test_collection"
         loader = MagicMock()
-        
-        with patch("src.infrastructure.repositories.vector.weaviate.weaviate_client.WeaviateClient"), \
-             patch("src.infrastructure.repositories.vector.weaviate.chunk_repository.ChunkWeaviateRepository"):
+
+        with (
+            patch(
+                "src.infrastructure.repositories.vector.weaviate.weaviate_client.WeaviateClient"
+            ),
+            patch(
+                "src.infrastructure.repositories.vector.weaviate.chunk_repository.ChunkWeaviateRepository"
+            ),
+        ):
             repo = get_vector_repository(settings, loader)
             assert repo is not None
 
@@ -68,8 +79,10 @@ class TestDependencies:
         settings.vector.store_type = VectorStoreType.FAISS
         settings.vector.vector_index_path = "test_path"
         loader = MagicMock()
-        
-        with patch("src.infrastructure.repositories.vector.faiss.chunk_repository.ChunkFAISSRepository"):
+
+        with patch(
+            "src.infrastructure.repositories.vector.faiss.chunk_repository.ChunkFAISSRepository"
+        ):
             repo = get_vector_repository(settings, loader)
             assert repo is not None
 
@@ -112,7 +125,7 @@ class TestDependencies:
             "embed_svc": MagicMock(),
             "chunk_svc": MagicMock(),
             "yt_vector_svc": MagicMock(),
-            "settings": MagicMock()
+            "settings": MagicMock(),
         }
         kwargs["settings"].vector.store_type = VectorStoreType.FAISS
         uc = get_ingest_youtube_use_case(**kwargs)

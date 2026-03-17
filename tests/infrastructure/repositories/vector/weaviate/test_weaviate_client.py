@@ -27,10 +27,10 @@ class FakeClient:
 
     def close(self):
         self.closed = True
-    
+
     def __enter__(self):
         return self
-    
+
     def __exit__(self, *args):
         self.close()
 
@@ -68,7 +68,7 @@ class TestWeaviateClient:
         wc = WeaviateClient(cfg, env="testing")
         with wc as client:
             assert client.is_ready()
-        
+
         # After context exit, internal client should be cleared
         assert wc._client is None
         assert fake.closed is True

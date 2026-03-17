@@ -10,9 +10,6 @@ if TYPE_CHECKING:
     from src.infrastructure.repositories.vector.weaviate.weaviate_client import (
         WeaviateClient,
     )
-    from src.infrastructure.repositories.vector.weaviate.weaviate_vector import (
-        WeaviateVector,
-    )
 
 from src.infrastructure.services.embedding_service import EmbeddingService
 
@@ -22,7 +19,7 @@ logger = Logger()
 class ChunkWeaviateRepository(IVectorRepository):
     def __init__(
         self,
-            weaviate_client: 'WeaviateClient',
+        weaviate_client: "WeaviateClient",
         embedding_service: EmbeddingService,
         collection_name: str,
         text_key: str = "content",
@@ -30,6 +27,7 @@ class ChunkWeaviateRepository(IVectorRepository):
         from src.infrastructure.repositories.vector.weaviate.weaviate_vector import (
             WeaviateVector,
         )
+
         self._weaviate_client = weaviate_client
         self._collection_name = collection_name
         self._embedding_service = embedding_service
@@ -116,7 +114,7 @@ class ChunkWeaviateRepository(IVectorRepository):
             raise e
 
     def retriever(
-            self, query: str, top_kn: int = 5, filters: Optional[Any] = None
+        self, query: str, top_kn: int = 5, filters: Optional[Any] = None
     ) -> List[ChunkModel]:
         # Deferred import for optional dependency
         from weaviate.collections.classes.filters import Filter
@@ -136,7 +134,7 @@ class ChunkWeaviateRepository(IVectorRepository):
                     weaviate_filters = weaviate_filters_list[0]
                 else:
                     weaviate_filters = Filter.all_of(weaviate_filters_list)
-        
+
         logger.debug(
             "Retrieving with scores",
             context={"filters": weaviate_filters, "query": query, "top_kn": top_kn},

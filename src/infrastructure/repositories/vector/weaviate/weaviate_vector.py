@@ -1,5 +1,3 @@
-
-
 from src.config.logger import Logger
 from src.infrastructure.repositories.vector.weaviate.weaviate_client import (
     WeaviateClient,

@@ -15,10 +15,10 @@ logger = Logger()
 
 class ChunkFAISSRepository(IVectorRepository):
     def __init__(
-            self,
-            embedding_service: EmbeddingService,
-            index_path: str,
-            index_name: str = "index",
+        self,
+        embedding_service: EmbeddingService,
+        index_path: str,
+        index_name: str = "index",
     ):
         self._embedding_service = embedding_service
         self._index_path = index_path
@@ -29,6 +29,7 @@ class ChunkFAISSRepository(IVectorRepository):
     def _load_or_create(self):
         """Load the FAISS index from disk or create a new one if it doesn't exist."""
         from langchain_community.vectorstores import FAISS
+
         if os.path.exists(os.path.join(self._index_path, f"{self._index_name}.faiss")):
             logger.debug(f"Loading existing FAISS index from {self._index_path}")
             try:
@@ -42,7 +43,9 @@ class ChunkFAISSRepository(IVectorRepository):
                 logger.error(f"Error loading FAISS index: {e}")
                 self._vector_store = None
         else:
-            logger.debug("FAISS index not found, it will be created upon first document addition")
+            logger.debug(
+                "FAISS index not found, it will be created upon first document addition"
+            )
 
     def _save(self):
         """Save the FAISS index to disk."""
@@ -58,11 +61,18 @@ class ChunkFAISSRepository(IVectorRepository):
         )
 
         try:
-            texts = [doc.content for doc in documents]
-            ids = [str(doc.id) for doc in documents]
+            texts: List[str] = [
+                doc.content for doc in documents if doc.content is not None
+            ]
+            if not texts:
+                return []
+
+            # Filter documents to match texts
+            valid_docs = [doc for doc in documents if doc.content is not None]
+            ids = [str(doc.id) for doc in valid_docs]
 
             metadatas = []
-            for doc in documents:
+            for doc in valid_docs:
                 meta = doc.model_dump(exclude={"content", "id", "score"})
 
                 # Convert UUIDs and datetimes to string for better compatibility
@@ -80,6 +90,7 @@ class ChunkFAISSRepository(IVectorRepository):
 
             if not self._vector_store:
                 from langchain_community.vectorstores import FAISS
+
                 self._vector_store = FAISS.from_texts(
                     texts=texts,
                     embedding=self._embedding_service,
@@ -104,7 +115,7 @@ class ChunkFAISSRepository(IVectorRepository):
             raise e
 
     def retriever(
-            self, query: str, top_kn: int = 5, filters: Optional[Any] = None
+        self, query: str, top_kn: int = 5, filters: Optional[Any] = None
     ) -> List[ChunkModel]:
         logger.debug(
             "Retrieving from FAISS",
@@ -117,6 +128,7 @@ class ChunkFAISSRepository(IVectorRepository):
         try:
             filter_callable = None
             if isinstance(filters, dict):
+
                 def filter_func(metadata: dict) -> bool:
                     for k, v in filters.items():
                         if str(metadata.get(k)) != str(v):
@@ -140,8 +152,7 @@ class ChunkFAISSRepository(IVectorRepository):
             return models
         except Exception as e:
             logger.error(
-                "Error retrieving from FAISS",
-                context={"query": query, "error": str(e)}
+                "Error retrieving from FAISS", context={"query": query, "error": str(e)}
             )
             raise e
 
@@ -151,9 +162,10 @@ class ChunkFAISSRepository(IVectorRepository):
             return 0
 
         try:
-
             if not filters:
-                logger.warning("Delete called without filters in FAISS, skipping for safety.")
+                logger.warning(
+                    "Delete called without filters in FAISS, skipping for safety."
+                )
                 return 0
 
             # If it's a simple ID filter
@@ -188,16 +200,18 @@ class ChunkFAISSRepository(IVectorRepository):
             raise e
 
     def list_chunks(
-            self, filters: Optional[Any], limit: int = 1000
+        self, filters: Optional[Any], limit: int = 1000
     ) -> List[ChunkModel]:
-        logger.debug("Listing chunks from FAISS", context={"filters": filters, "limit": limit})
+        logger.debug(
+            "Listing chunks from FAISS", context={"filters": filters, "limit": limit}
+        )
 
         if not self._vector_store:
             return []
 
         try:
             all_docs = self._vector_store.docstore._dict
-            chunks = []
+            chunks: List[ChunkModel] = []
             mapper = ChunkMapper()
 
             for doc_id, doc in all_docs.items():
@@ -220,7 +234,7 @@ class ChunkFAISSRepository(IVectorRepository):
         except Exception as e:
             logger.error(
                 "Error listing chunks from FAISS",
-                context={"filters": filters, "error": str(e)}
+                context={"filters": filters, "error": str(e)},
             )
             raise e
 

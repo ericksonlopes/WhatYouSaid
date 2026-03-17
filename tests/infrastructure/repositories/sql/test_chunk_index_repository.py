@@ -1,10 +1,17 @@
 from uuid import uuid4, UUID
 import pytest
-from src.infrastructure.repositories.sql.chunk_index_repository import ChunkIndexSQLRepository
-from src.infrastructure.repositories.sql.content_source_repository import ContentSourceSQLRepository
+from src.infrastructure.repositories.sql.chunk_index_repository import (
+    ChunkIndexSQLRepository,
+)
+from src.infrastructure.repositories.sql.content_source_repository import (
+    ContentSourceSQLRepository,
+)
 from src.domain.entities.enums.source_type_enum_entity import SourceType
 
-from src.infrastructure.repositories.sql.ingestion_job_repository import IngestionJobSQLRepository
+from src.infrastructure.repositories.sql.ingestion_job_repository import (
+    IngestionJobSQLRepository,
+)
+
 
 @pytest.mark.ChunkIndexRepository
 @pytest.mark.usefixtures("sqlite_memory")
@@ -22,7 +29,7 @@ class TestChunkIndexSQLRepository:
             source_type=SourceType.YOUTUBE.value,
             external_source=f"ext-{uuid4()}",
             title="Test Source",
-            language="en"
+            language="en",
         )
 
     def _create_job(self, cs_id):
@@ -30,7 +37,7 @@ class TestChunkIndexSQLRepository:
             content_source_id=cs_id,
             status="pending",
             embedding_model="test-model",
-            pipeline_version="1.0"
+            pipeline_version="1.0",
         )
 
     def test_create_chunks_success(self):
@@ -43,7 +50,7 @@ class TestChunkIndexSQLRepository:
                 "job_id": job_id,
                 "chunk_id": "chunk-1",
                 "content": "Hello world",
-                "language": "en"
+                "language": "en",
             },
             {
                 "id": uuid4(),
@@ -51,8 +58,8 @@ class TestChunkIndexSQLRepository:
                 "job_id": job_id,
                 "chunk_id": "chunk-2",
                 "content": "Python is great",
-                "language": "en"
-            }
+                "language": "en",
+            },
         ]
         ids = self.repo.create_chunks(chunks)
         assert len(ids) == 2
@@ -66,14 +73,18 @@ class TestChunkIndexSQLRepository:
     def test_list_by_content_source(self):
         cs_id = self._create_source()
         job_id = self._create_job(cs_id)
-        self.repo.create_chunks([{
-            "id": uuid4(),
-            "content_source_id": cs_id,
-            "job_id": job_id,
-            "chunk_id": "c1",
-            "content": "c1 content"
-        }])
-        
+        self.repo.create_chunks(
+            [
+                {
+                    "id": uuid4(),
+                    "content_source_id": cs_id,
+                    "job_id": job_id,
+                    "chunk_id": "c1",
+                    "content": "c1 content",
+                }
+            ]
+        )
+
         results = self.repo.list_by_content_source(cs_id, limit=10, offset=0)
         assert len(results) == 1
         assert results[0].chunk_id == "c1"
@@ -81,15 +92,29 @@ class TestChunkIndexSQLRepository:
     def test_list_chunks_with_filters(self):
         cs_id = self._create_source()
         job_id = self._create_job(cs_id)
-        self.repo.create_chunks([
-            {"id": uuid4(), "content_source_id": cs_id, "job_id": job_id, "chunk_id": "c1", "content": "apple"},
-            {"id": uuid4(), "content_source_id": cs_id, "job_id": job_id, "chunk_id": "c2", "content": "banana"}
-        ])
-        
+        self.repo.create_chunks(
+            [
+                {
+                    "id": uuid4(),
+                    "content_source_id": cs_id,
+                    "job_id": job_id,
+                    "chunk_id": "c1",
+                    "content": "apple",
+                },
+                {
+                    "id": uuid4(),
+                    "content_source_id": cs_id,
+                    "job_id": job_id,
+                    "chunk_id": "c2",
+                    "content": "banana",
+                },
+            ]
+        )
+
         # Search by query
         res = self.repo.list_chunks(search_query="apple")
         assert len(res) == 1
-        
+
         # Search by source_id
         res = self.repo.list_chunks(source_id=cs_id)
         assert len(res) == 2
@@ -97,13 +122,33 @@ class TestChunkIndexSQLRepository:
     def test_count_by_content_source(self):
         cs_id = self._create_source()
         job_id = self._create_job(cs_id)
-        self.repo.create_chunks([{"id": uuid4(), "content_source_id": cs_id, "job_id": job_id, "chunk_id": "c1", "content": "c1"}])
+        self.repo.create_chunks(
+            [
+                {
+                    "id": uuid4(),
+                    "content_source_id": cs_id,
+                    "job_id": job_id,
+                    "chunk_id": "c1",
+                    "content": "c1",
+                }
+            ]
+        )
         assert self.repo.count_by_content_source(cs_id) == 1
 
     def test_delete_by_content_source(self):
         cs_id = self._create_source()
         job_id = self._create_job(cs_id)
-        self.repo.create_chunks([{"id": uuid4(), "content_source_id": cs_id, "job_id": job_id, "chunk_id": "c1", "content": "c1"}])
+        self.repo.create_chunks(
+            [
+                {
+                    "id": uuid4(),
+                    "content_source_id": cs_id,
+                    "job_id": job_id,
+                    "chunk_id": "c1",
+                    "content": "c1",
+                }
+            ]
+        )
         count = self.repo.delete_by_content_source(cs_id)
         assert count == 1
         assert self.repo.count_by_content_source(cs_id) == 0
@@ -112,12 +157,22 @@ class TestChunkIndexSQLRepository:
         cs_id = self._create_source()
         job_id = self._create_job(cs_id)
         c_id = uuid4()
-        self.repo.create_chunks([{"id": c_id, "content_source_id": cs_id, "job_id": job_id, "chunk_id": "special-chunk", "content": "content"}])
-        
+        self.repo.create_chunks(
+            [
+                {
+                    "id": c_id,
+                    "content_source_id": cs_id,
+                    "job_id": job_id,
+                    "chunk_id": "special-chunk",
+                    "content": "content",
+                }
+            ]
+        )
+
         # Search by chunk_id pattern
         res = self.repo.search(query="special")
         assert len(res) == 1
-        
+
         # Search with filters - using id which is unambiguous or property of ChunkIndexModel
         res = self.repo.search(query=None, filters={"id": c_id})
         assert len(res) == 1
@@ -126,11 +181,21 @@ class TestChunkIndexSQLRepository:
         cs_id = self._create_source()
         job_id = self._create_job(cs_id)
         c_id = uuid4()
-        self.repo.create_chunks([{"id": c_id, "content_source_id": cs_id, "job_id": job_id, "chunk_id": "c1", "content": "old"}])
-        
+        self.repo.create_chunks(
+            [
+                {
+                    "id": c_id,
+                    "content_source_id": cs_id,
+                    "job_id": job_id,
+                    "chunk_id": "c1",
+                    "content": "old",
+                }
+            ]
+        )
+
         success = self.repo.update_chunk(c_id, "new content")
         assert success is True
-        
+
         updated = self.repo.get_by_id(c_id)
         assert updated.content == "new content"
         assert updated.chars == len("new content")
@@ -142,8 +207,18 @@ class TestChunkIndexSQLRepository:
         cs_id = self._create_source()
         job_id = self._create_job(cs_id)
         c_id = uuid4()
-        self.repo.create_chunks([{"id": c_id, "content_source_id": cs_id, "job_id": job_id, "chunk_id": "c1", "content": "c1"}])
-        
+        self.repo.create_chunks(
+            [
+                {
+                    "id": c_id,
+                    "content_source_id": cs_id,
+                    "job_id": job_id,
+                    "chunk_id": "c1",
+                    "content": "c1",
+                }
+            ]
+        )
+
         assert self.repo.delete_chunk(c_id) is True
         assert self.repo.get_by_id(c_id) is None
 
