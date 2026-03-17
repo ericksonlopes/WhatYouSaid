@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, FileText, Clock, PlayCircle } from 'lucide-react';
-import { useAppContext } from '../store/AppContext';
-import { ChatMessage, Citation } from '../types';
+import React, {useEffect, useRef, useState} from 'react';
+import {Bot, PlayCircle, Send, User} from 'lucide-react';
+import {useAppContext} from '../store/AppContext';
+import {ChatMessage, Citation} from '../types';
+import {api} from "@/src/services/api.ts";
 
 // --- Mock Data ---
 const MOCK_CITATIONS: Citation[] = [

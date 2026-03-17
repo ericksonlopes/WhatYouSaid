@@ -1,8 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Edit2, Trash2, Database, ChevronLeft, ChevronRight, Save, X, Loader2, FileText, Hash, Info, Video } from 'lucide-react';
-import { useAppContext } from '../store/AppContext';
-import { motion, AnimatePresence } from 'motion/react';
-import { api } from '../services/api';
+import React, {useEffect, useState} from 'react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Database,
+  Edit2,
+  FileText,
+  Hash,
+  Info,
+  Loader2,
+  Save,
+  Search,
+  Trash2,
+  Video,
+  X
+} from 'lucide-react';
+import {useAppContext} from '../store/AppContext';
+import {AnimatePresence, motion} from 'motion/react';
+import {api} from '../services/api';
 
 export function ChunksViewer() {
   const { subjects, selectedSubjects, selectedSourceIdForDb, setSelectedSourceIdForDb, sources, addToast, setCurrentView } = useAppContext();
