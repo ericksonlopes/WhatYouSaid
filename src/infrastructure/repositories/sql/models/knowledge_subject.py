@@ -16,6 +16,7 @@ class KnowledgeSubjectModel(Base):
     external_ref = Column(Text, nullable=True)
     name = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
+    icon = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships (string-based names avoid import-order issues)

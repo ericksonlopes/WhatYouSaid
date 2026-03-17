@@ -6,6 +6,17 @@ __pycache__/
 # C extensions
 *.so
 
+# frontend
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+
 # Distribution / packaging
 .Python
 build/

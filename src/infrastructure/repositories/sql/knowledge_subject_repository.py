@@ -12,15 +12,17 @@ logger = Logger()
 class KnowledgeSubjectSQLRepository:
     """Repository helpers for knowledge_subjects table."""
 
-    def create_subject(self, name: str, external_ref: Optional[str] = None, description: Optional[str] = None) -> UUID:
+    def create_subject(self, name: str, external_ref: Optional[str] = None, 
+                       description: Optional[str] = None, icon: Optional[str] = None) -> UUID:
         with Connector() as session:
             try:
                 logger.debug("Creating KnowledgeSubject",
-                            context={"name": name, "external_ref": external_ref, "description": description})
+                            context={"name": name, "external_ref": external_ref, "description": description, "icon": icon})
                 ks = KnowledgeSubjectModel(
                     external_ref=external_ref,
                     name=name,
                     description=description,
+                    icon=icon
                 )
                 session.add(ks)
                 session.commit()

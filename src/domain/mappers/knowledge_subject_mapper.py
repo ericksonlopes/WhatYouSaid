@@ -18,6 +18,7 @@ class KnowledgeSubjectMapper:
             external_ref=cast(Optional[str], getattr(model, "external_ref", None)),
             name=cast(str, getattr(model, "name", "")),
             description=cast(Optional[str], getattr(model, "description", None)),
+            icon=cast(Optional[str], getattr(model, "icon", None)),
             created_at=cast(datetime, getattr(model, "created_at")),
         )
 

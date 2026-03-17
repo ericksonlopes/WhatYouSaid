@@ -61,6 +61,10 @@ class ContentSourceService:
         models = self._repo.list_by_subject(subject_id, limit=limit, offset=offset)
         return ContentSourceMapper.model_list_to_entities(models)
 
+    def list_all(self, limit: Optional[int] = None, offset: Optional[int] = None) -> List[ContentSourceEntity]:
+        models = self._repo.list(limit=limit, offset=offset)
+        return ContentSourceMapper.model_list_to_entities(models)
+
     def count_by_subject(self, subject_id: UUID) -> int:
         return self._repo.count_by_subject(subject_id)
 

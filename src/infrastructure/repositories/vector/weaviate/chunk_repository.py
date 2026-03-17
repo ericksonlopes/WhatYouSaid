@@ -75,7 +75,12 @@ class ChunkWeaviateRepository(IVectorRepository):
             logger.debug("Created documents in Weaviate", context={"num_documents": len(documents),
                                                                   "created_ids_count": len(
                                                                       created_ids) if created_ids is not None else 0})
-            return created_ids if created_ids is not None else []
+            
+            # Ensure created_ids is a list of strings (Langchain-Weaviate might return UUID objects)
+            if created_ids:
+                return [str(id_val) for id_val in created_ids]
+            
+            return []
 
         except Exception as e:
             logger.error("Error creating documents in Weaviate",

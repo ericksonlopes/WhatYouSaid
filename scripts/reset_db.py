@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Adiciona a raiz do projeto ao sys.path para importar os módulos internos
@@ -7,18 +7,26 @@ root = Path(__file__).resolve().parents[1]
 if str(root) not in sys.path:
     sys.path.append(str(root))
 
-from src.infrastructure.repositories.sql.connector import engine, Base
-from src.config.settings import settings
-import weaviate
+from src.config.settings import settings # noqa: E402
+from src.infrastructure.repositories.sql.connector import Base, engine  # noqa: E402
+
 
 def reset_sql():
     print("--- Cleaning SQL Database ---")
     try:
         # Import models to ensure they are registered with Base
-        from src.infrastructure.repositories.sql.models.knowledge_subject import KnowledgeSubjectModel
-        from src.infrastructure.repositories.sql.models.content_source import ContentSourceModel
-        from src.infrastructure.repositories.sql.models.ingestion_job import IngestionJobModel
-        from src.infrastructure.repositories.sql.models.chunk_index import ChunkIndexModel
+        from src.infrastructure.repositories.sql.models.chunk_index import (
+            ChunkIndexModel,
+        )
+        from src.infrastructure.repositories.sql.models.content_source import (
+            ContentSourceModel,
+        )
+        from src.infrastructure.repositories.sql.models.ingestion_job import (
+            IngestionJobModel,
+        )
+        from src.infrastructure.repositories.sql.models.knowledge_subject import (
+            KnowledgeSubjectModel,
+        )
 
         Base.metadata.drop_all(bind=engine)
         print("Dropped all tables.")

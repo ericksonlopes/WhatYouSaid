@@ -1,8 +1,9 @@
 import re
 import uuid
 from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
-from urllib.parse import urlparse, parse_qs
+from typing import Any, Dict, List, Optional
+from urllib.parse import parse_qs, urlparse
+from uuid import UUID
 
 from langchain_core.documents import Document
 
@@ -19,9 +20,13 @@ from src.infrastructure.services.chunk_index_service import ChunkIndexService
 from src.infrastructure.services.content_source_service import ContentSourceService
 from src.infrastructure.services.embeddding_service import EmbeddingService
 from src.infrastructure.services.ingestion_job_service import IngestionJobService
-from src.infrastructure.services.knowledge_subject_service import KnowledgeSubjectService
+from src.infrastructure.services.knowledge_subject_service import (
+    KnowledgeSubjectService,
+)
 from src.infrastructure.services.model_loader_service import ModelLoaderService
-from src.infrastructure.services.youtube_data_process_service import YoutubeDataProcessService
+from src.infrastructure.services.youtube_data_process_service import (
+    YoutubeDataProcessService,
+)
 from src.infrastructure.services.youtube_vector_service import YouTubeVectorService
 
 logger = Logger()
@@ -143,7 +148,14 @@ class IngestYoutubeUseCase:
                     if current_source and current_source.processing_status not in [ContentSourceStatus.FAILED, ContentSourceStatus.DONE]:
                         self._finish_ingestion(source, result.created_chunks or 0)
 
-            logger.info("YouTube ingestion completed", context={"job_id": cmd.ingestion_job_id, "chunks": result.created_chunks})
+            skipped_count = sum(1 for r in result.video_results if r.get("skipped", False))
+            job_ids = [r.get("job_id") for r in result.video_results if r.get("job_id")]
+            logger.info("YouTube ingestion completed", context={
+                "job_ids": job_ids or cmd.ingestion_job_id,
+                "chunks": result.created_chunks,
+                "total_videos": len(result.video_results),
+                "skipped": skipped_count,
+            })
             return result
 
         except Exception as e:
@@ -172,8 +184,31 @@ class IngestYoutubeUseCase:
         if existing and existing.processing_status == "done":
             logger.info("Source already exists and is DONE, skipping ingestion",
                         context={"source_id": str(existing.id), "external_source": video_id})
+
+            # Create a FAILED ingestion job to record the duplicate attempt
+            failed_job_id = None
+            try:
+                failed_job = self.ingestion_service.create_job(
+                    content_source_id=existing.id,
+                    status=IngestionJobStatus.STARTED,
+                    embedding_model=self.model_loader_service.model_name,
+                    pipeline_version="1.0",
+                    ingestion_type=SourceType.YOUTUBE.value,
+                )
+                self.ingestion_service.update_job(
+                    job_id=failed_job.id,
+                    status=IngestionJobStatus.FAILED,
+                    error_message="Duplicate: this content has already been ingested.",
+                    status_message=f"Skipped: {video_id} already exists",
+                )
+                failed_job_id = str(failed_job.id)
+                logger.info("Created FAILED job for duplicate attempt",
+                            context={"job_id": failed_job_id, "video_id": video_id})
+            except Exception as ej:
+                logger.error(f"Failed to create FAILED job for duplicate: {ej}")
+
             return {"video_url": video_url, "video_id": video_id, "skipped": True, "reason": "source_exists_and_done",
-                    "source_id": existing.id}
+                    "source_id": existing.id, "job_id": failed_job_id}
 
         source = existing 
         ingestion = None
@@ -223,18 +258,20 @@ class IngestYoutubeUseCase:
             if source is None:
                 source = self._create_content_source(subject, cmd, video_id, title=extracted_title)
                 # Link job to the newly created source
-                self.ingestion_service.link_job_to_source(job_id=ingestion.id, content_source_id=source.id)
+                self.ingestion_service.link_job_to_source(job_id=ingestion.id, content_source_id=source.id,
+                                                          ingestion_type=SourceType.YOUTUBE.value)
             else:
                 self.cs_service._repo.update_title(content_source_id=source.id, title=extracted_title)
                 if ingestion.content_source_id is None:
-                    self.ingestion_service.link_job_to_source(job_id=ingestion.id, content_source_id=source.id)
+                    self.ingestion_service.link_job_to_source(job_id=ingestion.id, content_source_id=source.id,
+                                                              ingestion_type=SourceType.YOUTUBE.value)
 
             self._mark_source_processing(source)
 
             # 5. Embed and Index
             self.ingestion_service.update_job(job_id=ingestion.id, status=IngestionJobStatus.PROCESSING, 
                                              status_message=f"Generating embeddings for {len(docs)} chunks...", current_step=3, total_steps=4)
-            chunks = self._build_chunk_entities(docs, source, subject, cmd)
+            chunks = self._build_chunk_entities(docs, source, subject, cmd, job_id=ingestion.id)
             self._persist_chunks(chunks)
 
             self.ingestion_service.update_job(job_id=ingestion.id, status=IngestionJobStatus.PROCESSING, 
@@ -372,13 +409,14 @@ class IngestYoutubeUseCase:
         self.ingestion_service.update_job(job_id=ingestion.id, status=IngestionJobStatus.PROCESSING)
         logger.debug("Ingestion job updated to PROCESSING", context={"job_id": str(ingestion.id)})
 
-    def _build_chunk_entities(self, docs: List[Document], source, subject, cmd: IngestYoutubeCommand) -> List[
+    def _build_chunk_entities(self, docs: List[Document], source, subject, cmd: IngestYoutubeCommand, job_id: UUID) -> \
+    List[
         ChunkEntity]:
         list_chunks: List[ChunkEntity] = []
         for doc in docs:
             chunk_entity = ChunkEntity(
                 id=uuid.uuid4(),
-                job_id=uuid.uuid4(),
+                job_id=job_id,
                 content_source_id=source.id,
                 source_type=SourceType(source.source_type),
                 external_source=source.external_source,

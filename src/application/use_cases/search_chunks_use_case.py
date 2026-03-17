@@ -1,10 +1,11 @@
 from typing import Optional, Union
 from uuid import UUID
 
-from weaviate.collections.classes.filters import _Filters as Filters, Filter
+from weaviate.collections.classes.filters import Filter
+from weaviate.collections.classes.filters import _Filters as Filters
 
-from src.config.logger import Logger
 from src.application.dtos.results.search_chunks_result import SearchChunksResult
+from src.config.logger import Logger
 from src.infrastructure.services.chunk_vector_service import ChunkVectorService
 
 logger = Logger()

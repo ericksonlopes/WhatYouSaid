@@ -22,10 +22,10 @@ class KnowledgeSubjectService:
         self._logger = logger or Logger()
 
     def create_subject(self, name: str, external_ref: Optional[str] = None,
-                       description: Optional[str] = None) -> KnowledgeSubjectEntity:
+                       description: Optional[str] = None, icon: Optional[str] = None) -> KnowledgeSubjectEntity:
         """Create a new knowledge subject and return it as a Domain Entity."""
-        self._logger.debug("Creating knowledge subject", context={"name": name, "external_ref": external_ref})
-        created_id = self._repo.create_subject(name=name, external_ref=external_ref, description=description)
+        self._logger.debug("Creating knowledge subject", context={"name": name, "external_ref": external_ref, "icon": icon})
+        created_id = self._repo.create_subject(name=name, external_ref=external_ref, description=description, icon=icon)
         model = self._repo.get_by_id(created_id)
         entity = KnowledgeSubjectMapper.model_to_entity(model)
         assert entity is not None

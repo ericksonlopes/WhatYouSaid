@@ -76,7 +76,7 @@ class IngestionJobSQLRepository:
                 session.rollback()
                 raise
 
-    def link_job_to_source(self, job_id: UUID, content_source_id: UUID) -> None:
+    def link_job_to_source(self, job_id: UUID, content_source_id: UUID, ingestion_type: Optional[str] = None) -> None:
         """Link an existing job to a content source."""
         with Connector() as session:
             try:
@@ -84,6 +84,8 @@ class IngestionJobSQLRepository:
                 job = session.get(IngestionJobModel, job_id)
                 if job:
                     job.content_source_id = content_source_id
+                    if ingestion_type:
+                        job.ingestion_type = ingestion_type
                     session.commit()
                 else:
                     logger.warning("Job not found for linking", context={"job_id": job_id})

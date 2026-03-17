@@ -35,12 +35,14 @@ class IngestionJobService:
                              status_message=status_message, current_step=current_step, total_steps=total_steps,
                              chunks_count=chunks_count)
 
-    def link_job_to_source(self, job_id: UUID, content_source_id: UUID) -> None:
+    def link_job_to_source(self, job_id: UUID, content_source_id: UUID, ingestion_type: Optional[str] = None) -> None:
         """Link an existing job to a content source."""
-        self._repo.link_job_to_source(job_id=job_id, content_source_id=content_source_id)
+        self._repo.link_job_to_source(job_id=job_id, content_source_id=content_source_id, ingestion_type=ingestion_type)
 
     def get_by_id(self, job_id: UUID) -> Optional[IngestionJobEntity]:
         model = self._repo.get_by_id(job_id)
+        if model is None:
+            return None
         return IngestionJobMapper.model_to_entity(model)
 
     def list_by_content_source(self, content_source_id: UUID) -> List[IngestionJobEntity]:

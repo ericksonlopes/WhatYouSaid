@@ -22,6 +22,7 @@ class ChunkEntity(BaseModel):
     external_source: Optional[str] = Field(default=None)
     subject_id: Optional[UUID] = Field(default=None)
 
+    chunk_id: Optional[str] = Field(default=None, description="External reference ID for the chunk")
     content: Optional[str] = Field(default=None)
     tokens_count: Optional[int] = Field(default=None)
     extra: Dict[str, Any] = Field(default_factory=dict)

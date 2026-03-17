@@ -59,7 +59,7 @@ def make_ingestion_service():
             # noop for tests
             return None
 
-        def link_job_to_source(self, job_id, content_source_id):
+        def link_job_to_source(self, job_id, content_source_id, ingestion_type=None):
             # noop for tests
             return None
 

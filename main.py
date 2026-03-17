@@ -1,38 +1,73 @@
-import sys
-import os
-from pathlib import Path
+from contextlib import asynccontextmanager
 
-# Add project root to sys.path early
-root = Path(__file__).resolve().parent
-if str(root) not in sys.path:
-    sys.path.insert(0, str(root))
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-# Set PYTHONPATH environment variable for subprocesses/threads
-os.environ["PYTHONPATH"] = str(root)
+from src.config.logger import Logger
+from src.presentation.api.routes import (
+    chunk_router,
+    ingest_router,
+    job_router,
+    search_router,
+    source_router,
+    subject_router,
+)
 
-from streamlit.web import cli as stcli
-
-
-def main():
-    """
-    Main entry point for the WhatYouSaid application.
-    This script launches the Streamlit interface.
-    """
-    # Path to the actual streamlit application file
-    app_path = os.path.join(os.path.dirname(__file__), "frontend", "streamlit_app.py")
-
-    # Configure arguments for streamlit
-    # This is equivalent to running: streamlit run frontend/streamlit_app.py
-    sys.argv = [
-        "streamlit",
-        "run",
-        "--server.runOnSave=true",
-        app_path,
-    ]
-
-    # Execute streamlit
-    sys.exit(stcli.main())
+logger = Logger()
 
 
-if __name__ == "__main__":
-    main()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Starting up WhatYouSaid API...")
+    try:
+        from src.infrastructure.repositories.sql.connector import Base, engine
+        # In development, auto-create tables if they don't exist.
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables verified/created.")
+    except Exception as e:
+        logger.error(f"Error initializing database: {e}")
+    yield
+    logger.info("Shutting down WhatYouSaid API...")
+
+
+app = FastAPI(
+    title="WhatYouSaid API",
+    description="Vectorized data hub API",
+    version="1.0.0",
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+# Configure CORS for React frontend (defaulting to localhost:3000 or 5173)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"https?://localhost(:\d+)?",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+
+# Include routes with the /rest prefix
+app.include_router(search_router.router, prefix="/rest/search", tags=["Search"])
+app.include_router(ingest_router.router, prefix="/rest/ingest", tags=["Ingestion"])
+app.include_router(subject_router.router, prefix="/rest/subjects", tags=["Subjects"])
+app.include_router(source_router.router, prefix="/rest/sources", tags=["Sources"])
+app.include_router(job_router.router, prefix="/rest/jobs", tags=["Jobs"])
+app.include_router(chunk_router.router, prefix="/rest/chunks", tags=["Chunks"])
+
+
+@app.get("/health", tags=["Health"])
+def health_check():
+    return {"status": "ok", "message": "WhatYouSaid API is running"}
+
+
+if __name__ == '__main__':
+    import uvicorn
+
+    uvicorn.run(
+        "main:app",
+        host="localhost",
+        port=5000,
+        reload=True
+    )

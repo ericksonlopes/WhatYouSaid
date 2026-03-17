@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class YoutubeDataType(Enum):
+class YoutubeDataType(str, Enum):
     """Type of YouTube data to ingest."""
 
     VIDEO = "video"

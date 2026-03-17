@@ -27,18 +27,19 @@ disable_progress_bars()
 
 
 class ModelLoaderService(IModelLoaderService):
+    _model_cache = {}
+
     def __init__(self, model_name: str):
         super().__init__()
         self.model_name = model_name
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model_instance: Optional[SentenceTransformer] = None
         self.load_model()
 
     def load_model(self):
-        if self.model_instance is None:
+        if self.model_name not in ModelLoaderService._model_cache:
             try:
-                self.model_instance = SentenceTransformer(self.model_name, device=self.device)
                 logger.info("Loading models", context={"model_name": self.model_name, "device": self.device})
+                ModelLoaderService._model_cache[self.model_name] = SentenceTransformer(self.model_name, device=self.device)
             except Exception as e:
                 logger.error(f"Error loading models: {e}")
                 raise RuntimeError(f"Failed to load models '{self.model_name}': {e}")
@@ -57,8 +58,7 @@ class ModelLoaderService(IModelLoaderService):
 
     @property
     def model(self) -> SentenceTransformer:
-        if self.model_instance is None:
+        if self.model_name not in ModelLoaderService._model_cache:
             # Attempt to (re)load the models; load_model will raise on failure.
             self.load_model()
-        assert self.model_instance is not None
-        return self.model_instance
+        return ModelLoaderService._model_cache[self.model_name]

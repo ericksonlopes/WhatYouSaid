@@ -91,6 +91,25 @@ class ContentSourceSQLRepository:
                 logger.error("Error listing ContentSources by subject ID", context={**extra, "error": str(e)})
                 raise
 
+    def list(self, limit: Optional[int] = None, offset: Optional[int] = None) -> List[ContentSourceModel]:
+        with Connector() as session:
+            try:
+                extra = {"limit": limit, "offset": offset}
+                logger.debug("Listing all ContentSources", context=extra)
+                query = session.query(ContentSourceModel).order_by(ContentSourceModel.created_at.desc())
+                
+                if offset is not None:
+                    query = query.offset(offset)
+                if limit is not None:
+                    query = query.limit(limit)
+                    
+                result = query.all()
+                logger.debug("List successful", context={**extra, "count": len(result)})
+                return result
+            except Exception as e:
+                logger.error("Error listing all ContentSources", context={**extra, "error": str(e)})
+                raise
+
     def count_by_subject(self, subject_id: UUID) -> int:
         with Connector() as session:
             try:

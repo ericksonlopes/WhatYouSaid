@@ -1,5 +1,6 @@
 from typing import List, Optional, Any
-
+from uuid import UUID
+from weaviate.collections.classes.filters import Filter
 from src.config.logger import Logger
 from src.domain.entities.chunk_entity import ChunkEntity
 from src.domain.interfaces.repository.retriver_repository import IVectorRepository
@@ -52,4 +53,10 @@ class ChunkVectorService:
     def delete(self, filters: Optional[Any]) -> int:
         """Delete documents from the vector store based on provided filters."""
         logger.debug("Deleting documents from vector store", context={"filters": str(filters)})
+        return self._repository.delete(filters=filters)
+
+    def delete_by_id(self, chunk_id: UUID) -> int:
+        """Delete a specific chunk from the vector store by its ID."""
+        logger.debug("Deleting specific chunk from vector store", context={"chunk_id": str(chunk_id)})
+        filters = Filter.by_id().equal(chunk_id)
         return self._repository.delete(filters=filters)

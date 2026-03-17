@@ -15,4 +15,5 @@ class KnowledgeSubjectEntity(BaseModel):
     external_ref: Optional[str] = Field(default=None, description="Optional external reference ID")
     name: str = Field(..., description="Human-readable name of the subject")
     description: Optional[str] = Field(default=None, description="Optional longer description")
+    icon: Optional[str] = Field(default=None, description="Icon name for the frontend")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Creation timestamp")
