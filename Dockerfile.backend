@@ -33,8 +33,9 @@ COPY . .
 # Install the project itself
 RUN uv sync --locked --no-dev
 
-# Expose Streamlit port
-EXPOSE 8501
+# Expose FastAPI port
+EXPOSE 5000
 
 # Command to run migrations and then the application
-CMD ["bash", "-c", "uv run alembic upgrade head && uv run streamlit run frontend/streamlit_app.py --server.address=0.0.0.0 --server.port=8501"]
+# We use 0.0.0.0 to allow connections from outside the container
+CMD ["bash", "-c", "uv run alembic upgrade head && uv run uvicorn main:app --host 0.0.0.0 --port 5000"]

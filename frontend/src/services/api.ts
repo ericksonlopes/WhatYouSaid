@@ -1,6 +1,6 @@
 import { Subject, IngestionTask, ContentSource, ChatMessage } from '../types';
 
-const API_BASE_URL = 'http://localhost:5000/rest';
+const API_BASE_URL = '/rest';
 
 export const api = {
   async fetchSubjects(): Promise<Subject[]> {

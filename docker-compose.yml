@@ -1,10 +1,15 @@
 services:
-  app:
+  backend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.backend
     ports:
-      - 8501:8501
+      - 5000:5000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     environment:
       - APP__ENV=production
       - APP__LIST_LOG_LEVELS=INFO,WARNING,ERROR,CRITICAL
@@ -12,8 +17,29 @@ services:
       - VECTOR__WEAVIATE_HOST=weaviate
       - VECTOR__WEAVIATE_PORT=8080
       - VECTOR__WEAVIATE_GRPC_PORT=50051
+    volumes:
+      - .:/app
+      - /app/.venv
+      - sqlite_data:/app/data
     depends_on:
       - weaviate
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - 3001:80
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -qO- http://localhost:80/ | grep '<!DOCTYPE html>'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: always
 
   weaviate:
     image: cr.weaviate.io/semitechnologies/weaviate:1.35.9
@@ -31,4 +57,6 @@ services:
 
 volumes:
     weaviate_data:
+      driver: local
+    sqlite_data:
       driver: local
