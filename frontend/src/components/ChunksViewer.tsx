@@ -41,6 +41,7 @@ export function ChunksViewer() {
 
   useEffect(() => {
     const loadData = async () => {
+      console.log('ChunksViewer: loading chunks for source:', selectedSourceIdForDb);
       setLoading(true);
       try {
         const chunksData = await api.fetchChunks(
@@ -49,6 +50,7 @@ export function ChunksViewer() {
           0,
           searchQuery
         );
+        console.log('ChunksViewer: received chunks count:', chunksData.length);
         setChunks(chunksData);
       } catch (err) {
         console.error('Error loading chunks:', err);
@@ -71,6 +73,7 @@ export function ChunksViewer() {
   // We now use chunks directly from the server-side filtered results
   const totalPages = Math.ceil(chunks.length / pageSize);
   const paginatedChunks = chunks.slice((page - 1) * pageSize, page * pageSize);
+  console.log('ChunksViewer: rendering page', page, 'with', paginatedChunks.length, 'chunks');
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this chunk?')) {

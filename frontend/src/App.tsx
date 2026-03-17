@@ -13,14 +13,9 @@ import { IngestionTask, ContentSource } from './types';
 import { api } from './services/api';
 
 function ActivityMonitorView() {
-  const { jobs = [], refreshJobs } = useAppContext();
-  const [loading, setLoading] = useState(jobs.length === 0);
+  const { jobs = [], refreshJobs, isJobsLoaded } = useAppContext();
   const [page, setPage] = useState(1);
   const pageSize = 12;
-
-  useEffect(() => {
-    if (jobs.length > 0) setLoading(false);
-  }, [jobs.length]);
 
   const totalPages = Math.ceil(jobs.length / pageSize);
   const paginatedJobs = jobs.slice((page - 1) * pageSize, page * pageSize);
@@ -48,7 +43,7 @@ function ActivityMonitorView() {
 
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {loading ? (
+          {!isJobsLoaded ? (
             <div className="text-zinc-500 text-sm">Loading activity pipeline...</div>
           ) : jobs.length === 0 ? (
             <div className="text-zinc-500 text-sm col-span-2 py-12 text-center bg-panel-bg border border-border-subtle rounded-xl">
@@ -61,7 +56,7 @@ function ActivityMonitorView() {
       </div>
 
       {/* Pagination Footer */}
-      {!loading && jobs.length > pageSize && (
+      {isJobsLoaded && jobs.length > pageSize && (
         <div className="mt-8 pt-6 border-t border-border-subtle flex items-center justify-between bg-bg-dark">
           <span className="text-xs text-zinc-500">
             Showing <span className="text-zinc-300 font-medium">{(page - 1) * pageSize + 1}</span> to <span className="text-zinc-300 font-medium">{Math.min(page * pageSize, jobs.length)}</span> of <span className="text-zinc-300 font-medium">{jobs.length}</span> tasks
@@ -92,17 +87,12 @@ function ActivityMonitorView() {
 }
 
 function ContentSourcesView() {
-  const { setCurrentView, setSelectedSourceIdForDb, sources = [], refreshSources, selectedSubjects } = useAppContext();
-  const [loading, setLoading] = useState(sources.length === 0);
+  const { setCurrentView, setSelectedSourceIdForDb, sources = [], isSourcesLoaded, refreshSources, selectedSubjects } = useAppContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [appliedSearchQuery, setAppliedSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [page, setPage] = useState(1);
   const pageSize = 10;
-  
-  useEffect(() => {
-    if (sources.length > 0) setLoading(false);
-  }, [sources.length]);
 
   const filteredSources = React.useMemo(() => {
     let result = sources;
@@ -146,9 +136,7 @@ function ContentSourcesView() {
   };
 
   const handleRefresh = async () => {
-    setLoading(true);
     await refreshSources?.();
-    setLoading(false);
   };
 
   return (
@@ -179,15 +167,15 @@ function ContentSourcesView() {
           className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 transition-colors border border-zinc-700/50 shadow-sm"
           title="Refresh list"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-4 h-4 ${!isSourcesLoaded ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col">
         {/* Always show filters through SourcesTable (if not loading initial data) */}
-        {loading && sources.length === 0 ? (
+        {!isSourcesLoaded && sources.length === 0 ? (
           <div className="flex items-center gap-3 text-zinc-500 text-sm">
-            <RefreshCw className="w-4 h-4 animate-spin" />
+            <RefreshCw className="w-4 h-4 animate-spin text-emerald-500" />
             Loading knowledge sources...
           </div>
         ) : (
@@ -217,9 +205,9 @@ function ContentSourcesView() {
                     <p className="text-sm text-zinc-500 mt-1 max-w-xs mx-auto">
                       {appliedSearchQuery || typeFilter !== 'all' 
                         ? `Try adjusting your search for "${appliedSearchQuery || searchQuery}" or changing the filters.`
-                        : "No sources found in the selected context(s)."}
+                        : "No sources found in the selected context(s). Try adding some content."}
                     </p>
-                    {(appliedSearchQuery || typeFilter !== 'all') && (
+                    {appliedSearchQuery || typeFilter !== 'all' ? (
                       <button 
                         onClick={() => {
                           setSearchQuery('');
@@ -230,6 +218,12 @@ function ContentSourcesView() {
                       >
                         Clear all filters
                       </button>
+                    ) : (
+                      /* Use the existing logic or trigger modal from MainContent if possible, 
+                         but here we can just show a link to encourage action */
+                      <p className="mt-4 text-xs text-zinc-600">
+                        Click on "Add Data" in the top bar to begin.
+                      </p>
                     )}
                   </div>
                 </div>

@@ -16,7 +16,8 @@ interface AppState {
   subjects: Subject[];
   refreshSubjects: () => Promise<void>;
   addSubject: (subject: Omit<Subject, 'id' | 'sourceCount'>) => void;
-  sources: ContentSource[];
+  isSourcesLoaded: boolean;
+  isJobsLoaded: boolean;
   refreshSources: () => Promise<void>;
   jobs: IngestionTask[];
   refreshJobs: () => Promise<void>;
@@ -34,7 +35,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<Subject[]>([]);
   const [sources, setSources] = useState<ContentSource[]>([]);
+  const [isSourcesLoaded, setIsSourcesLoaded] = useState(false);
   const [jobs, setJobs] = useState<IngestionTask[]>([]);
+  const [isJobsLoaded, setIsJobsLoaded] = useState(false);
   const [currentView, setCurrentView] = useState<ViewState>('chat');
   const [selectedSourceIdForDb, setSelectedSourceIdForDb] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -58,6 +61,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSources(data);
     } catch (err) {
       console.error('Error fetching sources:', err);
+    } finally {
+      setIsSourcesLoaded(true);
     }
   }, []);
 
@@ -67,6 +72,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setJobs(data);
     } catch (err) {
       console.error('Error fetching jobs:', err);
+    } finally {
+      setIsJobsLoaded(true);
     }
   }, []);
 
@@ -170,8 +177,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refreshSubjects,
         addSubject,
         sources,
+        isSourcesLoaded,
         refreshSources,
         jobs,
+        isJobsLoaded,
         refreshJobs,
         addOptimisticJob,
         toasts,

@@ -90,7 +90,7 @@ export const api = {
   },
 
   async fetchChunks(sourceId?: string, limit: number = 100, offset: number = 0, query?: string): Promise<any[]> {
-    const url = new URL(`${API_BASE_URL}/chunks`);
+    const url = new URL(`${API_BASE_URL}/chunks`, window.location.origin);
     if (sourceId) url.searchParams.append('source_id', sourceId);
     if (query) url.searchParams.append('q', query);
     url.searchParams.append('limit', limit.toString());
