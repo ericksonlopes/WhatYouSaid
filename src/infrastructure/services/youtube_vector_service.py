@@ -27,18 +27,24 @@ class YouTubeVectorService:
 
         return result
 
-    def search(self, query: str, top_k: int = 5, filters: Optional[Filters] = None) -> List[ChunkEntity]:
+    def search(
+        self, query: str, top_k: int = 5, filters: Optional[Filters] = None
+    ) -> List[ChunkEntity]:
         if not query:
             raise ValueError("Query must be provided for search")
 
-        models: List[ChunkModel] = self._repository.retriever(query=query, top_kn=top_k, filters=filters)
+        models: List[ChunkModel] = self._repository.retriever(
+            query=query, top_kn=top_k, filters=filters
+        )
 
         mapper = ChunkMapper()
         entities: List[ChunkEntity] = [mapper.model_to_entity(doc) for doc in models]
 
         return entities
 
-    def search_by_video_id(self, video_id: str, filters: Optional[Filters] = None) -> List[ChunkEntity]:
+    def search_by_video_id(
+        self, video_id: str, filters: Optional[Filters] = None
+    ) -> List[ChunkEntity]:
         if not video_id:
             raise ValueError("video_id must be provided")
 
@@ -50,7 +56,9 @@ class YouTubeVectorService:
 
         combined_filters: Filters = Filter.all_of(filters_list)
 
-        models: List[ChunkModel] = self._repository.list_chunks(filters=combined_filters)
+        models: List[ChunkModel] = self._repository.list_chunks(
+            filters=combined_filters
+        )
         mapper = ChunkMapper()
 
         entities: List[ChunkEntity] = [mapper.model_to_entity(doc) for doc in models]
@@ -61,9 +69,9 @@ class YouTubeVectorService:
         if not video_id:
             raise ValueError("video_id must be provided")
 
-        filters: Filters = Filter.all_of([
-            Filter.by_property("external_source").equal(video_id)
-        ])
+        filters: Filters = Filter.all_of(
+            [Filter.by_property("external_source").equal(video_id)]
+        )
 
         result = self._repository.delete(filters=filters)
 

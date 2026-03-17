@@ -11,6 +11,7 @@ import src.infrastructure.repositories.sql.query_log_repository as ql_mod
 
 class RepositoryTestError(RuntimeError):
     """Raised by ErrSession to simulate repository errors in tests."""
+
     pass
 
 
@@ -91,7 +92,16 @@ def test_repositories_handle_exceptions(monkeypatch):
     monkeypatch.setattr(ch_mod, "Connector", BadConnector)
     ch_repo = ch_mod.ChunkIndexSQLRepository()
     with pytest.raises(RepositoryTestError):
-        ch_repo.create_chunks([{"id": uuid4(), "content_source_id": uuid4(), "job_id": uuid4(), "chunk_id": "x"}])
+        ch_repo.create_chunks(
+            [
+                {
+                    "id": uuid4(),
+                    "content_source_id": uuid4(),
+                    "job_id": uuid4(),
+                    "chunk_id": "x",
+                }
+            ]
+        )
     with pytest.raises(RepositoryTestError):
         ch_repo.list_by_content_source(uuid4())
     with pytest.raises(RepositoryTestError):
@@ -103,4 +113,3 @@ def test_repositories_handle_exceptions(monkeypatch):
     ql_repo = ql_mod.QueryLogSQLRepository()
     with pytest.raises(RepositoryTestError):
         ql_repo.create_log(subject_id=None, query_text="q")
-

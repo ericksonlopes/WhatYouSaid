@@ -21,6 +21,7 @@ async def lifespan(app: FastAPI):
     logger.info("Starting up WhatYouSaid API...")
     try:
         from src.infrastructure.repositories.sql.connector import Base, engine
+
         # In development, auto-create tables if they don't exist.
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables verified/created.")
@@ -45,7 +46,7 @@ app.add_middleware(
     allow_origin_regex=r"https?://localhost(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
 
 # Include routes with the /rest prefix
@@ -62,13 +63,7 @@ def health_check():
     return {"status": "ok", "message": "WhatYouSaid API is running"}
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(
-        "main:app",
-        host="localhost",
-        port=5000,
-        reload=True,
-        log_config=None
-    )
+    uvicorn.run("main:app", host="localhost", port=5000, reload=True, log_config=None)

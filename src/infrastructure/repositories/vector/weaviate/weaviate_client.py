@@ -15,7 +15,9 @@ class WeaviateClient:
     def _create_client(self):
         try:
             if self._env == "testing":
-                logger.debug("Creating WeaviateConfig client", context={"env": self._env})
+                logger.debug(
+                    "Creating WeaviateConfig client", context={"env": self._env}
+                )
                 client = weaviate.connect_to_local(
                     host=self._weaviate_config.weaviate_host,
                     port=self._weaviate_config.weaviate_port,
@@ -24,18 +26,28 @@ class WeaviateClient:
             else:
                 client = weaviate.connect_to_weaviate_cloud(
                     cluster_url=self._weaviate_config.weaviate_url,
-                    auth_credentials=Auth.api_key(self._weaviate_config.weaviate_api_key),
+                    auth_credentials=Auth.api_key(
+                        self._weaviate_config.weaviate_api_key
+                    ),
                 )
 
             if client.is_ready() and client.is_live():
-                logger.debug("WeaviateConfig client is ready and live", context={"env": self._env})
+                logger.debug(
+                    "WeaviateConfig client is ready and live",
+                    context={"env": self._env},
+                )
             else:
-                logger.critical("WeaviateConfig client is not ready or live", context={"env": self._env})
+                logger.critical(
+                    "WeaviateConfig client is not ready or live",
+                    context={"env": self._env},
+                )
                 raise ConnectionError("WeaviateConfig client is not ready or live")
 
             return client
         except Exception as e:
-            logger.error("Error creating WeaviateConfig connection", context={"error": str(e)})
+            logger.error(
+                "Error creating WeaviateConfig connection", context={"error": str(e)}
+            )
             raise
 
     def __enter__(self):
@@ -49,44 +61,50 @@ class WeaviateClient:
             try:
                 self._client.close()
             except Exception as e:
-                logger.error("Error closing WeaviateConfig connection", context={"error": str(e)})
+                logger.error(
+                    "Error closing WeaviateConfig connection", context={"error": str(e)}
+                )
             finally:
                 self._client = None
 
     def create_collection_if_not_exists(self, collection_name: str):
         """Creates the collection with explicit property types if it doesn't exist.
-        
+
         This prevents Weaviate auto-schema from misidentifying types (e.g. tokens_count as text).
         """
         import weaviate.classes.config as wvc
-        
+
         with self as client:
             if not client.collections.exists(collection_name):
-                logger.debug(f"Creating collection '{collection_name}' with explicit schema")
+                logger.debug(
+                    f"Creating collection '{collection_name}' with explicit schema"
+                )
                 client.collections.create(
                     name=collection_name,
                     properties=[
                         # Numeric fields
                         wvc.Property(name="tokens_count", data_type=wvc.DataType.INT),
                         wvc.Property(name="version_number", data_type=wvc.DataType.INT),
-                        
                         # Text fields
                         wvc.Property(name="source_type", data_type=wvc.DataType.TEXT),
-                        wvc.Property(name="external_source", data_type=wvc.DataType.TEXT),
+                        wvc.Property(
+                            name="external_source", data_type=wvc.DataType.TEXT
+                        ),
                         wvc.Property(name="language", data_type=wvc.DataType.TEXT),
                         wvc.Property(name="content", data_type=wvc.DataType.TEXT),
-                        wvc.Property(name="embedding_model", data_type=wvc.DataType.TEXT),
-                        
+                        wvc.Property(
+                            name="embedding_model", data_type=wvc.DataType.TEXT
+                        ),
                         # ID fields (stored as TEXT for simplicity or UUID if supported by the client version)
                         wvc.Property(name="job_id", data_type=wvc.DataType.TEXT),
-                        wvc.Property(name="content_source_id", data_type=wvc.DataType.TEXT),
+                        wvc.Property(
+                            name="content_source_id", data_type=wvc.DataType.TEXT
+                        ),
                         wvc.Property(name="subject_id", data_type=wvc.DataType.TEXT),
-                        
                         # Extra metadata as text (JSON string)
                         wvc.Property(name="extra_json", data_type=wvc.DataType.TEXT),
-                        
                         # Date fields
                         wvc.Property(name="created_at", data_type=wvc.DataType.DATE),
-                    ]
+                    ],
                 )
                 logger.debug(f"Collection '{collection_name}' created successfully")

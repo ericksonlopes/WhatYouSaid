@@ -2,7 +2,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from src.infrastructure.repositories.vector.weaviate.weaviate_vector import WeaviateVector
+from src.infrastructure.repositories.vector.weaviate.weaviate_vector import (
+    WeaviateVector,
+)
 
 
 class DummyClientContext:
@@ -32,33 +34,38 @@ class TestWeaviateVector:
         captured = {}
 
         class FakeWeaviateVectorStore:
-            def __init__(self, client, index_name, text_key, embedding, use_multi_tenancy):
-                captured['client'] = client
-                captured['index_name'] = index_name
-                captured['text_key'] = text_key
-                captured['embedding'] = embedding
-                captured['use_multi_tenancy'] = use_multi_tenancy
+            def __init__(
+                self, client, index_name, text_key, embedding, use_multi_tenancy
+            ):
+                captured["client"] = client
+                captured["index_name"] = index_name
+                captured["text_key"] = text_key
+                captured["embedding"] = embedding
+                captured["use_multi_tenancy"] = use_multi_tenancy
 
             def as_retriever(self, search_kwargs):
                 return SimpleNamespace(invoke=lambda q: [])
 
         monkeypatch.setattr(
-            'src.infrastructure.repositories.vector.weaviate.weaviate_vector.WeaviateVectorStore',
+            "src.infrastructure.repositories.vector.weaviate.weaviate_vector.WeaviateVectorStore",
             FakeWeaviateVectorStore,
         )
 
         client_ctx = DummyClientContext()
         ev = WeaviateVector(
-            client=client_ctx, embedding_service=DummyEmbedding(), index_name='idx', text_key='text',
-            use_multi_tenancy=False
+            client=client_ctx,
+            embedding_service=DummyEmbedding(),
+            index_name="idx",
+            text_key="text",
+            use_multi_tenancy=False,
         )
 
         with ev:
             # ensure FakeWeaviateVectorStore was constructed with the low-level client returned by __enter__
-            assert captured['client'] is client_ctx
-            assert captured['index_name'] == 'idx'
-            assert captured['text_key'] == 'text'
-            assert captured['use_multi_tenancy'] is False
+            assert captured["client"] is client_ctx
+            assert captured["index_name"] == "idx"
+            assert captured["text_key"] == "text"
+            assert captured["use_multi_tenancy"] is False
 
         # __exit__ should call DummyClientContext.__exit__ (no exception)
         ev.__exit__(None, None, None)

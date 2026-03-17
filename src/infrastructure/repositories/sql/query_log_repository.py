@@ -12,8 +12,12 @@ class QueryLogSQLRepository:
     """Repository helpers for query_logs table."""
 
     @staticmethod
-    def create_log(subject_id: Optional[UUID], query_text: str,
-                   top_k: Optional[int] = None, latency_ms: Optional[int] = None) -> UUID:
+    def create_log(
+        subject_id: Optional[UUID],
+        query_text: str,
+        top_k: Optional[int] = None,
+        latency_ms: Optional[int] = None,
+    ) -> UUID:
         with Connector() as session:
             try:
                 q = QueryLogModel(
@@ -27,7 +31,13 @@ class QueryLogSQLRepository:
                 session.refresh(q)
                 return cast(UUID, q.id)
             except Exception as e:
-                logger.error("Failed to create query log",
-                             context={"error": str(e), "subject_id": str(subject_id), "query_text": query_text})
+                logger.error(
+                    "Failed to create query log",
+                    context={
+                        "error": str(e),
+                        "subject_id": str(subject_id),
+                        "query_text": query_text,
+                    },
+                )
                 session.rollback()
                 raise

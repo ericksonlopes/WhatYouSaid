@@ -68,7 +68,7 @@ def get_model_loader(settings: Settings = Depends(get_settings)) -> ModelLoaderS
 
 
 def get_embedding_service(
-        model_loader: ModelLoaderService = Depends(get_model_loader),
+    model_loader: ModelLoaderService = Depends(get_model_loader),
 ) -> EmbeddingService:
     return EmbeddingService(model_loader_service=model_loader)
 
@@ -78,9 +78,9 @@ def get_weaviate_client(settings: Settings = Depends(get_settings)) -> WeaviateC
 
 
 def get_weaviate_repo(
-        settings: Settings = Depends(get_settings),
-        client: WeaviateClient = Depends(get_weaviate_client),
-        model_loader: ModelLoaderService = Depends(get_model_loader),
+    settings: Settings = Depends(get_settings),
+    client: WeaviateClient = Depends(get_weaviate_client),
+    model_loader: ModelLoaderService = Depends(get_model_loader),
 ) -> ChunkWeaviateRepository:
     emb_service = EmbeddingService(model_loader_service=model_loader)
     return ChunkWeaviateRepository(
@@ -91,25 +91,25 @@ def get_weaviate_repo(
 
 
 def get_ks_service(
-        repo: KnowledgeSubjectSQLRepository = Depends(get_subject_repo),
+    repo: KnowledgeSubjectSQLRepository = Depends(get_subject_repo),
 ) -> KnowledgeSubjectService:
     return KnowledgeSubjectService(repo)
 
 
 def get_cs_service(
-        repo: ContentSourceSQLRepository = Depends(get_source_repo),
+    repo: ContentSourceSQLRepository = Depends(get_source_repo),
 ) -> ContentSourceService:
     return ContentSourceService(repo)
 
 
 def get_job_service(
-        repo: IngestionJobSQLRepository = Depends(get_job_repo),
+    repo: IngestionJobSQLRepository = Depends(get_job_repo),
 ) -> IngestionJobService:
     return IngestionJobService(repo)
 
 
 def get_chunk_vector_service(
-        vector_repo: ChunkWeaviateRepository = Depends(get_weaviate_repo),
+    vector_repo: ChunkWeaviateRepository = Depends(get_weaviate_repo),
 ) -> ChunkVectorService:
     return ChunkVectorService(
         vector_repo
@@ -117,33 +117,33 @@ def get_chunk_vector_service(
 
 
 def get_chunk_index_service(
-        repo: ChunkIndexSQLRepository = Depends(get_chunk_repo),
+    repo: ChunkIndexSQLRepository = Depends(get_chunk_repo),
 ) -> ChunkIndexService:
     return ChunkIndexService(repo)
 
 
 def get_youtube_vector_service(
-        vector_repo: ChunkWeaviateRepository = Depends(get_weaviate_repo),
+    vector_repo: ChunkWeaviateRepository = Depends(get_weaviate_repo),
 ) -> YouTubeVectorService:
     return YouTubeVectorService(vector_repo)
 
 
 # Use Cases
 def get_search_chunks_use_case(
-        vector_svc: ChunkVectorService = Depends(get_chunk_vector_service),
-        ks_svc: KnowledgeSubjectService = Depends(get_ks_service),
+    vector_svc: ChunkVectorService = Depends(get_chunk_vector_service),
+    ks_svc: KnowledgeSubjectService = Depends(get_ks_service),
 ) -> SearchChunksUseCase:
     return SearchChunksUseCase(vector_service=vector_svc, ks_service=ks_svc)
 
 
 def get_ingest_youtube_use_case(
-        ks_svc: KnowledgeSubjectService = Depends(get_ks_service),
-        cs_svc: ContentSourceService = Depends(get_cs_service),
-        job_svc: IngestionJobService = Depends(get_job_service),
-        model_loader: ModelLoaderService = Depends(get_model_loader),
-        embed_svc: EmbeddingService = Depends(get_embedding_service),
-        chunk_svc: ChunkIndexService = Depends(get_chunk_index_service),
-        yt_vector_svc: YouTubeVectorService = Depends(get_youtube_vector_service),
+    ks_svc: KnowledgeSubjectService = Depends(get_ks_service),
+    cs_svc: ContentSourceService = Depends(get_cs_service),
+    job_svc: IngestionJobService = Depends(get_job_service),
+    model_loader: ModelLoaderService = Depends(get_model_loader),
+    embed_svc: EmbeddingService = Depends(get_embedding_service),
+    chunk_svc: ChunkIndexService = Depends(get_chunk_index_service),
+    yt_vector_svc: YouTubeVectorService = Depends(get_youtube_vector_service),
 ) -> IngestYoutubeUseCase:
     return IngestYoutubeUseCase(
         ks_service=ks_svc,

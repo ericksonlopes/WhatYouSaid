@@ -5,6 +5,6 @@ LOGGING_CONFIG = {
         "uvicorn": {"handlers": ["default"], "level": "ERROR", "propagate": False},
         "uvicorn.access": {"handlers": [], "level": "CRITICAL", "propagate": False},
         "fastapi": {"handlers": ["default"], "level": "ERROR", "propagate": False},
-        "starlette": {"handlers": ["default"], "level": "ERROR", "propagate": False}
-    }
+        "starlette": {"handlers": ["default"], "level": "ERROR", "propagate": False},
+    },
 }

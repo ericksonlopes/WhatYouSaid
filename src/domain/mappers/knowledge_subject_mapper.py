@@ -3,14 +3,18 @@ from typing import Optional, List, cast
 from uuid import UUID
 
 from src.domain.entities.knowledge_subject_entity import KnowledgeSubjectEntity
-from src.infrastructure.repositories.sql.models.knowledge_subject import KnowledgeSubjectModel
+from src.infrastructure.repositories.sql.models.knowledge_subject import (
+    KnowledgeSubjectModel,
+)
 
 
 class KnowledgeSubjectMapper:
     """Static mapper methods for KnowledgeSubject ORM <-> Domain Entity."""
 
     @staticmethod
-    def model_to_entity(model: Optional[KnowledgeSubjectModel]) -> Optional[KnowledgeSubjectEntity]:
+    def model_to_entity(
+        model: Optional[KnowledgeSubjectModel],
+    ) -> Optional[KnowledgeSubjectEntity]:
         if model is None:
             return None
         return KnowledgeSubjectEntity(
@@ -23,6 +27,10 @@ class KnowledgeSubjectMapper:
         )
 
     @staticmethod
-    def model_list_to_entities(models: List[KnowledgeSubjectModel]) -> List[KnowledgeSubjectEntity]:
-        temp = [KnowledgeSubjectMapper.model_to_entity(m) for m in models if m is not None]
+    def model_list_to_entities(
+        models: List[KnowledgeSubjectModel],
+    ) -> List[KnowledgeSubjectEntity]:
+        temp = [
+            KnowledgeSubjectMapper.model_to_entity(m) for m in models if m is not None
+        ]
         return [r for r in temp if r is not None]

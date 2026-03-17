@@ -3,6 +3,7 @@ from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
+
 class JobResponse(BaseModel):
     id: UUID
     status: str

@@ -29,12 +29,37 @@ def make_cs_service(existing: bool = False):
             self._repo = SimpleNamespace(update_title=lambda **kwargs: None)
 
         def get_by_source_info(self, source_type, external_source):
-            return SimpleNamespace(id=uuid.uuid4(), processing_status="done", source_type="youtube", external_source=external_source) if existing else None
+            return (
+                SimpleNamespace(
+                    id=uuid.uuid4(),
+                    processing_status="done",
+                    source_type="youtube",
+                    external_source=external_source,
+                )
+                if existing
+                else None
+            )
 
-        def create_source(self, subject_id, source_type, external_source, title, language, status, processing_status=None):
+        def create_source(
+            self,
+            subject_id,
+            source_type,
+            external_source,
+            title,
+            language,
+            status,
+            processing_status=None,
+        ):
             # ensure source_type is a value the use case can handle
-            val = source_type.value if hasattr(source_type, "value") else str(source_type)
-            src = SimpleNamespace(id=uuid.uuid4(), source_type=val, external_source=external_source, processing_status=processing_status or "pending")
+            val = (
+                source_type.value if hasattr(source_type, "value") else str(source_type)
+            )
+            src = SimpleNamespace(
+                id=uuid.uuid4(),
+                source_type=val,
+                external_source=external_source,
+                processing_status=processing_status or "pending",
+            )
             self.created = src
             return src
 
@@ -42,17 +67,20 @@ def make_cs_service(existing: bool = False):
             # noop for tests
             return None
 
-        def finish_ingestion(self, content_source_id, embedding_model, dimensions, chunks):
+        def finish_ingestion(
+            self, content_source_id, embedding_model, dimensions, chunks
+        ):
             # noop for tests
             return None
-
 
     return CS()
 
 
 def make_ingestion_service():
     class IS:
-        def create_job(self, content_source_id, status, embedding_model, pipeline_version, **kwargs):
+        def create_job(
+            self, content_source_id, status, embedding_model, pipeline_version, **kwargs
+        ):
             return SimpleNamespace(id=uuid.uuid4(), content_source_id=content_source_id)
 
         def update_job(self, job_id, status, error_message=None, **kwargs):
@@ -65,7 +93,6 @@ def make_ingestion_service():
 
         def get_by_id(self, id):
             return SimpleNamespace(id=id, content_source_id=None)
-
 
     return IS()
 
@@ -102,15 +129,27 @@ def test_ingest_single_url_processes_chunks(monkeypatch):
     chunk_svc = make_chunk_service()
     vec_svc = make_vector_service()
 
-    use_case = IngestYoutubeUseCase(ks, cs, isvc, model_loader, embedding, chunk_svc, vec_svc)
+    use_case = IngestYoutubeUseCase(
+        ks, cs, isvc, model_loader, embedding, chunk_svc, vec_svc
+    )
 
-    docs = [DummyDoc("chunk1", {"start": 0, "end": 10}), DummyDoc("chunk2", {"start": 10, "end": 20})]
+    docs = [
+        DummyDoc("chunk1", {"start": 0, "end": 10}),
+        DummyDoc("chunk2", {"start": 10, "end": 20}),
+    ]
     # patch instance methods
-    monkeypatch.setattr(use_case, "_extract_video_id_from_url", lambda url: "dQw4w9WgXcQ")
-    monkeypatch.setattr(use_case, "_extract_and_split", lambda cmd, video_id, yt_extractor=None: docs)
+    monkeypatch.setattr(
+        use_case, "_extract_video_id_from_url", lambda url: "dQw4w9WgXcQ"
+    )
+    monkeypatch.setattr(
+        use_case, "_extract_and_split", lambda cmd, video_id, yt_extractor=None: docs
+    )
 
-    cmd = IngestYoutubeCommand(video_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ", subject_name="s",
-                               send_transcript=False)
+    cmd = IngestYoutubeCommand(
+        video_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        subject_name="s",
+        send_transcript=False,
+    )
     result = use_case.execute(cmd)
 
     assert len(result.video_results) == 1
@@ -128,8 +167,12 @@ def test_ingest_skips_existing_source(monkeypatch):
     embedding = None
     chunk_svc = make_chunk_service()
     vec_svc = make_vector_service()
-    use_case = IngestYoutubeUseCase(ks, cs, isvc, model_loader, embedding, chunk_svc, vec_svc)
-    monkeypatch.setattr(use_case, "_extract_video_id_from_url", lambda url: "dQw4w9WgXcQ")
+    use_case = IngestYoutubeUseCase(
+        ks, cs, isvc, model_loader, embedding, chunk_svc, vec_svc
+    )
+    monkeypatch.setattr(
+        use_case, "_extract_video_id_from_url", lambda url: "dQw4w9WgXcQ"
+    )
     cmd = IngestYoutubeCommand(video_url="dQw4w9WgXcQ", subject_name="s")
     result = use_case.execute(cmd)
     assert result.video_results[0]["skipped"] is True

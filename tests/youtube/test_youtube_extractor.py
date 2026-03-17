@@ -1,7 +1,11 @@
 from unittest.mock import patch
 
 import pytest
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
+from youtube_transcript_api import (
+    YouTubeTranscriptApi,
+    TranscriptsDisabled,
+    NoTranscriptFound,
+)
 
 from src.config.logger import Logger
 from src.infrastructure.extractors.youtube_extractor import YoutubeExtractor
@@ -26,7 +30,9 @@ class TestYoutubeExtractor:
                 extractor = YoutubeExtractor(video_id)
                 result = extractor.extract_transcript()
                 assert result == dummy_transcript
-                mock_fetch.assert_called_once_with(video_id=video_id, languages=[extractor.language])
+                mock_fetch.assert_called_once_with(
+                    video_id=video_id, languages=[extractor.language]
+                )
 
     def test_extract_transcript_no_transcript_found(self):
         video_id = "dummy_id"
@@ -34,7 +40,9 @@ class TestYoutubeExtractor:
         requested_language_codes = ["pt"]
         message = "No transcript found"
         with patch.object(YouTubeTranscriptApi, "fetch") as mock_fetch:
-            mock_fetch.side_effect = NoTranscriptFound(transcript_data, requested_language_codes, message)
+            mock_fetch.side_effect = NoTranscriptFound(
+                transcript_data, requested_language_codes, message
+            )
             with patch.object(logger, "info"), patch.object(logger, "error"):
                 extractor = YoutubeExtractor(video_id)
                 with pytest.raises(NoTranscriptFound):
@@ -77,10 +85,12 @@ class TestYoutubeExtractor:
             "is_live": False,
             "uploader": "Dummy Uploader",
             "uploader_id": "uploader_dummy",
-            "uploader_url": "https://youtube.com/uploader_dummy"
+            "uploader_url": "https://youtube.com/uploader_dummy",
         }
         # Patch YoutubeDL in the correct module
-        with patch("src.infrastructure.extractors.youtube_extractor.YoutubeDL") as mock_ytdlp:
+        with patch(
+            "src.infrastructure.extractors.youtube_extractor.YoutubeDL"
+        ) as mock_ytdlp:
             mock_instance = mock_ytdlp.return_value.__enter__.return_value
             mock_instance.extract_info.return_value = dummy_info
             with patch.object(logger, "info"):

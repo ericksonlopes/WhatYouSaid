@@ -68,7 +68,9 @@ class ChunkMapper:
         """
         metadata = dict(getattr(document, "metadata", {}) or {})
         # prefer page_content, fall back to content
-        content = getattr(document, "page_content", None) or getattr(document, "content", None)
+        content = getattr(document, "page_content", None) or getattr(
+            document, "content", None
+        )
         data = metadata.copy()
         if content is not None:
             data["content"] = content
@@ -101,6 +103,7 @@ class ChunkMapper:
         # Ensure required fields for ChunkModel exist: job_id and content_source_id are required,
         # generate them if missing to produce a valid ChunkModel.
         from uuid import uuid4
+
         if "job_id" not in data:
             data["job_id"] = uuid4()
         if "content_source_id" not in data:
@@ -113,6 +116,7 @@ class ChunkMapper:
     def _convert_to_uuid(value: Any) -> Any:
         """Convert a value to UUID if it's a valid UUID string, else return None."""
         from uuid import UUID
+
         if isinstance(value, str):
             try:
                 return UUID(value)

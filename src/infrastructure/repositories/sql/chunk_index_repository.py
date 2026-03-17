@@ -23,7 +23,7 @@ class ChunkIndexSQLRepository:
                 for ch in chunks:
                     content_val = ch.get("content")
                     content_size = len(content_val) if content_val else 0
-                    
+
                     obj = ChunkIndexModel(
                         id=ch.get("id"),
                         content_source_id=ch.get("content_source_id"),
@@ -39,17 +39,31 @@ class ChunkIndexSQLRepository:
                     orm_objs.append(obj)
 
                 session.commit()
-                logger.debug("Created chunk index rows", context={"count": len(orm_objs)})
+                logger.debug(
+                    "Created chunk index rows", context={"count": len(orm_objs)}
+                )
 
                 return [cast(UUID, o.id) for o in orm_objs]
             except Exception as e:
                 session.rollback()
-                logger.error("Error creating chunk index rows", context={"error": str(e)})
+                logger.error(
+                    "Error creating chunk index rows", context={"error": str(e)}
+                )
                 raise
 
-    def list_by_content_source(self, content_source_id: UUID, limit: Optional[int] = None, offset: Optional[int] = None) -> List[ChunkIndexModel]:
+    def list_by_content_source(
+        self,
+        content_source_id: UUID,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> List[ChunkIndexModel]:
         with Connector() as session:
-            query = session.query(ChunkIndexModel).options(joinedload(ChunkIndexModel.content_source)).filter_by(content_source_id=content_source_id).order_by(ChunkIndexModel.created_at.asc())
+            query = (
+                session.query(ChunkIndexModel)
+                .options(joinedload(ChunkIndexModel.content_source))
+                .filter_by(content_source_id=content_source_id)
+                .order_by(ChunkIndexModel.created_at.asc())
+            )
             if offset is not None:
                 query = query.offset(offset)
             if limit is not None:
@@ -77,28 +91,49 @@ class ChunkIndexSQLRepository:
 
     def count_by_content_source(self, content_source_id: UUID) -> int:
         with Connector() as session:
-            return session.query(ChunkIndexModel).filter_by(content_source_id=content_source_id).count()
+            return (
+                session.query(ChunkIndexModel)
+                .filter_by(content_source_id=content_source_id)
+                .count()
+            )
 
     def delete_by_content_source(self, content_source_id: UUID) -> int:
         with Connector() as session:
             try:
-                deleted = session.query(ChunkIndexModel).filter_by(content_source_id=content_source_id).delete(synchronize_session=False)
+                deleted = (
+                    session.query(ChunkIndexModel)
+                    .filter_by(content_source_id=content_source_id)
+                    .delete(synchronize_session=False)
+                )
                 session.commit()
                 return int(deleted)
             except Exception as e:
                 session.rollback()
-                logger.error("Error deleting chunk index rows", context={"error": str(e)})
+                logger.error(
+                    "Error deleting chunk index rows", context={"error": str(e)}
+                )
                 raise
 
-    def search(self, query: Optional[str], top_k: int = 10, filters: Optional[Any] = None) -> List[ChunkIndexModel]:
+    def search(
+        self, query: Optional[str], top_k: int = 10, filters: Optional[Any] = None
+    ) -> List[ChunkIndexModel]:
         with Connector() as session:
-            q = session.query(ChunkIndexModel).options(joinedload(ChunkIndexModel.content_source)).outerjoin(ContentSourceModel, ChunkIndexModel.content_source_id == ContentSourceModel.id)
+            q = (
+                session.query(ChunkIndexModel)
+                .options(joinedload(ChunkIndexModel.content_source))
+                .outerjoin(
+                    ContentSourceModel,
+                    ChunkIndexModel.content_source_id == ContentSourceModel.id,
+                )
+            )
             if isinstance(filters, dict):
                 q = q.filter_by(**filters)
             if query:
                 pattern = f"%{query}%"
                 q = q.filter(
-                    (ContentSourceModel.title.ilike(pattern)) | (ContentSourceModel.external_source.ilike(pattern)) | (ChunkIndexModel.chunk_id.ilike(pattern))
+                    (ContentSourceModel.title.ilike(pattern))
+                    | (ContentSourceModel.external_source.ilike(pattern))
+                    | (ChunkIndexModel.chunk_id.ilike(pattern))
                 )
             return q.limit(top_k).all()
 
@@ -110,7 +145,10 @@ class ChunkIndexSQLRepository:
                 return result > 0
             except Exception as e:
                 session.rollback()
-                logger.error("Error deleting individual chunk", context={"chunk_id": str(chunk_id), "error": str(e)})
+                logger.error(
+                    "Error deleting individual chunk",
+                    context={"chunk_id": str(chunk_id), "error": str(e)},
+                )
                 raise
 
     def update_chunk(self, chunk_id: UUID, content: str) -> bool:
@@ -125,13 +163,24 @@ class ChunkIndexSQLRepository:
                 return False
             except Exception as e:
                 session.rollback()
-                logger.error("Error updating individual chunk", context={"chunk_id": str(chunk_id), "error": str(e)})
+                logger.error(
+                    "Error updating individual chunk",
+                    context={"chunk_id": str(chunk_id), "error": str(e)},
+                )
                 raise
 
     def get_by_id(self, chunk_id: UUID) -> Optional[ChunkIndexModel]:
         with Connector() as session:
             try:
-                return session.query(ChunkIndexModel).options(joinedload(ChunkIndexModel.content_source)).filter_by(id=chunk_id).first()
+                return (
+                    session.query(ChunkIndexModel)
+                    .options(joinedload(ChunkIndexModel.content_source))
+                    .filter_by(id=chunk_id)
+                    .first()
+                )
             except Exception as e:
-                logger.error("Error fetching individual chunk", context={"chunk_id": str(chunk_id), "error": str(e)})
+                logger.error(
+                    "Error fetching individual chunk",
+                    context={"chunk_id": str(chunk_id), "error": str(e)},
+                )
                 return None

@@ -39,14 +39,14 @@ class IngestYoutubeUseCase:
     """
 
     def __init__(
-            self,
-            ks_service: KnowledgeSubjectService,
-            cs_service: ContentSourceService,
-            ingestion_service: IngestionJobService,
-            model_loader_service: ModelLoaderService,
-            embedding_service: EmbeddingService,
-            chunk_service: ChunkIndexService,
-            vector_service: YouTubeVectorService,
+        self,
+        ks_service: KnowledgeSubjectService,
+        cs_service: ContentSourceService,
+        ingestion_service: IngestionJobService,
+        model_loader_service: ModelLoaderService,
+        embedding_service: EmbeddingService,
+        chunk_service: ChunkIndexService,
+        vector_service: YouTubeVectorService,
     ) -> None:
         self.ks_service = ks_service
         self.cs_service = cs_service
@@ -73,7 +73,12 @@ class IngestYoutubeUseCase:
         if cmd.ingestion_job_id:
             try:
                 from uuid import UUID
-                jid = UUID(cmd.ingestion_job_id) if isinstance(cmd.ingestion_job_id, str) else cmd.ingestion_job_id
+
+                jid = (
+                    UUID(cmd.ingestion_job_id)
+                    if isinstance(cmd.ingestion_job_id, str)
+                    else cmd.ingestion_job_id
+                )
                 ingestion = self.ingestion_service.get_by_id(jid)
                 if ingestion and ingestion.content_source_id:
                     source = self.cs_service.get_by_id(ingestion.content_source_id)
@@ -82,18 +87,33 @@ class IngestYoutubeUseCase:
 
         try:
             subject = self._resolve_subject(cmd)
-            logger.debug("KnowledgeSubject validated",
-                        context={"subject_id": str(subject.id), "subject_name": subject.name})
+            logger.debug(
+                "KnowledgeSubject validated",
+                context={"subject_id": str(subject.id), "subject_name": subject.name},
+            )
 
             if cmd.data_type == YoutubeDataType.PLAYLIST:
-                logger.info("Processing playlist", context={"playlist_url": cmd.video_url or (cmd.video_urls[0] if cmd.video_urls else None)})
-                playlist_url = cmd.video_url or (cmd.video_urls[0] if cmd.video_urls else None)
+                logger.info(
+                    "Processing playlist",
+                    context={
+                        "playlist_url": cmd.video_url
+                        or (cmd.video_urls[0] if cmd.video_urls else None)
+                    },
+                )
+                playlist_url = cmd.video_url or (
+                    cmd.video_urls[0] if cmd.video_urls else None
+                )
                 if not playlist_url:
                     raise ValueError("No video_url provided for playlist ingestion")
                 video_list = YoutubeExtractor.extract_playlist_videos(playlist_url)
                 if not video_list:
-                    logger.warning("No videos found in playlist", context={"playlist_url": playlist_url})
-                    raise ValueError(f"No videos found in playlist: {playlist_url}. Verify if the URL is a valid public playlist.")
+                    logger.warning(
+                        "No videos found in playlist",
+                        context={"playlist_url": playlist_url},
+                    )
+                    raise ValueError(
+                        f"No videos found in playlist: {playlist_url}. Verify if the URL is a valid public playlist."
+                    )
             else:
                 # determine list of video URLs to process
                 if cmd.video_urls:
@@ -113,31 +133,48 @@ class IngestYoutubeUseCase:
                 try:
                     video_id = self._extract_video_id_from_url(video_url)
                     if not video_id:
-                        raise ValueError(f"Unable to extract video id from url: {video_url}")
+                        raise ValueError(
+                            f"Unable to extract video id from url: {video_url}"
+                        )
 
-                    single_result = self._process_single_video(video_url, video_id, subject, cmd)
+                    single_result = self._process_single_video(
+                        video_url, video_id, subject, cmd
+                    )
                     result.video_results.append(single_result)
                     if not single_result.get("skipped", False):
-                        result.created_chunks = (result.created_chunks or 0) + single_result.get("created_chunks", 0)
+                        result.created_chunks = (
+                            result.created_chunks or 0
+                        ) + single_result.get("created_chunks", 0)
                         result.vector_ids.extend(single_result.get("vector_ids", []))
                 except Exception as e:
                     logger.error(e, context={"video_url": video_url})
-                    result.video_results.append({"video_url": video_url, "error": str(e)})
+                    result.video_results.append(
+                        {"video_url": video_url, "error": str(e)}
+                    )
 
             # 1. Determine overall status
             any_failed = any("error" in r for r in result.video_results)
-            logger.debug("Overall ingestion result status", context={"any_failed": any_failed, "results_count": len(result.video_results)})
+            logger.debug(
+                "Overall ingestion result status",
+                context={
+                    "any_failed": any_failed,
+                    "results_count": len(result.video_results),
+                },
+            )
 
             # 2. Update the parent Tracking Job
             if ingestion:
                 if any_failed:
                     # Collect error messages from failed videos
                     errors = [r["error"] for r in result.video_results if "error" in r]
-                    error_summary = f"Ingestion failed for {len(errors)} items: " + "; ".join(errors)[:200]
+                    error_summary = (
+                        f"Ingestion failed for {len(errors)} items: "
+                        + "; ".join(errors)[:200]
+                    )
                     self._fail_job(ingestion, error_summary)
                 else:
                     self._finish_job(ingestion, chunks_count=result.created_chunks)
-            
+
             # 3. Update the parent Source
             if source:
                 if any_failed:
@@ -145,45 +182,60 @@ class IngestYoutubeUseCase:
                 elif cmd.data_type != YoutubeDataType.PLAYLIST:
                     # For single videos, only finish if not already marked failed or done
                     current_source = self.cs_service.get_by_id(source.id)
-                    if current_source and current_source.processing_status not in [ContentSourceStatus.FAILED, ContentSourceStatus.DONE]:
+                    if current_source and current_source.processing_status not in [
+                        ContentSourceStatus.FAILED,
+                        ContentSourceStatus.DONE,
+                    ]:
                         self._finish_ingestion(source, result.created_chunks or 0)
 
-            skipped_count = sum(1 for r in result.video_results if r.get("skipped", False))
+            skipped_count = sum(
+                1 for r in result.video_results if r.get("skipped", False)
+            )
             job_ids = [r.get("job_id") for r in result.video_results if r.get("job_id")]
-            logger.info("YouTube ingestion completed", context={
-                "job_ids": job_ids or cmd.ingestion_job_id,
-                "chunks": result.created_chunks,
-                "total_videos": len(result.video_results),
-                "skipped": skipped_count,
-            })
+            logger.info(
+                "YouTube ingestion completed",
+                context={
+                    "job_ids": job_ids or cmd.ingestion_job_id,
+                    "chunks": result.created_chunks,
+                    "total_videos": len(result.video_results),
+                    "skipped": skipped_count,
+                },
+            )
             return result
 
         except Exception as e:
             error_msg = str(e)
-            logger.error(error_msg, context={"video_urls": getattr(cmd, "video_urls", None)})
-            
+            logger.error(
+                error_msg, context={"video_urls": getattr(cmd, "video_urls", None)}
+            )
+
             if source:
                 try:
                     self._fail_ingestion(source)
                 except Exception as ef:
                     logger.error(f"Failed to mark source as FAILED: {ef}")
-            
+
             if ingestion:
                 try:
                     self._fail_job(ingestion, error_msg)
                 except Exception as ej:
                     logger.error(f"Failed to mark job as FAILED: {ej}")
-            
+
             raise e
 
-    def _process_single_video(self, video_url: str, video_id: str, subject, cmd: IngestYoutubeCommand) -> Dict[
-        str, Any]:
-        logger.info("Processing video", context={"video_id": video_id, "video_url": video_url})
+    def _process_single_video(
+        self, video_url: str, video_id: str, subject, cmd: IngestYoutubeCommand
+    ) -> Dict[str, Any]:
+        logger.info(
+            "Processing video", context={"video_id": video_id, "video_url": video_url}
+        )
 
         existing = self._check_existing_source(video_id)
         if existing and existing.processing_status == "done":
-            logger.info("Source already exists and is DONE, skipping ingestion",
-                        context={"source_id": str(existing.id), "external_source": video_id})
+            logger.info(
+                "Source already exists and is DONE, skipping ingestion",
+                context={"source_id": str(existing.id), "external_source": video_id},
+            )
 
             # Create a FAILED ingestion job to record the duplicate attempt
             failed_job_id = None
@@ -202,30 +254,50 @@ class IngestYoutubeUseCase:
                     status_message=f"Skipped: {video_id} already exists",
                 )
                 failed_job_id = str(failed_job.id)
-                logger.info("Created FAILED job for duplicate attempt",
-                            context={"job_id": failed_job_id, "video_id": video_id})
+                logger.info(
+                    "Created FAILED job for duplicate attempt",
+                    context={"job_id": failed_job_id, "video_id": video_id},
+                )
             except Exception as ej:
                 logger.error(f"Failed to create FAILED job for duplicate: {ej}")
 
-            return {"video_url": video_url, "video_id": video_id, "skipped": True, "reason": "source_exists_and_done",
-                    "source_id": existing.id, "job_id": failed_job_id}
+            return {
+                "video_url": video_url,
+                "video_id": video_id,
+                "skipped": True,
+                "reason": "source_exists_and_done",
+                "source_id": existing.id,
+                "job_id": failed_job_id,
+            }
 
-        source = existing 
+        source = existing
         ingestion = None
         try:
             # 1. Reuse or create Ingestion Job EARLY (even before source exists)
             if cmd.ingestion_job_id:
                 try:
                     from uuid import UUID
-                    jid = UUID(cmd.ingestion_job_id) if isinstance(cmd.ingestion_job_id, str) else cmd.ingestion_job_id
+
+                    jid = (
+                        UUID(cmd.ingestion_job_id)
+                        if isinstance(cmd.ingestion_job_id, str)
+                        else cmd.ingestion_job_id
+                    )
                     ingestion = self.ingestion_service.get_by_id(jid)
                     if ingestion is None:
-                        logger.warning(f"Job {cmd.ingestion_job_id} not found, creating new one")
+                        logger.warning(
+                            f"Job {cmd.ingestion_job_id} not found, creating new one"
+                        )
                         ingestion = self._create_ingestion_job(source)
                     else:
-                        logger.debug("Reusing pre-created ingestion job", context={"job_id": str(jid)})
+                        logger.debug(
+                            "Reusing pre-created ingestion job",
+                            context={"job_id": str(jid)},
+                        )
                 except Exception as ej:
-                    logger.warning(f"Failed to retrieve pre-created job {cmd.ingestion_job_id}, creating new one: {ej}")
+                    logger.warning(
+                        f"Failed to retrieve pre-created job {cmd.ingestion_job_id}, creating new one: {ej}"
+                    )
                     ingestion = self._create_ingestion_job(source)
             else:
                 ingestion = self._create_ingestion_job(source)
@@ -237,80 +309,140 @@ class IngestYoutubeUseCase:
             yt_extractor = YoutubeExtractor(video_id=video_id, language=cmd.language)
             metadata = yt_extractor.extract_metadata()
             extracted_title = metadata.full_title or metadata.title or cmd.title
-            
+
             if not extracted_title or not str(extracted_title).strip():
-                logger.warning("No title extracted for video, using fallback", context={"video_id": video_id})
+                logger.warning(
+                    "No title extracted for video, using fallback",
+                    context={"video_id": video_id},
+                )
                 extracted_title = f"YouTube Video {video_id}"
 
-            logger.debug("Video title determined", context={"video_id": video_id, "title": extracted_title})
+            logger.debug(
+                "Video title determined",
+                context={"video_id": video_id, "title": extracted_title},
+            )
 
-            self.ingestion_service.update_job(job_id=ingestion.id, status=IngestionJobStatus.PROCESSING, 
-                                             status_message="Downloading & splitting transcript...", current_step=1, total_steps=4)
+            self.ingestion_service.update_job(
+                job_id=ingestion.id,
+                status=IngestionJobStatus.PROCESSING,
+                status_message="Downloading & splitting transcript...",
+                current_step=1,
+                total_steps=4,
+            )
 
             # 3. Extract and split transcript (CRITICAL STEP)
             # If this fails, the Source is NEVER created in the DB (unless it already existed).
             docs = self._extract_and_split(cmd, video_id, yt_extractor=yt_extractor)
-            
+
             if not docs:
-                raise ValueError(f"No transcript chunks generated for video {video_id}. It might be too short or have no available subtitles.")
+                raise ValueError(
+                    f"No transcript chunks generated for video {video_id}. It might be too short or have no available subtitles."
+                )
 
             # 4. Now that we have data, ensure Source exists
             if source is None:
-                source = self._create_content_source(subject, cmd, video_id, title=extracted_title)
+                source = self._create_content_source(
+                    subject, cmd, video_id, title=extracted_title
+                )
                 # Link job to the newly created source
-                self.ingestion_service.link_job_to_source(job_id=ingestion.id, content_source_id=source.id,
-                                                          ingestion_type=SourceType.YOUTUBE.value)
+                self.ingestion_service.link_job_to_source(
+                    job_id=ingestion.id,
+                    content_source_id=source.id,
+                    ingestion_type=SourceType.YOUTUBE.value,
+                )
             else:
-                self.cs_service._repo.update_title(content_source_id=source.id, title=extracted_title)
+                self.cs_service._repo.update_title(
+                    content_source_id=source.id, title=extracted_title
+                )
                 if ingestion.content_source_id is None:
-                    self.ingestion_service.link_job_to_source(job_id=ingestion.id, content_source_id=source.id,
-                                                              ingestion_type=SourceType.YOUTUBE.value)
+                    self.ingestion_service.link_job_to_source(
+                        job_id=ingestion.id,
+                        content_source_id=source.id,
+                        ingestion_type=SourceType.YOUTUBE.value,
+                    )
 
             self._mark_source_processing(source)
 
             # 5. Embed and Index
-            self.ingestion_service.update_job(job_id=ingestion.id, status=IngestionJobStatus.PROCESSING, 
-                                             status_message=f"Generating embeddings for {len(docs)} chunks...", current_step=3, total_steps=4)
-            chunks = self._build_chunk_entities(docs, source, subject, cmd, job_id=ingestion.id)
+            self.ingestion_service.update_job(
+                job_id=ingestion.id,
+                status=IngestionJobStatus.PROCESSING,
+                status_message=f"Generating embeddings for {len(docs)} chunks...",
+                current_step=3,
+                total_steps=4,
+            )
+            chunks = self._build_chunk_entities(
+                docs, source, subject, cmd, job_id=ingestion.id
+            )
             self._persist_chunks(chunks)
 
-            self.ingestion_service.update_job(job_id=ingestion.id, status=IngestionJobStatus.PROCESSING, 
-                                             status_message="Indexing in vector store...", current_step=4, total_steps=4)
+            self.ingestion_service.update_job(
+                job_id=ingestion.id,
+                status=IngestionJobStatus.PROCESSING,
+                status_message="Indexing in vector store...",
+                current_step=4,
+                total_steps=4,
+            )
             created_ids = self._index_chunks(chunks)
 
-            self.ingestion_service.update_job(job_id=ingestion.id, status=IngestionJobStatus.FINISHED,
-                                             status_message="Ingestion complete!", current_step=4, total_steps=4,
-                                             chunks_count=len(chunks))
+            self.ingestion_service.update_job(
+                job_id=ingestion.id,
+                status=IngestionJobStatus.FINISHED,
+                status_message="Ingestion complete!",
+                current_step=4,
+                total_steps=4,
+                chunks_count=len(chunks),
+            )
             self._finish_ingestion(source, len(chunks))
 
-            return {"video_url": video_url, "video_id": video_id, "skipped": False, "created_chunks": len(chunks),
-                    "vector_ids": created_ids, "source_id": source.id}
-        
+            return {
+                "video_url": video_url,
+                "video_id": video_id,
+                "skipped": False,
+                "created_chunks": len(chunks),
+                "vector_ids": created_ids,
+                "source_id": source.id,
+            }
+
         except Exception as e:
             error_msg = str(e)
-            logger.error(f"Error processing video {video_id}: {error_msg}", context={"video_url": video_url})
-            
+            logger.error(
+                f"Error processing video {video_id}: {error_msg}",
+                context={"video_url": video_url},
+            )
+
             if source:
                 try:
                     self._fail_ingestion(source)
                 except Exception as ef:
                     logger.error(f"Failed to mark source as FAILED: {ef}")
-            
+
             if ingestion:
                 try:
                     self._fail_job(ingestion, error_msg)
                 except Exception as ej:
                     logger.error(f"Failed to mark job as FAILED: {ej}")
-            
+
             raise e
 
     def _fail_ingestion(self, source) -> None:
-        self.cs_service.update_processing_status(content_source_id=source.id, status=ContentSourceStatus.FAILED)
-        logger.info("Content source marked as FAILED", context={"content_source_id": str(source.id)})
+        self.cs_service.update_processing_status(
+            content_source_id=source.id, status=ContentSourceStatus.FAILED
+        )
+        logger.info(
+            "Content source marked as FAILED",
+            context={"content_source_id": str(source.id)},
+        )
 
     def _fail_job(self, ingestion, error_message: str) -> None:
-        self.ingestion_service.update_job(job_id=ingestion.id, status=IngestionJobStatus.FAILED, error_message=error_message)
-        logger.info("Ingestion job updated to FAILED", context={"job_id": str(ingestion.id)})
+        self.ingestion_service.update_job(
+            job_id=ingestion.id,
+            status=IngestionJobStatus.FAILED,
+            error_message=error_message,
+        )
+        logger.info(
+            "Ingestion job updated to FAILED", context={"job_id": str(ingestion.id)}
+        )
 
     @classmethod
     def _extract_video_id_from_url(cls, url: str) -> Optional[str]:
@@ -339,32 +471,58 @@ class IngestYoutubeUseCase:
     def _resolve_subject(self, cmd: IngestYoutubeCommand):
         if getattr(cmd, "subject_id", None):
             try:
-                subject_id_val = cmd.subject_id if isinstance(cmd.subject_id, uuid.UUID) else uuid.UUID(
-                    str(cmd.subject_id))
+                subject_id_val = (
+                    cmd.subject_id
+                    if isinstance(cmd.subject_id, uuid.UUID)
+                    else uuid.UUID(str(cmd.subject_id))
+                )
             except Exception as e:
-                logger.error(e, context={"subject_id": getattr(cmd, "subject_id", None)})
+                logger.error(
+                    e, context={"subject_id": getattr(cmd, "subject_id", None)}
+                )
                 raise ValueError(f"Invalid subject_id provided: {e}")
             subject = self.ks_service.get_subject_by_id(subject_id_val)
             if subject is None:
-                logger.error("KnowledgeSubject not found by id", context={"subject_id": str(subject_id_val)})
+                logger.error(
+                    "KnowledgeSubject not found by id",
+                    context={"subject_id": str(subject_id_val)},
+                )
                 raise ValueError(f"KnowledgeSubject with id {subject_id_val} not found")
             return subject
 
         if cmd.subject_name:
             subject = self.ks_service.get_by_name(cmd.subject_name)
             if subject is None:
-                logger.error("KnowledgeSubject not found by name", context={"subject_name": cmd.subject_name})
-                raise ValueError(f"KnowledgeSubject with name '{cmd.subject_name}' not found")
+                logger.error(
+                    "KnowledgeSubject not found by name",
+                    context={"subject_name": cmd.subject_name},
+                )
+                raise ValueError(
+                    f"KnowledgeSubject with name '{cmd.subject_name}' not found"
+                )
             return subject
 
-        logger.error("No subject identifier provided", context={"video_url": getattr(cmd, "video_url", None)})
+        logger.error(
+            "No subject identifier provided",
+            context={"video_url": getattr(cmd, "video_url", None)},
+        )
         raise ValueError("Either subject_id or subject_name must be provided")
 
     def _check_existing_source(self, video_id: str):
-        logger.debug("Checking existing content source", context={"external_source": video_id})
-        return self.cs_service.get_by_source_info(source_type=SourceType.YOUTUBE, external_source=video_id)
+        logger.debug(
+            "Checking existing content source", context={"external_source": video_id}
+        )
+        return self.cs_service.get_by_source_info(
+            source_type=SourceType.YOUTUBE, external_source=video_id
+        )
 
-    def _create_content_source(self, subject, cmd: IngestYoutubeCommand, video_id: str, title: Optional[str] = None):
+    def _create_content_source(
+        self,
+        subject,
+        cmd: IngestYoutubeCommand,
+        video_id: str,
+        title: Optional[str] = None,
+    ):
         source = self.cs_service.create_source(
             subject_id=subject.id,
             source_type=SourceType.YOUTUBE,
@@ -372,9 +530,12 @@ class IngestYoutubeUseCase:
             title=title or cmd.title,
             language=cmd.language,
             status=ContentSourceStatus.ACTIVE,
-            processing_status="pending"
+            processing_status="pending",
         )
-        logger.debug("Content source created", context={"content_source_id": str(source.id), "external_source": video_id})
+        logger.debug(
+            "Content source created",
+            context={"content_source_id": str(source.id), "external_source": video_id},
+        )
         return source
 
     def _create_ingestion_job(self, source: Optional[Any] = None):
@@ -386,32 +547,64 @@ class IngestYoutubeUseCase:
             pipeline_version="1.0",
             ingestion_type=SourceType.YOUTUBE.value,
         )
-        logger.debug("Ingestion job created", context={"job_id": str(ingestion.id), "content_source_id": str(source_id)})
+        logger.debug(
+            "Ingestion job created",
+            context={"job_id": str(ingestion.id), "content_source_id": str(source_id)},
+        )
         return ingestion
 
     def _mark_source_processing(self, source) -> None:
-        self.cs_service.update_processing_status(content_source_id=source.id, status=ContentSourceStatus.PROCESSING)
-        logger.debug("Content source marked as PROCESSING", context={"content_source_id": str(source.id)})
+        self.cs_service.update_processing_status(
+            content_source_id=source.id, status=ContentSourceStatus.PROCESSING
+        )
+        logger.debug(
+            "Content source marked as PROCESSING",
+            context={"content_source_id": str(source.id)},
+        )
 
-    def _extract_and_split(self, cmd: IngestYoutubeCommand, video_id: str, yt_extractor: Optional[YoutubeExtractor] = None) -> List[Document]:
-        logger.debug("Starting extraction and transcript split", context={"video_id": video_id})
+    def _extract_and_split(
+        self,
+        cmd: IngestYoutubeCommand,
+        video_id: str,
+        yt_extractor: Optional[YoutubeExtractor] = None,
+    ) -> List[Document]:
+        logger.debug(
+            "Starting extraction and transcript split", context={"video_id": video_id}
+        )
         if yt_extractor is None:
             yt_extractor = YoutubeExtractor(video_id=video_id, language=cmd.language)
 
-        ytts = YoutubeDataProcessService(model_loader_service=self.model_loader_service, yt_extractor=yt_extractor)
-        docs: List[Document] = ytts.split_transcript(mode="tokens", tokens_per_chunk=cmd.tokens_per_chunk,
-                                                     tokens_overlap=cmd.tokens_overlap,)
+        ytts = YoutubeDataProcessService(
+            model_loader_service=self.model_loader_service, yt_extractor=yt_extractor
+        )
+        docs: List[Document] = ytts.split_transcript(
+            mode="tokens",
+            tokens_per_chunk=cmd.tokens_per_chunk,
+            tokens_overlap=cmd.tokens_overlap,
+        )
 
-        logger.debug("Transcript split completed", context={"video_id": video_id, "chunks": len(docs)})
+        logger.debug(
+            "Transcript split completed",
+            context={"video_id": video_id, "chunks": len(docs)},
+        )
         return docs
 
     def _update_ingestion_processing(self, ingestion) -> None:
-        self.ingestion_service.update_job(job_id=ingestion.id, status=IngestionJobStatus.PROCESSING)
-        logger.debug("Ingestion job updated to PROCESSING", context={"job_id": str(ingestion.id)})
+        self.ingestion_service.update_job(
+            job_id=ingestion.id, status=IngestionJobStatus.PROCESSING
+        )
+        logger.debug(
+            "Ingestion job updated to PROCESSING", context={"job_id": str(ingestion.id)}
+        )
 
-    def _build_chunk_entities(self, docs: List[Document], source, subject, cmd: IngestYoutubeCommand, job_id: UUID) -> \
-    List[
-        ChunkEntity]:
+    def _build_chunk_entities(
+        self,
+        docs: List[Document],
+        source,
+        subject,
+        cmd: IngestYoutubeCommand,
+        job_id: UUID,
+    ) -> List[ChunkEntity]:
         list_chunks: List[ChunkEntity] = []
         for doc in docs:
             chunk_entity = ChunkEntity(
@@ -435,11 +628,16 @@ class IngestYoutubeUseCase:
 
     def _persist_chunks(self, chunks: List[ChunkEntity]) -> None:
         self.chunk_service.create_chunks(chunks)
-        logger.debug("Persisted chunks to SQL repository", context={"num_chunks": len(chunks)})
+        logger.debug(
+            "Persisted chunks to SQL repository", context={"num_chunks": len(chunks)}
+        )
 
     def _index_chunks(self, chunks: List[ChunkEntity]) -> List[str]:
         created_ids = self.vector_service.index_documents(chunks)
-        logger.debug("Indexed chunks in vector store", context={"indexed_count": len(created_ids)})
+        logger.debug(
+            "Indexed chunks in vector store",
+            context={"indexed_count": len(created_ids)},
+        )
         return created_ids
 
     def _finish_ingestion(self, source, num_chunks: int) -> None:
@@ -452,9 +650,18 @@ class IngestYoutubeUseCase:
             dimensions=dims_val,
             chunks=num_chunks,
         )
-        logger.info("Ingestion finished",
-                    context={"content_source_id": str(source.id), "chunks": num_chunks})
+        logger.info(
+            "Ingestion finished",
+            context={"content_source_id": str(source.id), "chunks": num_chunks},
+        )
 
     def _finish_job(self, ingestion, chunks_count: Optional[int] = None) -> None:
-        self.ingestion_service.update_job(job_id=ingestion.id, status=IngestionJobStatus.FINISHED, chunks_count=chunks_count)
-        logger.debug("Ingestion job marked as FINISHED", context={"job_id": str(ingestion.id), "chunks": chunks_count})
+        self.ingestion_service.update_job(
+            job_id=ingestion.id,
+            status=IngestionJobStatus.FINISHED,
+            chunks_count=chunks_count,
+        )
+        logger.debug(
+            "Ingestion job marked as FINISHED",
+            context={"job_id": str(ingestion.id), "chunks": chunks_count},
+        )

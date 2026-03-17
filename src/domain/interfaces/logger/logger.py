@@ -3,7 +3,6 @@ from typing import Optional, Dict
 
 
 class ILogger(ABC):
-
     @abstractmethod
     def _is_allowed(self, level_name: str) -> bool:
         raise NotImplementedError

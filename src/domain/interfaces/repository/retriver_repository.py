@@ -13,7 +13,9 @@ class IVectorRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def retriever(self, query: str, top_kn: int = 5, filters: Optional[Any] = None) -> List[ChunkModel]:
+    def retriever(
+        self, query: str, top_kn: int = 5, filters: Optional[Any] = None
+    ) -> List[ChunkModel]:
         """Retrieve matching domain Chunk entities."""
         raise NotImplementedError
 
@@ -23,6 +25,8 @@ class IVectorRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def list_chunks(self, filters: Optional[Any], limit: int = 1000) -> List[ChunkModel]:
+    def list_chunks(
+        self, filters: Optional[Any], limit: int = 1000
+    ) -> List[ChunkModel]:
         """List chunks matching query and filters without vector search."""
         raise NotImplementedError

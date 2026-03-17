@@ -17,10 +17,30 @@ class DummyRepo:
 
     def retriever(self, query, top_kn=5, filters=None):
         # return list of ChunkModel
-        return [ChunkModel(job_id=uuid4(), content_source_id=uuid4(), source_type="youtube", external_source="v1", subject_id=uuid4(), embedding_model="m", content="abc")]
+        return [
+            ChunkModel(
+                job_id=uuid4(),
+                content_source_id=uuid4(),
+                source_type="youtube",
+                external_source="v1",
+                subject_id=uuid4(),
+                embedding_model="m",
+                content="abc",
+            )
+        ]
 
     def list_chunks(self, filters=None):
-        return [ChunkModel(job_id=uuid4(), content_source_id=uuid4(), source_type="youtube", external_source="v1", subject_id=uuid4(), embedding_model="m", content="abc")]
+        return [
+            ChunkModel(
+                job_id=uuid4(),
+                content_source_id=uuid4(),
+                source_type="youtube",
+                external_source="v1",
+                subject_id=uuid4(),
+                embedding_model="m",
+                content="abc",
+            )
+        ]
 
     def delete(self, filters=None):
         return 2

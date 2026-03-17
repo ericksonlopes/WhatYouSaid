@@ -27,19 +27,23 @@ class ChunkVectorService:
         models = [self._mapper.entity_to_model(doc) for doc in documents]
         return self._repository.create_documents(models)
 
-    def retrieve(self, query: str, top_k: int = 5, filters: Optional[Any] = None) -> List[ChunkEntity]:
+    def retrieve(
+        self, query: str, top_k: int = 5, filters: Optional[Any] = None
+    ) -> List[ChunkEntity]:
         """Retrieve chunk entities from the vector repository based on similarity search."""
         if not query:
             raise ValueError("Query must be provided for retrieval")
 
         logger.debug("Retrieving chunks", context={"query": query, "top_k": top_k})
-        models: List[ChunkModel] = self._repository.retriever(query=query, top_kn=top_k, filters=filters)
+        models: List[ChunkModel] = self._repository.retriever(
+            query=query, top_kn=top_k, filters=filters
+        )
 
         entities = [self._mapper.model_to_entity(m) for m in models]
 
         # Ensure scores are transferred to entities if present in models
         for i, m in enumerate(models):
-            if hasattr(m, 'score') and i < len(entities):
+            if hasattr(m, "score") and i < len(entities):
                 entities[i].score = m.score
 
         return entities
@@ -52,11 +56,16 @@ class ChunkVectorService:
 
     def delete(self, filters: Optional[Any]) -> int:
         """Delete documents from the vector store based on provided filters."""
-        logger.debug("Deleting documents from vector store", context={"filters": str(filters)})
+        logger.debug(
+            "Deleting documents from vector store", context={"filters": str(filters)}
+        )
         return self._repository.delete(filters=filters)
 
     def delete_by_id(self, chunk_id: UUID) -> int:
         """Delete a specific chunk from the vector store by its ID."""
-        logger.debug("Deleting specific chunk from vector store", context={"chunk_id": str(chunk_id)})
+        logger.debug(
+            "Deleting specific chunk from vector store",
+            context={"chunk_id": str(chunk_id)},
+        )
         filters = Filter.by_id().equal(chunk_id)
         return self._repository.delete(filters=filters)

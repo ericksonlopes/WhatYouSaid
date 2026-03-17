@@ -22,14 +22,22 @@ class SearchChunksUseCase:
         self.ks_service = ks_service
 
     def execute(
-            self,
-            query: str,
-            top_k: int = 5,
-            subject_id: Optional[Union[str, UUID]] = None,
-            subject_name: Optional[str] = None,
+        self,
+        query: str,
+        top_k: int = 5,
+        subject_id: Optional[Union[str, UUID]] = None,
+        subject_name: Optional[str] = None,
     ) -> SearchChunksResult:
-        logger.info("Executing search chunks use case", context={"query": query, "top_k": top_k, "subject_id": str(subject_id) if subject_id else None, "subject_name": subject_name})
-        
+        logger.info(
+            "Executing search chunks use case",
+            context={
+                "query": query,
+                "top_k": top_k,
+                "subject_id": str(subject_id) if subject_id else None,
+                "subject_name": subject_name,
+            },
+        )
+
         # Validations
         if subject_id and subject_name:
             raise ValueError("Provide only one of subject_id or subject_name")
@@ -39,12 +47,17 @@ class SearchChunksUseCase:
 
         # Resolve subject_name to ID if provided
         if subject_name:
-            logger.debug("Resolving subject name", context={"subject_name": subject_name})
+            logger.debug(
+                "Resolving subject name", context={"subject_name": subject_name}
+            )
             if not self.ks_service:
                 raise ValueError("ks_service is required to filter by subject_name")
             subject = self.ks_service.get_by_name(subject_name)
             if subject is None:
-                logger.warning("Subject not found during search", context={"subject_name": subject_name})
+                logger.warning(
+                    "Subject not found during search",
+                    context={"subject_name": subject_name},
+                )
                 return SearchChunksResult(query=query, results=[], total_count=0)
             subject_id = subject.id
 
@@ -55,13 +68,16 @@ class SearchChunksUseCase:
             filters = Filter.all_of(filters_list)
 
         # Execute retrieval
-        logger.debug("Calling vector service for retrieval", context={"query": query, "top_k": top_k})
+        logger.debug(
+            "Calling vector service for retrieval",
+            context={"query": query, "top_k": top_k},
+        )
         results = self.vector_service.retrieve(query, top_k=top_k, filters=filters)
-        
-        logger.info("Search completed", context={"query": query, "results_count": len(results)})
-        
+
+        logger.info(
+            "Search completed", context={"query": query, "results_count": len(results)}
+        )
+
         return SearchChunksResult(
-            query=query,
-            results=results,
-            total_count=len(results)
+            query=query, results=results, total_count=len(results)
         )

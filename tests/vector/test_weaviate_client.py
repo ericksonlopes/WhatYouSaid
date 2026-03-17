@@ -1,5 +1,7 @@
 import pytest
-from src.infrastructure.repositories.vector.weaviate.weaviate_client import WeaviateClient
+from src.infrastructure.repositories.vector.weaviate.weaviate_client import (
+    WeaviateClient,
+)
 
 
 class DummyConfig:

@@ -1,11 +1,8 @@
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException
-from pydantic import BaseModel
 
 from src.application.dtos.commands.ingest_youtube_command import IngestYoutubeCommand
-from src.application.dtos.enums.youtube_data_type import YoutubeDataType
-from src.application.dtos.results.ingest_youtube_result import IngestYoutubeResult
 from src.application.use_cases.ingest_youtube_use_case import IngestYoutubeUseCase
 from src.config.logger import Logger
 from src.presentation.api.dependencies import get_ingest_youtube_use_case
@@ -58,7 +55,7 @@ def ingest_youtube(
         if result.skipped:
             raise HTTPException(
                 status_code=409,
-                detail=result.reason or "This content has already been ingested."
+                detail=result.reason or "This content has already been ingested.",
             )
 
         return result

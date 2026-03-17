@@ -9,6 +9,7 @@ from sqlalchemy.orm import relationship
 
 from src.infrastructure.repositories.sql.connector import Base
 
+
 class ChunkIndexModel(Base):
     __tablename__ = "chunk_index"
 
@@ -29,7 +30,9 @@ class ChunkIndexModel(Base):
     tokens_count = Column(Integer, nullable=True)
     language = Column(Text, nullable=True)
     version_number = Column(Integer, nullable=False, server_default=text("1"))
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
     job = relationship("IngestionJobModel", back_populates="chunks")
     content_source = relationship("ContentSourceModel")

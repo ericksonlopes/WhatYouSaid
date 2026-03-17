@@ -1,4 +1,3 @@
-import os
 import sys
 from pathlib import Path
 
@@ -7,7 +6,7 @@ root = Path(__file__).resolve().parents[1]
 if str(root) not in sys.path:
     sys.path.append(str(root))
 
-from src.config.settings import settings # noqa: E402
+from src.config.settings import settings  # noqa: E402
 from src.infrastructure.repositories.sql.connector import Base, engine  # noqa: E402
 
 
@@ -15,18 +14,6 @@ def reset_sql():
     print("--- Cleaning SQL Database ---")
     try:
         # Import models to ensure they are registered with Base
-        from src.infrastructure.repositories.sql.models.chunk_index import (
-            ChunkIndexModel,
-        )
-        from src.infrastructure.repositories.sql.models.content_source import (
-            ContentSourceModel,
-        )
-        from src.infrastructure.repositories.sql.models.ingestion_job import (
-            IngestionJobModel,
-        )
-        from src.infrastructure.repositories.sql.models.knowledge_subject import (
-            KnowledgeSubjectModel,
-        )
 
         Base.metadata.drop_all(bind=engine)
         print("Dropped all tables.")
@@ -35,6 +22,7 @@ def reset_sql():
         print("✅ SQL Database reset complete.")
     except Exception as e:
         print(f"❌ Error resetting SQL: {e}")
+
 
 def reset_weaviate():
     print(f"--- Cleaning Weaviate at {settings.vector.weaviate_host} ---")
@@ -49,7 +37,7 @@ def reset_weaviate():
             grpc_port=50051,
             additional_config=AdditionalConfig(
                 timeout=Timeout(query=60, insert=120, init=30)
-            )
+            ),
         )
 
         try:
@@ -69,15 +57,18 @@ def reset_weaviate():
 
     except Exception as e:
         print(f"❌ Error connecting to Weaviate: {e}")
+
+
 def main():
     print("⚠️  WARNING: This will DELETE ALL DATA in SQL and Weaviate! ⚠️")
     confirm = input("Are you absolutely sure? (y/N): ")
-    if confirm.lower() == 'y':
+    if confirm.lower() == "y":
         reset_sql()
         reset_weaviate()
         print("\n🚀 System is clean and ready for a fresh start!")
     else:
         print("Operation aborted.")
+
 
 if __name__ == "__main__":
     main()

@@ -3,6 +3,7 @@ from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
+
 class SourceResponse(BaseModel):
     id: UUID
     title: Optional[str] = None

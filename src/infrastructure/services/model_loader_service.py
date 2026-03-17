@@ -1,6 +1,5 @@
-from typing import Optional
-
 import os
+from typing import Any
 import torch
 from sentence_transformers import SentenceTransformer
 import logging
@@ -18,16 +17,16 @@ logger = Logger()
 # Redirect transformers logs to our custom logger
 # Using ERROR level to silence the verbose loading reports and configs
 transformers_logging.set_verbosity_error()
-transformers_logging.disable_progress_bar() # Explicitly disable transformers progress bars
+transformers_logging.disable_progress_bar()  # Explicitly disable transformers progress bars
 transformers_logger = logging.getLogger("transformers")
 transformers_logger.addHandler(logger.get_intercept_handler())
-transformers_logger.propagate = False # Prevent double logging
+transformers_logger.propagate = False  # Prevent double logging
 
 disable_progress_bars()
 
 
 class ModelLoaderService(IModelLoaderService):
-    _model_cache = {}
+    _model_cache: dict[str, Any] = {}
 
     def __init__(self, model_name: str):
         super().__init__()
@@ -38,8 +37,13 @@ class ModelLoaderService(IModelLoaderService):
     def load_model(self):
         if self.model_name not in ModelLoaderService._model_cache:
             try:
-                logger.info("Loading models", context={"model_name": self.model_name, "device": self.device})
-                ModelLoaderService._model_cache[self.model_name] = SentenceTransformer(self.model_name, device=self.device)
+                logger.info(
+                    "Loading models",
+                    context={"model_name": self.model_name, "device": self.device},
+                )
+                ModelLoaderService._model_cache[self.model_name] = SentenceTransformer(
+                    self.model_name, device=self.device
+                )
             except Exception as e:
                 logger.error(f"Error loading models: {e}")
                 raise RuntimeError(f"Failed to load models '{self.model_name}': {e}")

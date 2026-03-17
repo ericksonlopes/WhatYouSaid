@@ -6,7 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from src.config.logger import Logger
 from src.infrastructure.services.chunk_index_service import ChunkIndexService
 from src.infrastructure.services.chunk_vector_service import ChunkVectorService
-from src.presentation.api.dependencies import get_chunk_index_service, get_chunk_vector_service
+from src.presentation.api.dependencies import (
+    get_chunk_index_service,
+    get_chunk_vector_service,
+)
 from src.presentation.api.schemas.chunk_schemas import ChunkResponse, ChunkUpdate
 
 logger = Logger()
@@ -52,26 +55,26 @@ def update_chunk(
 ):
     """Update an individual chunk's content in both SQL and Vector store."""
     logger.info("API request to update chunk", context={"chunk_id": str(chunk_id)})
-    
+
     try:
         # 1. Get current chunk from SQL to get full metadata
         entity = chunk_service.get_by_id(chunk_id)
         if not entity:
             raise HTTPException(status_code=404, detail="Chunk not found")
-        
+
         # 2. Update SQL
         success = chunk_service.update_chunk(chunk_id, update_data.content)
         if not success:
             raise HTTPException(status_code=404, detail="Failed to update chunk in SQL")
-        
+
         # 3. Update Vector Store (Delete old, index new)
         # Update entity content for re-indexing
         entity.content = update_data.content
-        
+
         # Re-indexing requires deleting by ID first then adding
         vector_service.delete_by_id(chunk_id)
         vector_service.index_documents([entity])
-        
+
         logger.info("Chunk updated successfully", context={"chunk_id": str(chunk_id)})
         return True
     except HTTPException:
@@ -96,16 +99,16 @@ def delete_chunk(
 ):
     """Delete an individual chunk from both SQL and Vector store."""
     logger.info("API request to delete chunk", context={"chunk_id": str(chunk_id)})
-    
+
     try:
         # 1. Delete from SQL
         success = chunk_service.delete_chunk(chunk_id)
         if not success:
             raise HTTPException(status_code=404, detail="Chunk not found in SQL")
-        
+
         # 2. Delete from Vector Store
         vector_service.delete_by_id(chunk_id)
-        
+
         logger.info("Chunk deleted successfully", context={"chunk_id": str(chunk_id)})
         return None  # FastAPI returns 200 OK by default with null content, or use Response(status_code=204)
     except HTTPException:

@@ -6,8 +6,11 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class SearchRequest(BaseModel):
-    query: str = Field(..., description="A query string to search for",
-                       json_schema_extra={"examples": ["Quem é o palestrante?"]}, )
+    query: str = Field(
+        ...,
+        description="A query string to search for",
+        json_schema_extra={"examples": ["Quem é o palestrante?"]},
+    )
     top_k: int = Field(default=5, ge=1, le=50)
     subject_id: Optional[str] = None
     subject_name: Optional[str] = None

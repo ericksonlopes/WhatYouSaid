@@ -8,8 +8,12 @@ from pydantic import BaseModel, Field
 class ContentSourceEntity(BaseModel):
     """Domain entity representing a content source (e.g., a YouTube video or document)."""
 
-    id: UUID = Field(default_factory=lambda: uuid4(), description="Logical ID of the content source")
-    subject_id: Optional[UUID] = Field(default=None, description="Associated knowledge subject id")
+    id: UUID = Field(
+        default_factory=lambda: uuid4(), description="Logical ID of the content source"
+    )
+    subject_id: Optional[UUID] = Field(
+        default=None, description="Associated knowledge subject id"
+    )
     source_type: str = Field(..., description="Type of source, e.g., 'youtube', 'pdf'")
     external_source: str = Field(..., description="External id or URL of the source")
     title: Optional[str] = Field(default=None)

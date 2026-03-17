@@ -12,12 +12,14 @@ class DummySettings:
 
 @pytest.fixture(autouse=True)
 def patch_settings(monkeypatch):
-    monkeypatch.setattr('src.config.settings.settings', DummySettings())
+    monkeypatch.setattr("src.config.settings.settings", DummySettings())
 
 
 @pytest.fixture
 def logger():
-    log_format = "{asctime} [{levelname}] {filename}:{lineno} {class}.{funcName} - {message}"
+    log_format = (
+        "{asctime} [{levelname}] {filename}:{lineno} {class}.{funcName} - {message}"
+    )
     return StdLogger(log_format, name="test")
 
 
@@ -74,7 +76,7 @@ class TestStdLogger:
     def test_logger_remove_handlers(self):
         log_format = "{message}"
         logger_name = "test_remove_handlers"
-        unique_logger_name = f'std_logger_{logger_name}_unique'
+        unique_logger_name = f"std_logger_{logger_name}_unique"
         logger_obj = logging.getLogger(unique_logger_name)
         handler = logging.StreamHandler()
         logger_obj.addHandler(handler)
@@ -85,6 +87,7 @@ class TestStdLogger:
 
     def test_logger_handler_removal(self):
         import logging
+
         log_format = "{message}"
         logger_name = "handler_removal"
         logger = StdLogger(log_format, name=logger_name)
@@ -100,6 +103,7 @@ class TestStdLogger:
 
     def test_logger_handler_removal_multiple(self):
         import logging
+
         log_format = "{message}"
         logger_name = "handler_removal_multiple"
         logger = StdLogger(log_format, name=logger_name)
@@ -172,10 +176,11 @@ class TestStdLogger:
         Ensures that existing handlers are removed from loggers instance.
         """
         import logging
+
         log_format = "{message}"
         logger_name = "explicit_handler_removal"
         # Create loggers and add handlers
-        logger_obj = logging.getLogger(f'std_logger_{logger_name}')
+        logger_obj = logging.getLogger(f"std_logger_{logger_name}")
         handler1 = logging.StreamHandler()
         handler2 = logging.StreamHandler()
         logger_obj.addHandler(handler1)
@@ -188,14 +193,14 @@ class TestStdLogger:
                 self.log_format = log_format
                 self.service_name = name or "std-loggers"
                 # Use fixed loggers name for test
-                self._logger = logging.getLogger(f'std_logger_{self.service_name}')
+                self._logger = logging.getLogger(f"std_logger_{self.service_name}")
                 for handler in self._logger.handlers[:]:
                     self._logger.removeHandler(handler)
                 self._logger.setLevel(logging.NOTSET)
                 self._logger.propagate = False
                 console_handler = logging.StreamHandler(sys.stdout)
                 console_handler.setLevel(logging.NOTSET)
-                formatter = logging.Formatter('%(message)s')
+                formatter = logging.Formatter("%(message)s")
                 console_handler.setFormatter(formatter)
                 self._logger.addHandler(console_handler)
                 self._logger.parent = None
@@ -210,11 +215,12 @@ class TestStdLogger:
         Test explicit coverage of handler removal loop (linha 27) usando logger_id fixo.
         """
         import logging
+
         log_format = "{message}"
         logger_name = "coverage_handler_removal"
         logger_id = "fixed"
         # Cria loggers e adiciona handlers
-        logger_obj = logging.getLogger(f'std_logger_{logger_name}_{logger_id}')
+        logger_obj = logging.getLogger(f"std_logger_{logger_name}_{logger_id}")
         handler1 = logging.StreamHandler()
         handler2 = logging.StreamHandler()
         logger_obj.addHandler(handler1)

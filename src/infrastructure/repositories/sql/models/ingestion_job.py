@@ -19,7 +19,9 @@ class IngestionJobModel(Base):
         ForeignKey("content_sources.id", deferrable=True, initially="IMMEDIATE"),
         nullable=True,
     )
-    started_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    started_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     created_at = synonym("started_at")
     finished_at = Column(DateTime(timezone=True), nullable=True)
     status = Column(Text, nullable=False)
@@ -29,9 +31,11 @@ class IngestionJobModel(Base):
     total_steps = Column(Integer, nullable=True)
     chunks_count = Column(Integer, nullable=True)
     ingestion_type = Column(Text, nullable=True)
-    
+
     embedding_model = Column(Text, nullable=True)
     pipeline_version = Column(Text, nullable=True)
 
     content_source = relationship("ContentSourceModel", back_populates="ingestion_jobs")
-    chunks = relationship("ChunkIndexModel", back_populates="job", cascade="all, delete-orphan")
+    chunks = relationship(
+        "ChunkIndexModel", back_populates="job", cascade="all, delete-orphan"
+    )

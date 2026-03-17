@@ -10,7 +10,9 @@ class ContentSourceMapper:
     """Static mapper methods for ContentSource Model <-> Domain Entity."""
 
     @staticmethod
-    def model_to_entity(model: Optional[ContentSourceModel]) -> Optional[ContentSourceEntity]:
+    def model_to_entity(
+        model: Optional[ContentSourceModel],
+    ) -> Optional[ContentSourceEntity]:
         if model is None:
             return None
         return ContentSourceEntity(
@@ -23,14 +25,18 @@ class ContentSourceMapper:
             created_at=cast(datetime, getattr(model, "created_at")),
             ingested_at=cast(Optional[datetime], getattr(model, "ingested_at", None)),
             processing_status=cast(str, getattr(model, "processing_status", "pending")),
-            embedding_model=cast(Optional[str], getattr(model, "embedding_model", None)),
+            embedding_model=cast(
+                Optional[str], getattr(model, "embedding_model", None)
+            ),
             dimensions=cast(Optional[int], getattr(model, "dimensions", None)),
             status=cast(str, getattr(model, "status", "active")),
-            chunks=cast(int, getattr(model, "chunks", 0))
+            chunks=cast(int, getattr(model, "chunks", 0)),
         )
 
     @staticmethod
-    def model_list_to_entities(models: List[ContentSourceModel]) -> List[ContentSourceEntity]:
+    def model_list_to_entities(
+        models: List[ContentSourceModel],
+    ) -> List[ContentSourceEntity]:
         temp = [ContentSourceMapper.model_to_entity(o) for o in models if o is not None]
         return [r for r in temp if r is not None]
 
@@ -45,5 +51,5 @@ class ContentSourceMapper:
             "embedding_model": entity.embedding_model,
             "dimensions": entity.dimensions,
             "status": entity.status,
-            "chunks": entity.chunks
+            "chunks": entity.chunks,
         }

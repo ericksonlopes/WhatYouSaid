@@ -9,6 +9,7 @@ from sqlalchemy.orm import relationship
 
 from src.infrastructure.repositories.sql.connector import Base
 
+
 class KnowledgeSubjectModel(Base):
     __tablename__ = "knowledge_subjects"
 
@@ -17,7 +18,11 @@ class KnowledgeSubjectModel(Base):
     name = Column(Text, nullable=False)
     description = Column(Text, nullable=True)
     icon = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
     # Relationships (string-based names avoid import-order issues)
-    content_sources = relationship("ContentSourceModel", back_populates="subject", cascade="all, delete-orphan")
+    content_sources = relationship(
+        "ContentSourceModel", back_populates="subject", cascade="all, delete-orphan"
+    )
