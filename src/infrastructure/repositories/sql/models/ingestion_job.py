@@ -4,7 +4,7 @@ ORM models for ingestion_jobs table.
 
 import uuid
 
-from sqlalchemy import Column, Text, DateTime, func, ForeignKey, UUID, Integer
+from sqlalchemy import Column, Text, DateTime, func, ForeignKey, UUID, Integer, Index
 from sqlalchemy.orm import relationship, synonym
 
 from src.infrastructure.repositories.sql.connector import Base
@@ -20,9 +20,15 @@ class IngestionJobModel(Base):
         nullable=True,
     )
     started_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )
     created_at = synonym("started_at")
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
     finished_at = Column(DateTime(timezone=True), nullable=True)
     status = Column(Text, nullable=False)
     error_message = Column(Text, nullable=True)
@@ -38,4 +44,9 @@ class IngestionJobModel(Base):
     content_source = relationship("ContentSourceModel", back_populates="ingestion_jobs")
     chunks = relationship(
         "ChunkIndexModel", back_populates="job", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        Index("ix_ingestion_jobs_content_source_id", "content_source_id"),
+        Index("ix_ingestion_jobs_status", "status"),
     )

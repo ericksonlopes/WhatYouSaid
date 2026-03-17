@@ -4,7 +4,7 @@ ORM models for query_logs table.
 
 import uuid
 
-from sqlalchemy import Column, Text, DateTime, Integer, func, ForeignKey, UUID
+from sqlalchemy import Column, Text, DateTime, Integer, func, ForeignKey, UUID, Index
 from sqlalchemy.orm import relationship
 
 from src.infrastructure.repositories.sql.connector import Base
@@ -18,10 +18,11 @@ class QueryLogModel(Base):
         UUID,
         ForeignKey("knowledge_subjects.id", deferrable=True, initially="IMMEDIATE"),
         nullable=True,
+        index=True,
     )
     query_text = Column(Text, nullable=False)
     created_at = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )
     top_k = Column(Integer, nullable=True)
     latency_ms = Column(Integer, nullable=True)

@@ -20,28 +20,37 @@ def setup_logging():
     custom_logger = Logger()
     intercept_handler = custom_logger.get_intercept_handler()
 
-    # List of loggers to intercept
-    loggers = [
-        None,  # Root logger
-        #     "uvicorn",
-        #     "uvicorn.access",
-        #     "uvicorn.error",
-        #     "fastapi",
-        #     "starlette",
-        #     "sqlalchemy.engine"
-    ]
+    # loggers to keep at INFO or DEBUG
+    app_loggers = [None]  # Root logger
 
-    for logger_name in loggers:
+    # infrastructure loggers to silence or set to WARNING/ERROR
+    silence_loggers = {
+        "uvicorn": logging.WARNING,
+        "uvicorn.access": logging.CRITICAL,  # Silence HTTP request logs
+        "uvicorn.error": logging.ERROR,
+        "fastapi": logging.WARNING,
+        "starlette": logging.WARNING,
+        "sqlalchemy.engine": logging.WARNING,
+        "httpcore": logging.WARNING,
+        "httpx": logging.WARNING
+    }
+
+    # Configure root and main loggers
+    for logger_name in app_loggers:
         logging_logger = logging.getLogger(logger_name)
-        # Remove existing handlers to avoid duplicate logs
         for handler in logging_logger.handlers[:]:
             logging_logger.removeHandler(handler)
-
         logging_logger.addHandler(intercept_handler)
-        # For root logger, we don't set propagate False, but for others we do
-        if logger_name is not None:
-            logging_logger.propagate = False
-
         logging_logger.setLevel(logging.INFO)
 
+    # Configure infrastructure loggers with higher thresholds
+    for logger_name, level in silence_loggers.items():
+        logging_logger = logging.getLogger(logger_name)
+        for handler in logging_logger.handlers[:]:
+            logging_logger.removeHandler(handler)
+        logging_logger.addHandler(intercept_handler)
+        logging_logger.propagate = False
+        logging_logger.setLevel(level)
+
     return custom_logger
+

@@ -1,6 +1,7 @@
 import React from 'react';
 import { IngestionTask } from '../types';
-import { CheckCircle2, CircleDashed, Loader2, XCircle } from 'lucide-react';
+import { CheckCircle2, CircleDashed, Loader2, XCircle, ExternalLink } from 'lucide-react';
+import { ErrorDetailModal } from './ErrorDetailModal';
 
 // 2. Componente de 'Task Card' dinâmico
 // Muda de cor e ícone baseando-se no enum de status.
@@ -11,6 +12,7 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task }: TaskCardProps) {
+  const [isErrorModalOpen, setIsErrorModalOpen] = React.useState(false);
   const statusConfig = {
     pending: {
       icon: CircleDashed,
@@ -82,7 +84,15 @@ export function TaskCard({ task }: TaskCardProps) {
   const Icon = config.icon;
 
   return (
-    <div className={`p-4 rounded-xl border border-border-subtle bg-panel-bg flex flex-col gap-3 transition-all hover:bg-panel-hover`}>
+    <>
+      <div 
+        onClick={() => (task.status === 'failed' || task.status === 'error') && setIsErrorModalOpen(true)}
+        className={`p-4 rounded-xl border border-border-subtle bg-panel-bg flex flex-col gap-3 transition-all ${
+          (task.status === 'failed' || task.status === 'error') 
+            ? 'hover:bg-rose-500/5 hover:border-rose-500/30 cursor-pointer group' 
+            : 'hover:bg-panel-hover'
+        }`}
+      >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${config.bgColor} ${config.borderColor} border`}>
@@ -91,8 +101,14 @@ export function TaskCard({ task }: TaskCardProps) {
           <div>
             <h4 className="text-sm font-medium text-zinc-200">{task.title}</h4>
             <p className="text-xs text-zinc-500 mt-0.5">ID: {task.id} • {new Date(task.createdAt).toLocaleTimeString()}</p>
-            {task.status === 'failed' && task.errorMessage && (
-              <p className="text-xs text-rose-400/80 mt-1 line-clamp-2">{task.errorMessage}</p>
+            {((task.status === 'failed' || task.status === 'error')) && task.errorMessage && (
+              <div className="mt-2 flex flex-col gap-1">
+                <p className="text-xs text-rose-400/80 line-clamp-2">{task.errorMessage}</p>
+                <span className="flex items-center gap-1.5 text-[10px] font-bold text-rose-500/60 group-hover:text-rose-400 uppercase tracking-widest transition-colors mt-1">
+                  <ExternalLink className="w-3 h-3" />
+                  View details
+                </span>
+              </div>
             )}
           </div>
         </div>
@@ -117,6 +133,12 @@ export function TaskCard({ task }: TaskCardProps) {
           ></div>
         </div>
       )}
-    </div>
+      </div>
+      <ErrorDetailModal 
+        isOpen={isErrorModalOpen}
+        onClose={() => setIsErrorModalOpen(false)}
+        task={task}
+      />
+    </>
   );
 }

@@ -23,7 +23,7 @@ class TestModelLoaderService:
         )
 
         from src.infrastructure.services.model_loader_service import ModelLoaderService
-        
+
         # Clear cache for isolated test
         ModelLoaderService._model_cache = {}
 

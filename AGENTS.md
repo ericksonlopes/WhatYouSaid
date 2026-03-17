@@ -36,38 +36,40 @@ This document provides essential knowledge for AI coding agents to be productive
 ## Frontend (Streamlit)
 
 ### Architecture
-- **Entry point**: `frontend/streamlit_app.py`.
-- **Tabs**: Modularized in `frontend/tabs/` (e.g., `content_sources.py`, `search.py`).
-- **Dialogs**: Located in `frontend/dialogs/` (e.g., `add_knowledge_dialog.py`).
+- **Entry point**: `frontend/src/App.tsx` (React/TypeScript).
+- **UI Components**: Modularized in `frontend/src/components/`.
+- **State Management**: Located in `frontend/src/store/`.
+- **Hooks and Services**: Custom hooks in `frontend/src/hooks/`, API/services in `frontend/src/services/`.
 
 ### Key Patterns
-1. **Auto-refresh**: Use `@st.fragment(run_every="3s")` to refresh specific UI components (like the Tasks sidebar or the Content Sources table) without a full page reload.
-2. **Ingestion Workflow**:
-    - **Foreground (Immediate)**: Extract metadata (e.g., Video ID), create `ContentSource` with `pending` status, and create `IngestionJob` with `started` status.
-    - **Background (Async)**: Trigger the heavy lifting via `frontend/utils/background_jobs.py`, passing the pre-created `job_id`.
-    - **Sync**: Use `st.rerun()` after starting the job (ensure it's not inside an `on_click` callback) to show the new task immediately.
-3. **Styling**: 
-    - Custom CSS is injected via `TABLE_CSS` in `streamlit_app.py`.
-    - Use `.task-card` for task history items for consistent layout.
-    - Badges follow `.badge-done`, `.badge-processing`, etc.
+1. **UI Modularity**: Use React components for dashboard, subject management, content sources, search, and activity monitor.
+2. **State and Effects**: Use React hooks for state, effects, and async data fetching.
+3. **Styling**: Styles are managed via `frontend/src/index.css` and component-level CSS.
+4. **API Integration**: Frontend interacts with backend via service modules and fetch calls.
 
 ---
 
 ## Developer Workflows
 
+
 ### Setup
-- Use Python 3.12+.
+- Use Python 3.12+ for backend.
 - Create and activate a virtual environment:
   ```bash
   python -m venv .venv
   .\.venv\Scripts\Activate
   ```
-- Install dependencies:
+- Install backend dependencies:
   ```bash
   python -m pip install -e .
-  # Install project dependencies with uv (if you use uv to manage dependencies)
   uv sync
   uv sync --group dev
+  ```
+- For frontend, use Node.js:
+  ```bash
+  cd frontend
+  npm install
+  npm run dev
   ```
 
 ### Running the Application
@@ -195,17 +197,33 @@ This document is a living guide. Update it as the project evolves.
 The guidance content for Copilot/Contributors that was in `copilot-instructions.md` has been consolidated here to
 avoid duplication. Key points summarized:
 
-- Environment and installation: Python 3.12+, python -m venv .venv, .\.venv\Scripts\Activate, python -m pip install -e .; use
-  `uv sync --group dev` to install development dependencies.
-- Tests and quality: uv run pytest -v, uv run mypy src tests, uv run ruff check .
-- Migrations: alembic upgrade head; alembic revision --autogenerate -m "description"
-- Conventions: Make surgical changes; plan complex changes (use plan.md); update docs and tests when changing
-  public behavior.
-- Planning flow: for complex changes, use the `todos` table for tracking. (The `plan.md` file is not present.)
-- Copilot CLI tools: prefer `create`/`edit` for file changes; use backslash in paths on Windows.
-- Commit/PR: short messages; include this mandatory trailer in all applicable commits:
 
-- Quick checklist before commit: all tests pass; mypy without relevant errors; formatted code (black, isort);
-  updated documentation.
+    - Environment and installation: Python 3.12+, python -m venv .venv, .\.venv\Scripts\Activate, python -m pip install -e .; use
+      `uv sync --group dev` to install development dependencies. For frontend, use Node.js and `npm install`.
+    - Tests and quality: uv run pytest -v, uv run mypy src tests, uv run ruff check .
+    - Migrations: alembic upgrade head; alembic revision --autogenerate -m "description"
+    - Conventions: Make surgical changes; plan complex changes (use plan.md); update docs and tests when changing
+      public behavior.
+    - Planning flow: for complex changes, use the `todos` table for tracking. (The `plan.md` file is not present.)
+    - Copilot CLI tools: prefer `create`/`edit` for file changes; use backslash in paths on Windows.
+    - Commit/PR: short messages; include this mandatory trailer in all applicable commits:
+
+    - Quick checklist before commit: all tests pass; mypy without relevant errors; formatted code (black, isort);
+      updated documentation.
+
+### Secure Commit Skill
+The secure commit process is enforced via `.agents/skills/secure-commit/SKILL.md`:
+
+**Workflow:**
+1. Ensure all files are staged and repo is clean.
+2. Run `ruff check . --fix` and `ruff format .` for linting/formatting.
+3. Run `mypy .` for type checks.
+4. Run `bandit -r src/` for security scan (no high-severity issues allowed).
+5. Run `pytest` (all tests must pass).
+6. Only then, perform the git commit with a clear, concise message.
+
+**Guardrails:**
+- Never bypass hooks or commit if tests or security checks fail.
+- Provide a summary of checks performed (Ruff, Mypy, Bandit, Tests).
 
 For a complete and historical copy of the instructions, check `.github/copilot-instructions.md`.
