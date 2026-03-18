@@ -94,12 +94,12 @@
     },
     "table": {
       "title": "Title",
-      "type": "Type",
+      "type": "ORIGIN",
       "date": "Date",
       "chunks": "Chunks",
       "status": "Status",
       "model": "Model",
-      "origin": "Origin",
+      "origin": "identifier",
       "dimensions": "Dimensions",
       "none": "No sources found.",
       "types": {
@@ -189,11 +189,20 @@
       "placeholder": "Select a context..."
     },
     "sources": {
+      "youtube": "YouTube",
+      "article": "Article",
+      "file": "PDF",
+      "wikipedia": "Wikipedia",
+      "web": "Web Scrape",
+      "notion": "Notion"
+    },
+    "descriptions": {
+      "youtube": "Videos & Transcripts",
+      "article": "Web Text Content",
+      "file": "PDF Documents",
       "wikipedia": "Articles & History",
       "web": "Scrape any URL",
-      "youtube": "Video & Audio",
-      "notion": "Workspace Sync",
-      "file": "Local Files"
+      "notion": "Workspace Sync"
     },
     "coming_soon": {
       "title": "Integration Coming Soon",

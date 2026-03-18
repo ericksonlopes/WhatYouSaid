@@ -19,6 +19,7 @@ interface AppState {
   isSourcesLoaded: boolean;
   refreshSources: () => Promise<void>;
   sources: ContentSource[];
+  sourceTypes: string[];
   jobs: IngestionTask[];
   refreshJobs: () => Promise<void>;
   addOptimisticJob: (title: string) => void;
@@ -35,6 +36,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<Subject[]>([]);
   const [sources, setSources] = useState<ContentSource[]>([]);
+  const [sourceTypes, setSourceTypes] = useState<string[]>([]);
   const [isSourcesLoaded, setIsSourcesLoaded] = useState(false);
   const [jobs, setJobs] = useState<IngestionTask[]>([]);
   const [isJobsLoaded, setIsJobsLoaded] = useState(false);
@@ -78,10 +80,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refreshSources = useCallback(async () => {
     try {
-      const data = await api.fetchSources();
-      setSources(data);
+      const [sourcesData, typesData] = await Promise.all([
+        api.fetchSources(),
+        api.fetchSourceTypes()
+      ]);
+      setSources(sourcesData);
+      setSourceTypes(typesData);
     } catch (err) {
-      console.error('Error fetching sources:', err);
+      console.error('Error fetching sources or types:', err);
     } finally {
       setIsSourcesLoaded(true);
     }
@@ -212,6 +218,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         sources,
         isSourcesLoaded,
         refreshSources,
+        sourceTypes,
         jobs,
         isJobsLoaded,
         refreshJobs,

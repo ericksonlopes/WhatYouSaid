@@ -12,6 +12,7 @@ import {
     Layers,
     ListVideo,
     Lock,
+    Newspaper,
     Scissors,
     Search,
     Settings2,
@@ -29,7 +30,7 @@ interface AddContentModalProps {
     onClose: () => void;
 }
 
-type ContentType = 'youtube' | 'wikipedia' | 'web' | 'notion' | 'file';
+type ContentType = 'youtube' | 'wikipedia' | 'web' | 'notion' | 'pdf';
 
 interface SourceOption {
     id: ContentType;
@@ -218,11 +219,11 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
     const {startIngestion} = useIngestion();
     
     const SOURCES: SourceOption[] = [
-        {id: 'youtube', name: 'YouTube', description: 'Video & Audio', icon: Youtube, enabled: true},
-        {id: 'wikipedia', name: 'Wikipedia', description: t('ingestion.sources.wikipedia'), icon: BookOpen, enabled: false},
-        {id: 'web', name: 'Web Article', description: t('ingestion.sources.web'), icon: Globe, enabled: false},
-        {id: 'notion', name: 'Notion', description: 'Workspace Sync', icon: Database, enabled: false},
-        {id: 'file', name: 'Local Files', description: 'PDF, TXT, CSV', icon: FileUp, enabled: true},
+        {id: 'youtube', name: t('ingestion.sources.youtube'), description: t('ingestion.descriptions.youtube'), icon: Youtube, enabled: true},
+        {id: 'article', name: t('ingestion.sources.article'), description: t('ingestion.descriptions.article'), icon: Newspaper, enabled: false},
+        {id: 'pdf', name: t('ingestion.sources.file'), description: t('ingestion.descriptions.file'), icon: FileText, enabled: true},
+        {id: 'wikipedia', name: t('ingestion.sources.wikipedia'), description: t('ingestion.descriptions.wikipedia'), icon: BookOpen, enabled: false},
+        {id: 'web', name: t('ingestion.sources.web'), description: t('ingestion.descriptions.web'), icon: Globe, enabled: false},
     ];
 
     const [contentType, setContentType] = useState<ContentType>('youtube');
@@ -267,7 +268,7 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (contentType !== 'youtube' && contentType !== 'file') return;
+        if (contentType !== 'youtube' && contentType !== 'pdf') return;
 
         const targetSubject = subjects.find(s => s.id === targetSubjectId);
         if (!targetSubject) return;
@@ -276,7 +277,7 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
             startIngestion(inputValue, contentType, targetSubject, tokensPerChunk, tokensOverlap, youtubeDataType);
             setInputValue('');
             onClose();
-        } else if (contentType === 'file' && selectedFile) {
+        } else if (contentType === 'pdf' && selectedFile) {
             // Simulate file processing
             setUploadStatus('chunking');
             setProgress(0);
@@ -557,7 +558,7 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
                                                         </p>
                                                     </div>
                                                 </div>
-                                            ) : contentType === 'file' ? (
+                                            ) : contentType === 'pdf' ? (
                                                 <div
                                                     className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                                     {!selectedFile ? (
@@ -657,7 +658,7 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={!selectedSource?.enabled || (contentType === 'youtube' && !inputValue.trim()) || (contentType === 'file' && !selectedFile) || uploadStatus !== 'idle'}
+                                    disabled={!selectedSource?.enabled || (contentType === 'youtube' && !inputValue.trim()) || (contentType === 'pdf' && !selectedFile) || uploadStatus !== 'idle'}
                                     className="px-6 py-2.5 text-sm font-medium text-black bg-emerald-500 rounded-xl hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.15)] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
                                 >
                                     {t('common.actions.addData')}

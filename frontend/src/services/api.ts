@@ -37,6 +37,12 @@ export const api = {
     }));
   },
 
+  async fetchSourceTypes(): Promise<string[]> {
+    const response = await fetch(`${API_BASE_URL}/sources/types`);
+    if (!response.ok) throw new Error('Failed to fetch source types');
+    return response.json();
+  },
+
   async fetchJobs(): Promise<IngestionTask[]> {
     const response = await fetch(`${API_BASE_URL}/jobs`);
     if (!response.ok) throw new Error('Failed to fetch jobs');

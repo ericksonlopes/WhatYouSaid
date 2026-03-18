@@ -12,12 +12,28 @@ import {
   Search,
   Trash2,
   Video,
-  X
+  X,
+  Youtube,
+  BookOpen,
+  Filter,
+  Globe,
+  Newspaper
 } from 'lucide-react';
 import {useAppContext} from '../store/AppContext';
 import { useTranslation } from 'react-i18next';
 import {AnimatePresence, motion} from 'motion/react';
-import {api} from '../services/api';
+import { api } from '../services/api';
+
+const getIcon = (type: string) => {
+  switch (type.toLowerCase()) {
+    case 'youtube': return Youtube;
+    case 'article': return Newspaper;
+    case 'pdf': return FileText;
+    case 'wikipedia': return BookOpen;
+    case 'web': return Globe;
+    default: return Filter;
+  }
+};
 
 export function ChunksViewer() {
   const { t } = useTranslation();
@@ -139,9 +155,16 @@ export function ChunksViewer() {
             <ChevronRight className="w-3 h-3" />
             <span className="text-emerald-500">{t('sidebar.operations.chunks')}</span>
           </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight mt-0.5">
-            {currentSource?.title || 'Unknown Source'}
-          </h2>
+          <div className="flex items-center gap-3 mt-0.5">
+            {currentSource?.type && (
+              <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
+                {t(`ingestion.sources.${currentSource.type.toLowerCase()}`, { defaultValue: currentSource.type })}
+              </span>
+            )}
+            <h2 className="text-2xl font-bold text-white tracking-tight">
+              {currentSource?.title || 'Unknown Source'}
+            </h2>
+          </div>
         </div>
       </div>
 
@@ -178,24 +201,23 @@ export function ChunksViewer() {
             paginatedChunks.map((chunk, index) => (
               <div key={chunk.id} className="bg-[#121212] border border-border-subtle rounded-xl p-5 hover:border-zinc-700 transition-colors group">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <h3 className="text-sm font-bold text-white truncate max-w-[300px]">
-                      {sourceMap.get(chunk.content_source_id)?.title || 'Unknown Source'} 
-                      <span className="ml-2 text-zinc-500 font-normal">#{(page - 1) * pageSize + index + 1}</span>
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="px-2 py-0.5 rounded bg-zinc-800/50 border border-zinc-700/50 text-[10px] text-zinc-400 whitespace-nowrap">
-                        {chunk.content.length} chars
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-zinc-800/50 border border-zinc-700/50 text-[10px] text-zinc-400 whitespace-nowrap">
-                        {chunk.tokens_count || 0} tokens
-                      </span>
-                      <span className="px-2 py-0.5 rounded bg-zinc-800/50 border border-zinc-700/50 text-[10px] text-zinc-400 uppercase">
-                        pt
-                      </span>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-bold font-mono">
+                          #{(page - 1) * pageSize + index + 1}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-zinc-800/50 border border-zinc-700/50 text-[10px] text-zinc-400 whitespace-nowrap">
+                          {chunk.content.length} chars
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-zinc-800/50 border border-zinc-700/50 text-[10px] text-zinc-400 whitespace-nowrap">
+                          {chunk.tokens_count || 0} tokens
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-zinc-800/50 border border-zinc-700/50 text-[10px] text-zinc-400 uppercase">
+                          pt
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between md:justify-end gap-4">
+                    <div className="flex items-center justify-between md:justify-end gap-4">
                     <span className="text-[10px] text-zinc-600 font-mono">ID: {chunk.id}</span>
                     <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <button onClick={() => handleEdit(chunk)} className="p-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-400/20 rounded transition-colors" title="Edit Chunk">
@@ -282,18 +304,19 @@ export function ChunksViewer() {
               </div>
 
               {/* Source Info Bar */}
-              <div className="px-6 py-3 bg-black/20 border-b border-border-subtle flex items-center gap-4 text-xs">
+              <div className="px-6 py-3 bg-black/20 border-b border-border-subtle flex flex-wrap items-center gap-4 text-xs">
                 <div className="flex items-center gap-2.5 text-zinc-400">
-                  {['video', 'youtube'].includes(sourceMap.get(selectedChunk.content_source_id)?.type.toLowerCase() || '') ? (
-                    <Video className="w-4 h-4" />
-                  ) : (
-                    <FileText className="w-4 h-4" />
-                  )}
+                  {React.createElement(getIcon(sourceMap.get(selectedChunk.content_source_id)?.type || ''), { className: "w-4 h-4" })}
                   <span className="font-medium text-zinc-300">
                     {sourceMap.get(selectedChunk.content_source_id)?.title || 'Unknown Source'}
                   </span>
                 </div>
-                <div className="w-px h-3 bg-zinc-800" />
+                {sourceMap.get(selectedChunk.content_source_id)?.type && (
+                  <span className="px-2 py-0.5 rounded bg-zinc-800/50 border border-zinc-700/50 text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
+                    {t(`ingestion.sources.${sourceMap.get(selectedChunk.content_source_id)?.type.toLowerCase()}`, { defaultValue: sourceMap.get(selectedChunk.content_source_id)?.type })}
+                  </span>
+                )}
+                <div className="w-px h-3 bg-zinc-800 hidden sm:block" />
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <Hash className="w-3.5 h-3.5" />
                   <span>{selectedChunk.tokens_count || 0} tokens</span>

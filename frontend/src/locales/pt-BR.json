@@ -94,12 +94,12 @@
     },
     "table": {
       "title": "Título",
-      "type": "Tipo",
+      "type": "ORIGEM",
       "date": "Data",
       "chunks": "Chunks",
       "status": "Status",
       "model": "Modelo",
-      "origin": "Origem",
+      "origin": "identificador",
       "dimensions": "Dimensões",
       "none": "Nenhuma fonte encontrada.",
       "types": {
@@ -189,11 +189,20 @@
       "placeholder": "Selecione um contexto..."
     },
     "sources": {
+      "youtube": "YouTube",
+      "article": "Artigo",
+      "file": "PDF",
+      "wikipedia": "Wikipedia",
+      "web": "Web Scrape",
+      "notion": "Notion"
+    },
+    "descriptions": {
+      "youtube": "Vídeos e Transcrições",
+      "article": "Conteúdo de Texto Web",
+      "file": "Documentos PDF",
       "wikipedia": "Artigos e História",
-      "web": "Extrair qualquer URL",
-      "youtube": "Vídeo e Áudio",
-      "notion": "Sincronização Notion",
-      "file": "Arquivos Locais"
+      "web": "Extração de qualquer URL",
+      "notion": "Sincronização de Workspace"
     },
     "coming_soon": {
       "title": "Integração em Breve",

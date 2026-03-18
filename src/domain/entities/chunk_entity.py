@@ -24,7 +24,7 @@ class ChunkEntity(BaseModel):
         default=None,
         description="ID of the original content source, e.g., video id or document id",
     )
-    source_type: SourceType = Field(description="e.g., YOUTUBE, PDF, WEB_PAGE")
+    source_type: SourceType = Field(description="e.g., YOUTUBE, PDF, WIKIPEDIA")
     external_source: Optional[str] = Field(default=None)
     subject_id: Optional[UUID] = Field(default=None)
 

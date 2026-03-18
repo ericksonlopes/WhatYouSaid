@@ -6,11 +6,18 @@ from src.config.logger import Logger
 from src.infrastructure.services.content_source_service import ContentSourceService
 from src.infrastructure.services.model_loader_service import ModelLoaderService
 from src.presentation.api.dependencies import get_cs_service, get_model_loader
+from src.domain.entities.enums.source_type_enum_entity import SourceType
 from src.presentation.api.schemas.model_schemas import ModelInfoResponse
 from src.presentation.api.schemas.source_schemas import SourceResponse
 
 logger = Logger()
 router = APIRouter()
+
+
+@router.get("/types", response_model=List[str])
+def get_source_types():
+    """Retrieve all available source types from the Enum"""
+    return [source.value for source in SourceType]
 
 
 @router.get(

@@ -4,7 +4,7 @@ import {
   Search, Sparkles, Lock, FileText, PlayCircle, ExternalLink, 
   SlidersHorizontal, Database, TextSearch, Network, ListOrdered, 
   ChevronDown, X, Copy, Check, Languages, Cpu, Hash, Calendar, 
-  Info, Clock, ArrowUpDown
+  Info, Clock, ArrowUpDown, Youtube, BookOpen, Globe, Filter
 } from 'lucide-react';
 import { useAppContext } from '../store/AppContext';
 import { motion } from 'motion/react';
@@ -25,6 +25,17 @@ interface SearchResult {
   createdAt?: string;
   sourceType?: string;
 }
+
+const getIcon = (type: string) => {
+  switch (type.toLowerCase()) {
+    case 'youtube': return Youtube;
+    case 'article': return Newspaper;
+    case 'pdf': return FileText;
+    case 'wikipedia': return BookOpen;
+    case 'web': return Globe;
+    default: return Filter;
+  }
+};
 
 export function SearchView() {
   const { selectedSubjects, sources } = useAppContext();
@@ -358,7 +369,7 @@ export function SearchView() {
                     </div>
 
                     <h3 className="text-lg font-medium text-zinc-100 mb-3 flex items-center gap-2.5">
-                      {result.type === 'video' ? <PlayCircle className="w-5 h-5 text-zinc-500" /> : <FileText className="w-5 h-5 text-zinc-500" />}
+                      {React.createElement(getIcon(result.sourceType || ''), { className: "w-5 h-5 text-zinc-500" })}
                       {result.source}
                       {result.timestamp && (
                         <span className="text-xs font-mono text-zinc-400 bg-white/5 px-2 py-1 rounded-md border border-white/5 ml-2">
@@ -422,7 +433,7 @@ export function SearchView() {
             {/* Modal Header */}
             <div className="flex items-center justify-between p-5 border-b border-zinc-800">
               <div className="flex items-center gap-3 min-w-0">
-                {selectedResult.type === 'video' ? <PlayCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" /> : <FileText className="w-5 h-5 text-emerald-400 flex-shrink-0" />}
+                {React.createElement(getIcon(selectedResult.sourceType || ''), { className: "w-5 h-5 text-emerald-400 flex-shrink-0" })}
                 <h3 className="text-lg font-semibold text-white truncate">{selectedResult.source}</h3>
               </div>
               <div className="flex items-center gap-2">
@@ -497,7 +508,7 @@ export function SearchView() {
                 <div className="flex flex-col gap-1">
                   <span className="text-[10px] text-zinc-600">{t('search.results.type')}</span>
                   <span className="text-xs text-zinc-300 flex items-center gap-1.5 capitalize">
-                    {selectedResult.type === 'video' ? <PlayCircle className="w-3.5 h-3.5 text-zinc-500" /> : <FileText className="w-3.5 h-3.5 text-zinc-500" />}
+                    {React.createElement(getIcon(selectedResult.sourceType || ''), { className: "w-3.5 h-3.5 text-zinc-500" })}
                     {selectedResult.sourceType?.toLowerCase() || 'Unknown'}
                   </span>
                 </div>
