@@ -14,9 +14,9 @@ from src.infrastructure.services.model_loader_service import ModelLoaderService
 
 
 def test_search_engines_weaviate():
-    print("🔍 Iniciando Teste de Qualidade de Busca (Weaviate)...")
+    print("🔍 Starting Search Quality Test (Weaviate)...")
 
-    # Configuração para conectar no container local
+    # Configuration to connect to local container
     cfg = VectorConfig(
         weaviate_host="localhost",
         weaviate_port=8081,
@@ -24,14 +24,14 @@ def test_search_engines_weaviate():
         collection_name_chunks="TestChunks",
     )
 
-    # Inicializa serviços reais
+    # Initialize real services
     model_name = "BAAI/bge-m3"
     model_loader = ModelLoaderService(model_name=model_name)
     embedding_service = EmbeddingService(model_loader_service=model_loader)
 
     weaviate_client = WeaviateClient(vector_config=cfg)
 
-    # Garante que a collection existe com o schema correto
+    # Ensure the collection exists with the correct schema
     weaviate_client.create_collection_if_not_exists(cfg.collection_name_chunks)
 
     repo = ChunkWeaviateRepository(
@@ -40,16 +40,16 @@ def test_search_engines_weaviate():
         collection_name=cfg.collection_name_chunks,
     )
 
-    # Em vez de delete total, vamos apenas criar novos documentos
-    # para garantir que a busca funcione.
-    print("🧹 (Nota: Deleção total pulada para evitar problemas de filtro no v4)")
+    # Instead of total deletion, we just create new documents
+    # to ensure the search works.
+    print("🧹 (Note: Total deletion skipped to avoid filter issues in v4)")
 
-    # IDs únicos para este teste para evitar colisões
+    # Unique IDs for this test to avoid collisions
     job_id = uuid.uuid4()
     source_id = uuid.uuid4()
     subject_id = uuid.uuid4()
 
-    # 1. Preparando Massa de Dados
+    # 1. Preparing test data
     documents = [
         ChunkModel(
             id=uuid.uuid4(),
@@ -57,7 +57,7 @@ def test_search_engines_weaviate():
             content_source_id=source_id,
             subject_id=subject_id,
             embedding_model=model_name,
-            content="A biologia marinha estuda a vida nos oceanos e ecossistemas aquáticos.",
+            content="Marine biology studies life in the oceans and aquatic ecosystems.",
             external_source="nature_docs",
             source_type="text",
         ),
@@ -67,7 +67,7 @@ def test_search_engines_weaviate():
             content_source_id=source_id,
             subject_id=subject_id,
             embedding_model=model_name,
-            content="A física quântica explora o comportamento da matéria em nível atômico.",
+            content="Quantum physics explores the behavior of matter at the atomic level.",
             external_source="science_journal",
             source_type="text",
         ),
@@ -77,42 +77,42 @@ def test_search_engines_weaviate():
             content_source_id=source_id,
             subject_id=subject_id,
             embedding_model=model_name,
-            content="O estudo dos recifes de coral é essencial para a biologia quântica marinha imaginária.",
+            content="The study of coral reefs is essential for imaginary marine quantum biology.",
             external_source="hybrid_source",
             source_type="text",
         ),
     ]
 
-    print(f"📦 Indexando {len(documents)} documentos no Weaviate...")
+    print(f"📦 Indexing {len(documents)} documents in Weaviate...")
     repo.create_documents(documents)
 
-    # --- TESTE 1: SEMÂNTICO ---
-    print("\n--- Teste 1: Busca Semântica ---")
-    query_semantic = "animais do mar"
+    # --- TEST 1: SEMANTIC ---
+    print("\n--- Test 1: Semantic Search ---")
+    query_semantic = "sea animals"
     results = repo.retriever(query_semantic, top_kn=2, search_mode=SearchMode.SEMANTIC)
     print(f"Query: '{query_semantic}'")
     for i, r in enumerate(results):
-        print(f"  [{i + 1}] Score: {r.score:.4f} | Conteúdo: {r.content[:50]}...")
+        print(f"  [{i + 1}] Score: {r.score:.4f} | Content: {r.content[:50]}...")
 
-    # --- TESTE 2: BM25 (PALAVRA-CHAVE) ---
-    print("\n--- Teste 2: Busca BM25 (Keyword) ---")
-    query_keyword = "quântica"
+    # --- TEST 2: BM25 (KEYWORD) ---
+    print("\n--- Test 2: BM25 Search (Keyword) ---")
+    query_keyword = "quantum"
     results = repo.retriever(query_keyword, top_kn=1, search_mode=SearchMode.BM25)
     print(f"Query: '{query_keyword}'")
     if results:
-        print(f"  [OK] Encontrou: {results[0].content[:50]}...")
+        print(f"  [OK] Found: {results[0].content[:50]}...")
     else:
-        print("  [ERRO] Nada encontrado para 'quântica'")
+        print("  [ERROR] Nothing found for 'quantum'")
 
-    # --- TESTE 3: HÍBRIDO ---
-    print("\n--- Teste 3: Busca Híbrida (Nativa do Weaviate) ---")
-    query_hybrid = "oceano atômico"
+    # --- TEST 3: HYBRID ---
+    print("\n--- Test 3: Hybrid Search (Native Weaviate) ---")
+    query_hybrid = "atomic ocean"
     results = repo.retriever(query_hybrid, top_kn=2, search_mode=SearchMode.HYBRID)
     print(f"Query: '{query_hybrid}'")
     for i, r in enumerate(results):
-        print(f"  [{i + 1}] Score: {r.score:.4f} | Conteúdo: {r.content[:50]}...")
+        print(f"  [{i + 1}] Score: {r.score:.4f} | Content: {r.content[:50]}...")
 
-    print("\n✅ Teste finalizado com sucesso!")
+    print("\n✅ Test completed successfully!")
 
 
 if __name__ == "__main__":

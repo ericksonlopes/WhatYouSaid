@@ -20,6 +20,7 @@ class IVectorRepository(ABC):
         top_kn: int = 5,
         filters: Optional[Any] = None,
         search_mode: SearchMode = SearchMode.SEMANTIC,
+        re_rank: bool = True,
     ) -> List[ChunkModel]:
         """Retrieve matching domain Chunk entities using the given search mode."""
         raise NotImplementedError

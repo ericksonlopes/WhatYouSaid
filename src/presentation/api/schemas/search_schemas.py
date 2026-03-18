@@ -20,6 +20,10 @@ class SearchRequest(BaseModel):
         default=SearchMode.SEMANTIC,
         description="Search strategy: semantic (vector), bm25 (keyword), or hybrid",
     )
+    re_rank: bool = Field(
+        default=True,
+        description="Enable re-ranking of search results",
+    )
 
 
 class ChunkResultSchema(BaseModel):

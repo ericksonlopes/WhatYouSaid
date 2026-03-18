@@ -34,6 +34,7 @@ class ChunkVectorService:
         top_k: int = 5,
         filters: Optional[Any] = None,
         search_mode: SearchMode = SearchMode.SEMANTIC,
+        re_rank: bool = True,
     ) -> List[ChunkEntity]:
         """Retrieve chunk entities from the vector repository based on the given search mode."""
         if not query:
@@ -41,10 +42,19 @@ class ChunkVectorService:
 
         logger.debug(
             "Retrieving chunks",
-            context={"query": query, "top_k": top_k, "search_mode": str(search_mode)},
+            context={
+                "query": query,
+                "top_k": top_k,
+                "search_mode": str(search_mode),
+                "re_rank": re_rank,
+            },
         )
         models: List[ChunkModel] = self._repository.retriever(
-            query=query, top_kn=top_k, filters=filters, search_mode=search_mode
+            query=query,
+            top_kn=top_k,
+            filters=filters,
+            search_mode=search_mode,
+            re_rank=re_rank,
         )
 
         entities = [self._mapper.model_to_entity(m) for m in models]

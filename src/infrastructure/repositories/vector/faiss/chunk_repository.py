@@ -123,6 +123,7 @@ class ChunkFAISSRepository(IVectorRepository):
         top_kn: int = 5,
         filters: Optional[Any] = None,
         search_mode: SearchMode = SearchMode.SEMANTIC,
+        re_rank: bool = True,
     ) -> List[ChunkModel]:
 
         logger.debug(
@@ -132,6 +133,7 @@ class ChunkFAISSRepository(IVectorRepository):
                 "query": query,
                 "top_kn": top_kn,
                 "search_mode": str(search_mode),
+                "re_rank": re_rank,
             },
         )
 

@@ -11,14 +11,21 @@ class DummyVectorService:
         self.last_top_k = None
         self.last_filters = None
         self.last_search_mode = None
+        self.last_re_rank = None
 
     def retrieve(
-        self, query: str, top_k: int = 5, filters=None, search_mode=SearchMode.SEMANTIC
+        self,
+        query: str,
+        top_k: int = 5,
+        filters=None,
+        search_mode=SearchMode.SEMANTIC,
+        re_rank=True,
     ):
         self.last_query = query
         self.last_top_k = top_k
         self.last_filters = filters
         self.last_search_mode = search_mode
+        self.last_re_rank = re_rank
         # return dummy chunks as simple objects (avoid ChunkEntity validation in tests)
         return [SimpleNamespace(id=uuid.uuid4(), content="a", subject_id=uuid.uuid4())]
 
@@ -79,3 +86,15 @@ def test_search_passes_hybrid_mode_to_service():
 
     assert vec.last_search_mode == SearchMode.HYBRID
     assert result.search_mode == "hybrid"
+
+
+def test_search_passes_re_rank_to_service():
+    vec = DummyVectorService()
+    uc = SearchChunksUseCase(vector_service=vec, ks_service=None)
+
+    uc.execute(query="hello", top_k=3, re_rank=False)
+
+    assert vec.last_re_rank is False
+
+    uc.execute(query="hello", top_k=3, re_rank=True)
+    assert vec.last_re_rank is True

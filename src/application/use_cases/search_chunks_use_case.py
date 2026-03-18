@@ -27,6 +27,7 @@ class SearchChunksUseCase:
         subject_id: Optional[Union[str, UUID]] = None,
         subject_name: Optional[str] = None,
         search_mode: SearchMode = SearchMode.SEMANTIC,
+        re_rank: bool = True,
     ) -> SearchChunksResult:
         logger.info(
             "Executing search chunks use case",
@@ -36,6 +37,7 @@ class SearchChunksUseCase:
                 "subject_id": str(subject_id) if subject_id else None,
                 "subject_name": subject_name,
                 "search_mode": str(search_mode),
+                "re_rank": re_rank,
             },
         )
 
@@ -66,10 +68,19 @@ class SearchChunksUseCase:
         # Execute retrieval
         logger.debug(
             "Calling vector service for retrieval",
-            context={"query": query, "top_k": top_k, "search_mode": str(search_mode)},
+            context={
+                "query": query,
+                "top_k": top_k,
+                "search_mode": str(search_mode),
+                "re_rank": re_rank,
+            },
         )
         results = self.vector_service.retrieve(
-            query, top_k=top_k, filters=filters, search_mode=search_mode
+            query,
+            top_k=top_k,
+            filters=filters,
+            search_mode=search_mode,
+            re_rank=re_rank,
         )
 
         logger.info(

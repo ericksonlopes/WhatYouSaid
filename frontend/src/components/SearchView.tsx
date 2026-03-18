@@ -36,6 +36,7 @@ export function SearchView() {
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const [copied, setCopied] = useState(false);
   const [searchMode, setSearchMode] = useState<'semantic' | 'bm25' | 'hybrid'>('semantic');
+  const [reRank, setReRank] = useState(true);
 
   const sourceMap = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -46,7 +47,7 @@ export function SearchView() {
     return map;
   }, [sources]);
 
-  const runSearch = useCallback(async (currentQuery: string, currentMode: string) => {
+  const runSearch = useCallback(async (currentQuery: string, currentMode: string, currentReRank: boolean) => {
     if (!currentQuery.trim() || selectedSubjects.length === 0) return;
 
     setIsSearching(true);
@@ -55,7 +56,7 @@ export function SearchView() {
 
     try {
       const subjectId = selectedSubjects.length > 0 ? selectedSubjects[0].id : undefined;
-      const data = await api.search(currentQuery, topK, subjectId, currentMode);
+      const data = await api.search(currentQuery, topK, subjectId, currentMode, currentReRank);
 
       const mappedResults: SearchResult[] = data.results.map((res: any) => ({
         id: res.id,
@@ -80,17 +81,17 @@ export function SearchView() {
     }
   }, [selectedSubjects, topK, sourceMap]);
 
-  // Re-run search automatically when the mode changes (only if a search was already performed)
+  // Re-run search automatically when the mode or reRank changes (only if a search was already performed)
   useEffect(() => {
     if (hasSearched && query.trim()) {
-      runSearch(query, searchMode);
+      runSearch(query, searchMode, reRank);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchMode]);
+  }, [searchMode, reRank]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    runSearch(query, searchMode);
+    runSearch(query, searchMode, reRank);
   };
 
   return (
@@ -182,6 +183,21 @@ export function SearchView() {
                 </div>
               )}
             </div>
+
+            {/* Re-rank Toggle */}
+            <button
+              type="button"
+              onClick={() => setReRank(!reRank)}
+              className="flex items-center gap-2 bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 rounded-lg p-1.5 px-3 h-[34px] transition-all"
+              title={reRank ? "Re-ranking enabled" : "Re-ranking disabled"}
+            >
+              <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center transition-colors ${reRank ? 'bg-emerald-500' : 'bg-zinc-700'}`}>
+                {reRank && <Check className="w-2.5 h-2.5 text-black" />}
+              </div>
+              <span className={`text-xs font-medium ${reRank ? 'text-zinc-200' : 'text-zinc-500'}`}>
+                Re-rank
+              </span>
+            </button>
 
             {/* Search Mode Toggle */}
             <div className="flex flex-nowrap items-center gap-1 bg-zinc-900/80 border border-zinc-800 rounded-lg p-1 flex-shrink-0">
