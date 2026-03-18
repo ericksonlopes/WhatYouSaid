@@ -7,6 +7,7 @@ from src.domain.entities.enums.search_mode_enum import SearchMode
 from src.domain.interfaces.repository.retriver_repository import IVectorRepository
 from src.domain.mappers.chunk_mapper import ChunkMapper
 from src.infrastructure.repositories.vector.models.chunk_model import ChunkModel
+from src.infrastructure.services.re_rank_service import ReRankService
 
 logger = Logger()
 
@@ -14,9 +15,10 @@ logger = Logger()
 class ChunkVectorService:
     """Generic service for managing and retrieving chunks in a vector store."""
 
-    def __init__(self, repository: IVectorRepository):
+    def __init__(self, repository: IVectorRepository, rerank_service: Optional[ReRankService] = None):
         self._repository = repository
         self._mapper = ChunkMapper()
+        self._rerank_service = rerank_service or ReRankService()
 
     def index_documents(self, documents: List[ChunkEntity]) -> List[str]:
         """Index a list of chunk entities into the vector store."""
@@ -56,6 +58,10 @@ class ChunkVectorService:
             search_mode=search_mode,
             re_rank=re_rank,
         )
+
+        # Apply Re-ranking if requested
+        if re_rank and self._rerank_service:
+            models = self._rerank_service.rerank(query, models)
 
         entities = [self._mapper.model_to_entity(m) for m in models]
 

@@ -38,7 +38,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isSourcesLoaded, setIsSourcesLoaded] = useState(false);
   const [jobs, setJobs] = useState<IngestionTask[]>([]);
   const [isJobsLoaded, setIsJobsLoaded] = useState(false);
-  const [currentView, setCurrentView] = useState<ViewState>('chat');
+  const [currentView, setCurrentView] = useState<ViewState>(() => {
+    return (localStorage.getItem('currentView') as ViewState) || 'chat';
+  });
   const [selectedSourceIdForDb, setSelectedSourceIdForDb] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
@@ -47,6 +49,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const data = await api.fetchSubjects();
       setSubjects(data);
+      
+      // If we have persisted selection, restore it
+      const savedIdsStr = localStorage.getItem('selectedSubjectIds');
+      if (savedIdsStr) {
+        try {
+          const savedIds = JSON.parse(savedIdsStr) as string[];
+          const restored = data.filter(s => savedIds.includes(s.id));
+          if (restored.length > 0) {
+            setSelectedSubjects(restored);
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to parse saved subject IDs", e);
+        }
+      }
+
       if (data.length > 0 && selectedSubjects.length === 0) {
         setSelectedSubjects([data[0]]);
       }
@@ -112,7 +130,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [refreshJobs]);
 
-  // Periodic refresh for sources & subjects (sync after ingestion completes)
   useEffect(() => {
     const interval = setInterval(() => {
       refreshSources();
@@ -120,6 +137,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }, 5000);
     return () => clearInterval(interval);
   }, [refreshSources, refreshSubjects]);
+
+  // Persist currentView
+  useEffect(() => {
+    localStorage.setItem('currentView', currentView);
+  }, [currentView]);
+
+  // Persist selectedSubjects
+  useEffect(() => {
+    if (selectedSubjects.length > 0) {
+      const ids = selectedSubjects.map(s => s.id);
+      localStorage.setItem('selectedSubjectIds', JSON.stringify(ids));
+    }
+  }, [selectedSubjects]);
 
   const toggleSubjectSelection = useCallback((subject: Subject) => {
     setSelectedSubjects((prev) => {

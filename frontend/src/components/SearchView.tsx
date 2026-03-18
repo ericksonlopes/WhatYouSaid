@@ -3,7 +3,7 @@ import {
   Search, Sparkles, Lock, FileText, PlayCircle, ExternalLink, 
   SlidersHorizontal, Database, TextSearch, Network, ListOrdered, 
   ChevronDown, X, Copy, Check, Languages, Cpu, Hash, Calendar, 
-  Info, Clock
+  Info, Clock, ArrowUpDown
 } from 'lucide-react';
 import { useAppContext } from '../store/AppContext';
 import { motion } from 'motion/react';
@@ -36,7 +36,7 @@ export function SearchView() {
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const [copied, setCopied] = useState(false);
   const [searchMode, setSearchMode] = useState<'semantic' | 'bm25' | 'hybrid'>('semantic');
-  const [reRank, setReRank] = useState(true);
+  const [useRerank, setUseRerank] = useState(true);
 
   const sourceMap = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -47,7 +47,7 @@ export function SearchView() {
     return map;
   }, [sources]);
 
-  const runSearch = useCallback(async (currentQuery: string, currentMode: string, currentReRank: boolean) => {
+  const runSearch = useCallback(async (currentQuery: string, currentMode: string, currentUseRerank: boolean) => {
     if (!currentQuery.trim() || selectedSubjects.length === 0) return;
 
     setIsSearching(true);
@@ -56,7 +56,7 @@ export function SearchView() {
 
     try {
       const subjectId = selectedSubjects.length > 0 ? selectedSubjects[0].id : undefined;
-      const data = await api.search(currentQuery, topK, subjectId, currentMode, currentReRank);
+      const data = await api.search(currentQuery, topK, subjectId, currentMode, currentUseRerank);
 
       const mappedResults: SearchResult[] = data.results.map((res: any) => ({
         id: res.id,
@@ -81,17 +81,17 @@ export function SearchView() {
     }
   }, [selectedSubjects, topK, sourceMap]);
 
-  // Re-run search automatically when the mode or reRank changes (only if a search was already performed)
+  // Re-run search automatically when the mode or useRerank changes (only if a search was already performed)
   useEffect(() => {
     if (hasSearched && query.trim()) {
-      runSearch(query, searchMode, reRank);
+      runSearch(query, searchMode, useRerank);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchMode, reRank]);
+  }, [searchMode, useRerank]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    runSearch(query, searchMode, reRank);
+    runSearch(query, searchMode, useRerank);
   };
 
   return (
@@ -187,16 +187,16 @@ export function SearchView() {
             {/* Re-rank Toggle */}
             <button
               type="button"
-              onClick={() => setReRank(!reRank)}
-              className="flex items-center gap-2 bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 rounded-lg p-1.5 px-3 h-[34px] transition-all"
-              title={reRank ? "Re-ranking enabled" : "Re-ranking disabled"}
+              onClick={() => setUseRerank(!useRerank)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border flex-shrink-0 ${
+                useRerank 
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.1)]' 
+                  : 'bg-zinc-900/80 text-zinc-500 border-zinc-800 hover:border-zinc-700 hover:text-zinc-300'
+              }`}
+              title="Use Cross-Encoder to re-rank results for higher precision"
             >
-              <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center transition-colors ${reRank ? 'bg-emerald-500' : 'bg-zinc-700'}`}>
-                {reRank && <Check className="w-2.5 h-2.5 text-black" />}
-              </div>
-              <span className={`text-xs font-medium ${reRank ? 'text-zinc-200' : 'text-zinc-500'}`}>
-                Re-rank
-              </span>
+              <ArrowUpDown className="w-3.5 h-3.5" />
+              Re-rank {useRerank ? 'ON' : 'OFF'}
             </button>
 
             {/* Search Mode Toggle */}
