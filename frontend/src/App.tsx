@@ -34,12 +34,6 @@ function ActivityMonitorView() {
           <h2 className="text-2xl font-bold text-white tracking-tight">{t('activity.title')}</h2>
           <p className="text-zinc-400 mt-1">{t('activity.subtitle')}</p>
         </div>
-        <button 
-          onClick={() => refreshJobs?.()}
-          className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 transition-colors"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1">
@@ -92,12 +86,13 @@ function ActivityMonitorView() {
 }
 
 function ContentSourcesView() {
-  const { setCurrentView, setSelectedSourceIdForDb, sources = [], isSourcesLoaded, refreshSources, selectedSubjects } = useAppContext();
+  const { setCurrentView, setSelectedSourceIdForDb, sources = [], isSourcesLoaded, refreshSources, selectedSubjects, addToast } = useAppContext();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [appliedSearchQuery, setAppliedSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [page, setPage] = useState(1);
+  const [isSyncing, setIsSyncing] = useState(false);
   const pageSize = 10;
 
   const filteredSources = React.useMemo(() => {
@@ -142,7 +137,16 @@ function ContentSourcesView() {
   };
 
   const handleRefresh = async () => {
-    await refreshSources?.();
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await refreshSources?.();
+      addToast(t('notifications.sync.success'), 'success');
+    } catch (err) {
+      addToast(t('notifications.sync.error'), 'error');
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   return (
@@ -173,10 +177,11 @@ function ContentSourcesView() {
 
         <button 
           onClick={handleRefresh}
-          className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 transition-colors border border-zinc-700/50 shadow-sm"
-          title={t('common.actions.sync')}
+          disabled={isSyncing}
+          className="group flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-zinc-300 bg-panel-bg border border-border-subtle rounded-lg hover:bg-panel-hover hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <RefreshCw className={`w-4 h-4 ${!isSourcesLoaded ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${isSyncing ? 'animate-spin text-emerald-400' : 'group-hover:rotate-180'}`} />
+          {isSyncing ? t('common.actions.syncing') : t('common.actions.sync')}
         </button>
       </div>
 
@@ -257,24 +262,9 @@ function ContentSourcesView() {
 
 // --- Main Layout ---
 function MainContent() {
-  const { currentView, selectedSubjects, addToast, refreshSubjects } = useAppContext();
+  const { currentView, selectedSubjects } = useAppContext();
   const { t } = useTranslation();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-
-  const handleSync = async () => {
-    if (isSyncing) return;
-    setIsSyncing(true);
-    
-    try {
-      await refreshSubjects();
-      addToast(t('notifications.sync.success'), 'success');
-    } catch (err) {
-      addToast(t('notifications.sync.error'), 'error');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   // @ts-ignore
   return (
@@ -293,14 +283,6 @@ function MainContent() {
         </div>
         
         <div className="flex items-center gap-3">
-          <button 
-            onClick={handleSync}
-            disabled={isSyncing}
-            className="group flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-zinc-300 bg-panel-bg border border-border-subtle rounded-lg hover:bg-panel-hover hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${isSyncing ? 'animate-spin text-emerald-400' : 'group-hover:rotate-180'}`} />
-            {isSyncing ? t('common.actions.syncing') : t('common.actions.sync')}
-          </button>
           <button 
             onClick={() => setIsAddModalOpen(true)}
             className="group flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-black bg-emerald-500 rounded-lg hover:bg-emerald-400 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.2)]"
