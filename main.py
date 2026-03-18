@@ -32,6 +32,7 @@ async def lifespan(app: FastAPI):
     try:
         from src.config.settings import Settings
         from src.infrastructure.services.model_loader_service import ModelLoaderService
+        from src.infrastructure.services.re_rank_service import ReRankService
 
         _settings = Settings()
         app.state.model_loader = ModelLoaderService(
@@ -41,6 +42,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error pre-loading embedding model: {e}")
         app.state.model_loader = None
+
+    try:
+        app.state.rerank_service = ReRankService(model_name=_settings.model_rerank.name)
+        logger.info("Re-rank model pre-loaded successfully.")
+    except Exception as e:
+        logger.error(f"Error pre-loading re-rank model: {e}")
+        app.state.rerank_service = None
 
     yield
     logger.info("Shutting down WhatYouSaid API...")

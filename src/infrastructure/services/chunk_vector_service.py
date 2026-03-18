@@ -15,10 +15,14 @@ logger = Logger()
 class ChunkVectorService:
     """Generic service for managing and retrieving chunks in a vector store."""
 
-    def __init__(self, repository: IVectorRepository, rerank_service: Optional[ReRankService] = None):
+    def __init__(
+        self,
+        repository: IVectorRepository,
+        rerank_service: Optional[ReRankService] = None,
+    ):
         self._repository = repository
         self._mapper = ChunkMapper()
-        self._rerank_service = rerank_service or ReRankService()
+        self._rerank_service = rerank_service
 
     def index_documents(self, documents: List[ChunkEntity]) -> List[str]:
         """Index a list of chunk entities into the vector store."""

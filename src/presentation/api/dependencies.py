@@ -30,6 +30,7 @@ from src.infrastructure.services.knowledge_subject_service import (
     KnowledgeSubjectService,
 )
 from src.infrastructure.services.model_loader_service import ModelLoaderService
+from src.infrastructure.services.re_rank_service import ReRankService
 from src.infrastructure.services.youtube_vector_service import YouTubeVectorService
 
 
@@ -130,12 +131,15 @@ def get_job_service(
     return IngestionJobService(repo)
 
 
+def get_rerank_service(request: Request) -> ReRankService:
+    return request.app.state.rerank_service
+
+
 def get_chunk_vector_service(
     vector_repo: IVectorRepository = Depends(get_vector_repository),
+    rerank_service: ReRankService = Depends(get_rerank_service),
 ) -> ChunkVectorService:
-    return ChunkVectorService(
-        vector_repo
-    )  # ChunkVectorService only takes repo in __init__
+    return ChunkVectorService(vector_repo, rerank_service=rerank_service)
 
 
 def get_chunk_index_service(

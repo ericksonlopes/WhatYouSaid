@@ -108,6 +108,13 @@ class App(BaseSettings):
         }
 
 
+class ModelRerank(BaseSettings):
+    name: str = Field(
+        default="ms-marco-MiniLM-L-12-v2",
+        description="Name of the reranker models to use",
+    )
+
+
 class ModelEmbedding(BaseSettings):
     name: str = Field(
         default="BAAI/bge-m3", description="Name of the embedding models to use"
@@ -124,6 +131,9 @@ class Settings(BaseSettings):
     )
     model_embedding: ModelEmbedding = Field(
         default_factory=ModelEmbedding, description="Model embedding settings"
+    )
+    model_rerank: ModelRerank = Field(
+        default_factory=ModelRerank, description="Model rerank settings"
     )
     sql: SQLConfig = Field(
         default_factory=SQLConfig, description="SQL database connection settings"
