@@ -52,14 +52,15 @@ export const api = {
     }));
   },
 
-  async search(query: string, topK: number, subjectId?: string): Promise<any> {
+  async search(query: string, topK: number, subjectId?: string, searchMode?: string): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         query,
         top_k: topK,
-        subject_id: subjectId
+        subject_id: subjectId,
+        search_mode: searchMode ?? 'semantic',
       })
     });
     if (!response.ok) throw new Error('Search failed');

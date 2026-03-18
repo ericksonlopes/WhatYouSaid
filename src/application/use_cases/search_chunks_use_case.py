@@ -4,13 +4,14 @@ from uuid import UUID
 
 from src.application.dtos.results.search_chunks_result import SearchChunksResult
 from src.config.logger import Logger
+from src.domain.entities.enums.search_mode_enum import SearchMode
 from src.infrastructure.services.chunk_vector_service import ChunkVectorService
 
 logger = Logger()
 
 
 class SearchChunksUseCase:
-    """Use case for semantic search of chunks via vector service with knowledge_subject filtering.
+    """Use case for semantic/BM25/hybrid search of chunks via vector service with knowledge_subject filtering.
 
     Can filter by subject_id (UUID or str) or by subject_name (requires ks_service).
     """
@@ -25,6 +26,7 @@ class SearchChunksUseCase:
         top_k: int = 5,
         subject_id: Optional[Union[str, UUID]] = None,
         subject_name: Optional[str] = None,
+        search_mode: SearchMode = SearchMode.SEMANTIC,
     ) -> SearchChunksResult:
         logger.info(
             "Executing search chunks use case",
@@ -33,6 +35,7 @@ class SearchChunksUseCase:
                 "top_k": top_k,
                 "subject_id": str(subject_id) if subject_id else None,
                 "subject_name": subject_name,
+                "search_mode": str(search_mode),
             },
         )
 
@@ -63,14 +66,19 @@ class SearchChunksUseCase:
         # Execute retrieval
         logger.debug(
             "Calling vector service for retrieval",
-            context={"query": query, "top_k": top_k},
+            context={"query": query, "top_k": top_k, "search_mode": str(search_mode)},
         )
-        results = self.vector_service.retrieve(query, top_k=top_k, filters=filters)
+        results = self.vector_service.retrieve(
+            query, top_k=top_k, filters=filters, search_mode=search_mode
+        )
 
         logger.info(
             "Search completed", context={"query": query, "results_count": len(results)}
         )
 
         return SearchChunksResult(
-            query=query, results=results, total_count=len(results)
+            query=query,
+            results=results,
+            total_count=len(results),
+            search_mode=search_mode.value,
         )

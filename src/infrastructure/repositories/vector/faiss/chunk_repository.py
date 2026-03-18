@@ -5,6 +5,7 @@ from typing import List, Optional, Any
 from uuid import UUID
 
 from src.config.logger import Logger
+from src.domain.entities.enums.search_mode_enum import SearchMode
 from src.domain.interfaces.repository.retriver_repository import IVectorRepository
 from src.domain.mappers.chunk_mapper import ChunkMapper
 from src.infrastructure.repositories.vector.models.chunk_model import ChunkModel
@@ -73,7 +74,9 @@ class ChunkFAISSRepository(IVectorRepository):
 
             metadatas = []
             for doc in valid_docs:
-                meta = doc.model_dump(exclude={"content", "id", "score"})
+                meta = doc.model_dump(
+                    exclude={"content", "score"}
+                )  # No longer exclude ID
 
                 # Convert UUIDs and datetimes to string for better compatibility
                 for key, value in meta.items():
@@ -115,46 +118,183 @@ class ChunkFAISSRepository(IVectorRepository):
             raise e
 
     def retriever(
-        self, query: str, top_kn: int = 5, filters: Optional[Any] = None
+        self,
+        query: str,
+        top_kn: int = 5,
+        filters: Optional[Any] = None,
+        search_mode: SearchMode = SearchMode.SEMANTIC,
     ) -> List[ChunkModel]:
+
         logger.debug(
             "Retrieving from FAISS",
-            context={"filters": filters, "query": query, "top_kn": top_kn},
+            context={
+                "filters": filters,
+                "query": query,
+                "top_kn": top_kn,
+                "search_mode": str(search_mode),
+            },
         )
 
         if not self._vector_store:
             return []
 
+        filter_callable = None
+        if isinstance(filters, dict):
+
+            def filter_func(metadata: dict) -> bool:
+                for k, v in filters.items():
+                    if str(metadata.get(k)) != str(v):
+                        return False
+                return True
+
+            filter_callable = filter_func
+
         try:
-            filter_callable = None
-            if isinstance(filters, dict):
-
-                def filter_func(metadata: dict) -> bool:
-                    for k, v in filters.items():
-                        if str(metadata.get(k)) != str(v):
-                            return False
-                    return True
-
-                filter_callable = filter_func
-
-            docs_with_scores = self._vector_store.similarity_search_with_score(
-                query, k=top_kn, filter=filter_callable
-            )
-
-            mapper = ChunkMapper()
-            models: List[ChunkModel] = []
-
-            for doc, score in docs_with_scores:
-                model = mapper.document_to_model(doc)
-                model.score = float(score)
-                models.append(model)
-
-            return models
+            if search_mode == SearchMode.BM25:
+                return self._bm25_search(query, top_kn, filter_callable)
+            elif search_mode == SearchMode.HYBRID:
+                return self._hybrid_search(query, top_kn, filter_callable)
+            else:
+                return self._semantic_search(query, top_kn, filter_callable)
         except Exception as e:
             logger.error(
                 "Error retrieving from FAISS", context={"query": query, "error": str(e)}
             )
             raise e
+
+    def _semantic_search(
+        self, query: str, top_kn: int, filter_callable: Optional[Any]
+    ) -> List[ChunkModel]:
+        """Standard FAISS vector similarity search."""
+        if not self._vector_store:
+            return []
+
+        docs_with_scores = self._vector_store.similarity_search_with_score(
+            query, k=top_kn, filter=filter_callable
+        )
+        mapper = ChunkMapper()
+        models: List[ChunkModel] = []
+        for doc, score in docs_with_scores:
+            model = mapper.document_to_model(doc)
+            # FAISS returns L2 distance; convert to 0-1 similarity
+            model.score = float(1.0 / (1.0 + score))
+            models.append(model)
+        return models
+
+    def _get_all_docs(self, filter_callable: Optional[Any]):
+        """Return all docs from docstore that pass the optional filter callable."""
+        if not self._vector_store or not hasattr(self._vector_store, "docstore"):
+            return []
+
+        all_docs = list(self._vector_store.docstore._dict.values())
+        if filter_callable:
+            all_docs = [d for d in all_docs if filter_callable(d.metadata)]
+        return all_docs
+
+    def _bm25_search(
+        self, query: str, top_kn: int, filter_callable: Optional[Any]
+    ) -> List[ChunkModel]:
+        """BM25 keyword search over the in-memory FAISS docstore using rank_bm25."""
+        try:
+            from rank_bm25 import BM25Okapi
+        except ImportError:
+            logger.error("rank_bm25 is not installed. Run: pip install rank-bm25")
+            raise ImportError(
+                "rank-bm25 package required for BM25 search. Install with: pip install rank-bm25"
+            )
+
+        all_docs = self._get_all_docs(filter_callable)
+        if not all_docs:
+            return []
+
+        tokenized_corpus = [
+            (doc.page_content or "").lower().split() for doc in all_docs
+        ]
+        bm25 = BM25Okapi(tokenized_corpus)
+        scores = bm25.get_scores(query.lower().split())
+
+        # Get top_kn indices sorted by descending score
+        ranked_indices = sorted(
+            range(len(scores)), key=lambda i: scores[i], reverse=True
+        )[:top_kn]
+
+        mapper = ChunkMapper()
+        models: List[ChunkModel] = []
+        for idx in ranked_indices:
+            if scores[idx] <= 0:
+                continue
+            model = mapper.document_to_model(all_docs[idx])
+            model.score = float(scores[idx])
+            models.append(model)
+        return models
+
+    def _hybrid_search(
+        self, query: str, top_kn: int, filter_callable: Optional[Any]
+    ) -> List[ChunkModel]:
+        """Hybrid search: merge BM25 + semantic results using Reciprocal Rank Fusion (RRF)."""
+        # Fetch more candidates per method to improve fusion quality
+        fetch_k = max(top_kn * 3, 20)
+
+        logger.debug(
+            "Executing hybrid search sub-calls",
+            context={"query": query, "fetch_k": fetch_k},
+        )
+        semantic_results = self._semantic_search(query, fetch_k, filter_callable)
+        bm25_results = self._bm25_search(query, fetch_k, filter_callable)
+
+        logger.debug(
+            "Hybrid search candidates found",
+            context={
+                "semantic_count": len(semantic_results),
+                "bm25_count": len(bm25_results),
+            },
+        )
+
+        if not semantic_results and not bm25_results:
+            return []
+
+        # Build doc_id -> model map
+        rrf_k = 60
+        scores: dict = {}
+        id_to_model: dict = {}
+
+        def _doc_key(model: ChunkModel) -> str:
+            """Ensure a deterministic string key for merging same documents from different sources."""
+            # Use content hash if ID is missing or if we suspect it's unique per call
+            # For FAISS, the content is the most reliable join key
+            import hashlib
+
+            content_str = (model.content or "").strip()
+            content_hash = hashlib.md5(content_str.encode("utf-8")).hexdigest()
+            return content_hash
+
+        for rank, model in enumerate(semantic_results):
+            key = _doc_key(model)
+            scores[key] = scores.get(key, 0.0) + 1.0 / (rrf_k + rank + 1)
+            id_to_model[key] = model
+
+        for rank, model in enumerate(bm25_results):
+            key = _doc_key(model)
+            scores[key] = scores.get(key, 0.0) + 1.0 / (rrf_k + rank + 1)
+            if key not in id_to_model:
+                id_to_model[key] = model
+
+        # Sort by RRF score descending and take top_kn
+        # Use a stable sort key to avoid TypeError when comparing different key types on tie-breaks
+        ranked_keys = sorted(
+            scores.keys(), key=lambda k: (scores[k], str(k)), reverse=True
+        )[:top_kn]
+
+        results = []
+        for key in ranked_keys:
+            model = id_to_model[key]
+            model.score = scores[key]
+            results.append(model)
+
+        logger.info(
+            "Hybrid search fusion completed", context={"total_results": len(results)}
+        )
+        return results
 
     def delete(self, filters: Optional[Any]) -> int:
         logger.debug("Deleting from FAISS", context={"filters": filters})

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Any
 
+from src.domain.entities.enums.search_mode_enum import SearchMode
 from src.infrastructure.repositories.vector.models.chunk_model import ChunkModel
 
 
@@ -14,9 +15,13 @@ class IVectorRepository(ABC):
 
     @abstractmethod
     def retriever(
-        self, query: str, top_kn: int = 5, filters: Optional[Any] = None
+        self,
+        query: str,
+        top_kn: int = 5,
+        filters: Optional[Any] = None,
+        search_mode: SearchMode = SearchMode.SEMANTIC,
     ) -> List[ChunkModel]:
-        """Retrieve matching domain Chunk entities."""
+        """Retrieve matching domain Chunk entities using the given search mode."""
         raise NotImplementedError
 
     @abstractmethod

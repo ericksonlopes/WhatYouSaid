@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, ConfigDict
 
+from src.domain.entities.enums.search_mode_enum import SearchMode
+
 
 class SearchRequest(BaseModel):
     query: str = Field(
@@ -14,6 +16,10 @@ class SearchRequest(BaseModel):
     top_k: int = Field(default=5, ge=1, le=50)
     subject_id: Optional[str] = None
     subject_name: Optional[str] = None
+    search_mode: SearchMode = Field(
+        default=SearchMode.SEMANTIC,
+        description="Search strategy: semantic (vector), bm25 (keyword), or hybrid",
+    )
 
 
 class ChunkResultSchema(BaseModel):
@@ -36,3 +42,4 @@ class SearchResponse(BaseModel):
     query: str
     results: List[ChunkResultSchema]
     total_count: int
+    search_mode: Optional[str] = None

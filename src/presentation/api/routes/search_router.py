@@ -34,6 +34,7 @@ def search_chunks(
             top_k=request.top_k,
             subject_id=request.subject_id,
             subject_name=request.subject_name,
+            search_mode=request.search_mode,
         )
         return result
     except ValueError as ve:

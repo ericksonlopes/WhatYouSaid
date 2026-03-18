@@ -6,6 +6,7 @@ omit =
     */dtos/*
     */schemas/*
     */mappers/*
+    */scripts/*
     __init__.py
     main.py
 

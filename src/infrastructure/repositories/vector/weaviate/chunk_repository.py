@@ -2,6 +2,7 @@ from typing import List, Optional, Any, TYPE_CHECKING
 from uuid import UUID
 
 from src.config.logger import Logger
+from src.domain.entities.enums.search_mode_enum import SearchMode
 from src.domain.interfaces.repository.retriver_repository import IVectorRepository
 from src.domain.mappers.chunk_mapper import ChunkMapper
 from src.infrastructure.repositories.vector.models.chunk_model import ChunkModel
@@ -114,12 +115,15 @@ class ChunkWeaviateRepository(IVectorRepository):
             raise e
 
     def retriever(
-        self, query: str, top_kn: int = 5, filters: Optional[Any] = None
+        self,
+        query: str,
+        top_kn: int = 5,
+        filters: Optional[Any] = None,
+        search_mode: SearchMode = SearchMode.SEMANTIC,
     ) -> List[ChunkModel]:
-        # Deferred import for optional dependency
+        # Convert dictionary filters to Weaviate filters if necessary
         from weaviate.collections.classes.filters import Filter
 
-        # Convert dictionary filters to Weaviate filters if necessary
         weaviate_filters = filters
         if isinstance(filters, dict):
             weaviate_filters_list = []
@@ -137,55 +141,141 @@ class ChunkWeaviateRepository(IVectorRepository):
 
         logger.debug(
             "Retrieving with scores",
-            context={"filters": weaviate_filters, "query": query, "top_kn": top_kn},
+            context={
+                "filters": weaviate_filters,
+                "query": query,
+                "top_kn": top_kn,
+                "search_mode": str(search_mode),
+            },
         )
 
         try:
-            with self.vector_store as vector_store:
-                docs_with_scores = vector_store.similarity_search_with_score(
-                    query, k=top_kn, filters=weaviate_filters
-                )
-
-                mapper = ChunkMapper()
-                all_models: List[ChunkModel] = []
-
-                for doc, score in docs_with_scores:
-                    model = mapper.document_to_model(doc)
-                    model.score = score
-                    all_models.append(model)
-
-                seen = set()
-                models = []
-                for m in all_models:
-                    content_preview = (m.content or "")[:500].strip()
-                    source_id = str(m.external_source or "")
-                    key = (content_preview, source_id)
-
-                    if key not in seen:
-                        seen.add(key)
-                        models.append(m)
-
-                logger.debug(
-                    "Retrieved documents with scores",
-                    context={
-                        "query": query,
-                        "total_found": len(all_models),
-                        "unique_results": len(models),
-                    },
-                )
-                return models
+            if search_mode == SearchMode.BM25:
+                return self._bm25_search(query, top_kn, weaviate_filters)
+            elif search_mode == SearchMode.HYBRID:
+                return self._hybrid_search(query, top_kn, weaviate_filters)
+            else:
+                return self._semantic_search(query, top_kn, weaviate_filters)
         except Exception as e:
             logger.error(
                 "Error retrieving documents", context={"query": query, "error": str(e)}
             )
             raise e
 
+    def _semantic_search(
+        self, query: str, top_kn: int, weaviate_filters: Optional[Any]
+    ) -> List[ChunkModel]:
+        """Standard semantic (vector) search via LangChain WeaviateVectorStore."""
+        with self.vector_store as vector_store:
+            docs_with_scores = vector_store.similarity_search_with_score(
+                query, k=top_kn, filters=weaviate_filters
+            )
+
+            mapper = ChunkMapper()
+            all_models: List[ChunkModel] = []
+
+            for doc, score in docs_with_scores:
+                model = mapper.document_to_model(doc)
+                model.score = score
+                all_models.append(model)
+
+            seen = set()
+            models = []
+            for m in all_models:
+                content_preview = (m.content or "")[:500].strip()
+                source_id = str(m.external_source or "")
+                key = (content_preview, source_id)
+
+                if key not in seen:
+                    seen.add(key)
+                    models.append(m)
+
+            logger.debug(
+                "Retrieved documents with scores",
+                context={
+                    "query": query,
+                    "total_found": len(all_models),
+                    "unique_results": len(models),
+                },
+            )
+            return models
+
+    def _weaviate_objects_to_models(self, response_objects: list) -> List[ChunkModel]:
+        """Map Weaviate query response objects to ChunkModel list."""
+        chunks = []
+        for obj in response_objects:
+            properties = obj.properties
+            chunk_model = ChunkModel(
+                id=UUID(str(obj.uuid)),
+                content=properties.get(self._text_key, ""),
+                **{k: v for k, v in properties.items() if k != self._text_key},
+            )
+            # Attach score from metadata if available
+            if hasattr(obj, "metadata") and obj.metadata:
+                meta = obj.metadata
+                if hasattr(meta, "score") and meta.score is not None:
+                    chunk_model.score = float(meta.score)
+                elif hasattr(meta, "distance") and meta.distance is not None:
+                    # convert distance to similarity
+                    chunk_model.score = float(1.0 / (1.0 + meta.distance))
+            chunks.append(chunk_model)
+        return chunks
+
+    def _bm25_search(
+        self, query: str, top_kn: int, weaviate_filters: Optional[Any]
+    ) -> List[ChunkModel]:
+        """Native Weaviate BM25 keyword search."""
+        with self._weaviate_client as client:
+            collection = client.collections.get(self._collection_name)
+            from weaviate.classes.query import MetadataQuery
+
+            response = collection.query.bm25(
+                query=query,
+                limit=top_kn,
+                filters=weaviate_filters,
+                return_metadata=MetadataQuery(score=True),
+            )
+
+        models = self._weaviate_objects_to_models(response.objects)
+        logger.debug(
+            "BM25 search completed",
+            context={"query": query, "results": len(models)},
+        )
+        return models
+
+    def _hybrid_search(
+        self, query: str, top_kn: int, weaviate_filters: Optional[Any]
+    ) -> List[ChunkModel]:
+        """Native Weaviate Hybrid search (vector + BM25, alpha=0.5)."""
+        # Generate query vector since Weaviate collection has no automatic vectorizer
+        query_vector = self._embedding_service.embed_query(query)
+
+        with self._weaviate_client as client:
+            collection = client.collections.get(self._collection_name)
+            from weaviate.classes.query import MetadataQuery
+
+            response = collection.query.hybrid(
+                query=query,
+                vector=query_vector,
+                limit=top_kn,
+                filters=weaviate_filters,
+                alpha=0.5,  # 0=pure BM25, 1=pure vector; 0.5 = equal blend
+                return_metadata=MetadataQuery(score=True),
+            )
+
+        models = self._weaviate_objects_to_models(response.objects)
+        logger.debug(
+            "Hybrid search completed",
+            context={"query": query, "results": len(models)},
+        )
+        return models
+
     def delete(self, filters: Optional[Any]) -> int:
         from weaviate.collections.classes.filters import Filter
 
         # Convert dictionary filters to Weaviate filters if necessary
         weaviate_filters = filters
-        if isinstance(filters, dict):
+        if isinstance(filters, dict) and filters:
             weaviate_filters_list = []
             for k, v in filters.items():
                 if k == "id":
@@ -198,6 +288,15 @@ class ChunkWeaviateRepository(IVectorRepository):
                     weaviate_filters = weaviate_filters_list[0]
                 else:
                     weaviate_filters = Filter.all_of(weaviate_filters_list)
+        elif not filters or (isinstance(filters, dict) and not filters):
+            # If filters are empty, we don't want to pass a raw dict/None to delete_many
+            # Weaviate v4 requires a valid Filter object for delete_many
+            # To delete all, we can use a filter that matches everything (not recommended for production without care)
+            # For now, let's just log and return 0 if no filter is provided to avoid accidental mass deletion
+            logger.warning(
+                "Delete called without filters in Weaviate, skipping for safety."
+            )
+            return 0
 
         logger.debug("Deleting documents", context={"filters": weaviate_filters})
         try:

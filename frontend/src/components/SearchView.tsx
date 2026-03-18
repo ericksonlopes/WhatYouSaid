@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Search, Sparkles, Lock, FileText, PlayCircle, ExternalLink, 
   SlidersHorizontal, Database, TextSearch, Network, ListOrdered, 
@@ -35,6 +35,7 @@ export function SearchView() {
   const [isTopKOpen, setIsTopKOpen] = useState(false);
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const [searchMode, setSearchMode] = useState<'semantic' | 'bm25' | 'hybrid'>('semantic');
 
   const sourceMap = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -45,19 +46,17 @@ export function SearchView() {
     return map;
   }, [sources]);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim() || selectedSubjects.length === 0) return;
+  const runSearch = useCallback(async (currentQuery: string, currentMode: string) => {
+    if (!currentQuery.trim() || selectedSubjects.length === 0) return;
 
     setIsSearching(true);
     setHasSearched(true);
     setResults([]);
 
     try {
-      // Use the first selected subject for now as per backend limitation or pass one specifically
       const subjectId = selectedSubjects.length > 0 ? selectedSubjects[0].id : undefined;
-      const data = await api.search(query, topK, subjectId);
-      
+      const data = await api.search(currentQuery, topK, subjectId, currentMode);
+
       const mappedResults: SearchResult[] = data.results.map((res: any) => ({
         id: res.id,
         source: sourceMap.get(res.external_source) || res.external_source || 'Unknown Source',
@@ -79,6 +78,19 @@ export function SearchView() {
     } finally {
       setIsSearching(false);
     }
+  }, [selectedSubjects, topK, sourceMap]);
+
+  // Re-run search automatically when the mode changes (only if a search was already performed)
+  useEffect(() => {
+    if (hasSearched && query.trim()) {
+      runSearch(query, searchMode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchMode]);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    runSearch(query, searchMode);
   };
 
   return (
@@ -173,43 +185,49 @@ export function SearchView() {
 
             {/* Search Mode Toggle */}
             <div className="flex flex-nowrap items-center gap-1 bg-zinc-900/80 border border-zinc-800 rounded-lg p-1 flex-shrink-0">
-            {/* Semantic (Active) */}
-            <button className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-zinc-800 text-emerald-400 text-xs font-medium shadow-sm border border-zinc-700/50 whitespace-nowrap">
+            {/* Semantic */}
+            <button
+              type="button"
+              onClick={() => setSearchMode('semantic')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
+                searchMode === 'semantic'
+                  ? 'bg-zinc-800 text-emerald-400 shadow-sm border border-zinc-700/50'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
               <Sparkles className="w-3.5 h-3.5" />
               Semantic
             </button>
 
-            {/* Keyword (Disabled) */}
-            <div className="relative group">
-              <button 
-                disabled
-                className="flex items-center gap-2 px-3 py-1.5 rounded-md text-zinc-500 text-xs font-medium cursor-not-allowed opacity-70 whitespace-nowrap"
-              >
-                <TextSearch className="w-3.5 h-3.5" />
-                Keyword (BM25)
-                <Lock className="w-3 h-3 ml-1" />
-              </button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-zinc-800 border border-zinc-700 rounded-lg text-[10px] text-zinc-300 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl z-10">
-                Exact keyword matching (BM25) is coming soon to the Pro plan.
-              </div>
-            </div>
+            {/* Keyword (BM25) */}
+            <button
+              type="button"
+              onClick={() => setSearchMode('bm25')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
+                searchMode === 'bm25'
+                  ? 'bg-zinc-800 text-sky-400 shadow-sm border border-zinc-700/50'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              <TextSearch className="w-3.5 h-3.5" />
+              Keyword (BM25)
+            </button>
 
-            {/* Hybrid (Disabled) */}
-            <div className="relative group">
-              <button 
-                disabled
-                className="flex items-center gap-2 px-3 py-1.5 rounded-md text-zinc-500 text-xs font-medium cursor-not-allowed opacity-70 whitespace-nowrap"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                Hybrid
-                <Lock className="w-3 h-3 ml-1" />
-              </button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-zinc-800 border border-zinc-700 rounded-lg text-[10px] text-zinc-300 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl z-10">
-                Hybrid search (Semantic + Keyword) is coming soon to the Pro plan.
-              </div>
-            </div>
+            {/* Hybrid */}
+            <button
+              type="button"
+              onClick={() => setSearchMode('hybrid')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
+                searchMode === 'hybrid'
+                  ? 'bg-zinc-800 text-violet-400 shadow-sm border border-zinc-700/50'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Hybrid
+            </button>
 
-            {/* MMR (Disabled) */}
+            {/* MMR (Disabled — needs dedicated implementation) */}
             <div className="relative group">
               <button 
                 disabled
@@ -220,7 +238,7 @@ export function SearchView() {
                 <Lock className="w-3 h-3 ml-1" />
               </button>
               <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-zinc-800 border border-zinc-700 rounded-lg text-[10px] text-zinc-300 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl z-10">
-                Maximal Marginal Relevance (Diversity) is coming soon to the Pro plan.
+                Maximal Marginal Relevance (Diversity) is coming soon.
               </div>
             </div>
           </div>
@@ -293,9 +311,18 @@ export function SearchView() {
                     <div className="flex items-start justify-between gap-4 mb-4">
                       <div className="flex items-center gap-3 flex-wrap">
                         <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-zinc-950 border border-white/10 shadow-inner">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                          <span className="text-emerald-400 text-[11px] font-mono font-medium tracking-tight">
-                            {(result.score * 100).toFixed(1)}% MATCH
+                          <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)] ${
+                            searchMode === 'bm25' ? 'bg-sky-400' : searchMode === 'hybrid' ? 'bg-violet-400' : 'bg-emerald-500'
+                          }`} />
+                          <span className={`text-[11px] font-mono font-medium tracking-tight ${
+                            searchMode === 'bm25' ? 'text-sky-400' : searchMode === 'hybrid' ? 'text-violet-400' : 'text-emerald-400'
+                          }`}>
+                            {searchMode === 'bm25'
+                              ? `BM25: ${result.score.toFixed(2)}`
+                              : searchMode === 'hybrid'
+                              ? `${(result.score * 100).toFixed(1)}% HYBRID`
+                              : `${(result.score * 100).toFixed(1)}% MATCH`
+                            }
                           </span>
                         </div>
                         <span className="text-xs text-zinc-500 flex items-center gap-1.5 font-medium">
@@ -408,9 +435,18 @@ export function SearchView() {
             {/* Modal Metadata Sub-header */}
             <div className="flex flex-wrap items-center gap-4 px-5 py-3 border-b border-zinc-800/50 bg-black/20 overflow-x-auto no-scrollbar">
               <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-zinc-950 border border-white/10 flex-shrink-0">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                <span className="text-emerald-400 text-[11px] font-mono font-medium">
-                  {(selectedResult.score * 100).toFixed(1)}% MATCH
+                <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)] ${
+                  searchMode === 'bm25' ? 'bg-sky-400' : searchMode === 'hybrid' ? 'bg-violet-400' : 'bg-emerald-500'
+                }`} />
+                <span className={`text-[11px] font-mono font-medium ${
+                  searchMode === 'bm25' ? 'text-sky-400' : searchMode === 'hybrid' ? 'text-violet-400' : 'text-emerald-400'
+                }`}>
+                  {searchMode === 'bm25'
+                    ? `BM25: ${selectedResult.score.toFixed(2)}`
+                    : searchMode === 'hybrid'
+                    ? `${(selectedResult.score * 100).toFixed(1)}% HYBRID`
+                    : `${(selectedResult.score * 100).toFixed(1)}% MATCH`
+                  }
                 </span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-zinc-400 flex-shrink-0">

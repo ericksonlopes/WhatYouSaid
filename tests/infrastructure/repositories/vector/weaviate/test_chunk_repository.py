@@ -177,5 +177,5 @@ class TestChunkRepository:
         assert isinstance(chunks[0], ChunkModel)
 
         # delete uses the client context and returns matches
-        deleted = repo.delete(filters=None)
+        deleted = repo.delete(filters={"job_id": "test"})
         assert deleted == 1
