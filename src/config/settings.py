@@ -29,7 +29,7 @@ class SQLConfig(BaseSettings):
 
 class VectorConfig(BaseSettings):
     store_type: VectorStoreType = Field(
-        default=VectorStoreType.CHROMA,
+        default=VectorStoreType.FAISS,
         description="Type of vector store to use (CHROMA, WEAVIATE, FAISS)",
     )
     vector_index_path: str = Field(
