@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ContentSource } from '../types';
+import { useTranslation } from 'react-i18next';
 import { FileText, Video, ChevronLeft, ChevronRight, Search, Filter, ChevronDown, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -18,7 +19,7 @@ interface SourcesTableProps {
 }
 
 const TYPE_OPTIONS = [
-  { value: 'all', label: 'All Types', icon: Filter },
+  { value: 'all', label: 'All Types', icon: Filter }, // Needs i18n in rendering
   { value: 'video', label: 'Videos', icon: Video },
   { value: 'article', label: 'Articles', icon: FileText },
   { value: 'transcript', label: 'Transcripts', icon: FileText },
@@ -28,6 +29,7 @@ export function SourcesTable({
   sources, totalCount, page, pageSize, onPageChange, onRowClick, 
   searchQuery, onSearchChange, onSearchSubmit, typeFilter, onTypeFilterChange 
 }: SourcesTableProps) {
+  const { t } = useTranslation();
   const [isTypeOpen, setIsTypeOpen] = useState(false);
   const totalPages = Math.ceil(totalCount / pageSize);
   const startIndex = (page - 1) * pageSize;
@@ -40,9 +42,9 @@ export function SourcesTable({
       {/* Table Header / Toolbar */}
       <div className="p-4 border-b border-border-subtle flex flex-col md:flex-row md:items-center justify-between gap-4 bg-black/20">
         <div className="flex items-center gap-3">
-          <h3 className="text-sm font-medium text-zinc-200">Indexed Sources</h3>
+          <h3 className="text-sm font-medium text-zinc-200">{t('sources.title')}</h3>
           <span className="px-2 py-0.5 rounded-full bg-zinc-800 text-[10px] text-zinc-500 font-mono border border-zinc-700/50">
-            {totalCount} TOTAL
+            {totalCount} {t('search.results.total').toUpperCase()}
           </span>
         </div>
 
@@ -55,7 +57,9 @@ export function SourcesTable({
               className="flex items-center gap-2 bg-zinc-900 border border-border-subtle hover:border-zinc-700 rounded-lg px-3 py-1.5 transition-colors min-w-[140px]"
             >
               <activeType.icon className="w-3.5 h-3.5 text-zinc-500" />
-              <span className="text-sm text-zinc-300 flex-1 text-left">{activeType.label}</span>
+              <span className="text-sm text-zinc-300 flex-1 text-left">
+                {activeType.value === 'all' ? t('common.actions.filter') : activeType.label}
+              </span>
               <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-200 ${isTypeOpen ? 'rotate-180' : ''}`} />
             </button>
 
@@ -97,7 +101,7 @@ export function SourcesTable({
               <Search className="w-4 h-4 text-zinc-500 group-focus-within:text-emerald-400 transition-colors" />
               <input 
                 type="text" 
-                placeholder="Name or ID..." 
+                placeholder={`${t('common.actions.search')}...`} 
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && onSearchSubmit()}
@@ -108,7 +112,7 @@ export function SourcesTable({
               onClick={onSearchSubmit}
               className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-1.5 text-xs font-medium border-l border-border-subtle transition-colors"
             >
-              Search
+              {t('common.actions.search')}
             </button>
           </div>
         </div>
@@ -119,14 +123,14 @@ export function SourcesTable({
         <table className="w-full text-left text-sm text-zinc-400">
           <thead className="text-xs text-zinc-500 uppercase bg-black/40 sticky top-0 backdrop-blur-md">
             <tr>
-              <th className="px-6 py-3 font-medium">Source</th>
-              <th className="px-6 py-3 font-medium">Origin</th>
-              <th className="px-6 py-3 font-medium">Type</th>
-              <th className="px-6 py-3 font-medium text-right">Chunks</th>
-              <th className="px-6 py-3 font-medium text-center">Status</th>
-              <th className="px-6 py-3 font-medium">Model</th>
+              <th className="px-6 py-3 font-medium">{t('sources.table.title')}</th>
+              <th className="px-6 py-3 font-medium">{t('sources.table.origin')}</th>
+              <th className="px-6 py-3 font-medium">{t('sources.table.type')}</th>
+              <th className="px-6 py-3 font-medium text-right">{t('sources.table.chunks')}</th>
+              <th className="px-6 py-3 font-medium text-center">{t('sources.table.status')}</th>
+              <th className="px-6 py-3 font-medium">{t('sources.table.model')}</th>
               <th className="px-6 py-3 font-medium">Dimensions</th>
-              <th className="px-6 py-3 font-medium">Date Indexed</th>
+              <th className="px-6 py-3 font-medium">{t('sources.table.date')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-subtle">

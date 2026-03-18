@@ -1,0 +1,110 @@
+{
+  "common": {
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "close": "Close",
+      "sync": "Sync",
+      "syncing": "Syncing...",
+      "addData": "Add Data",
+      "search": "Search",
+      "filter": "Filter",
+      "clear": "Clear all filters",
+      "copy": "Copy",
+      "copied": "Copied!"
+    },
+    "status": {
+      "pending": "PENDING",
+      "processing": "PROCESSING",
+      "done": "DONE",
+      "error": "ERROR",
+      "unknown": "UNKNOWN"
+    }
+  },
+  "sidebar": {
+    "brand": {
+      "title": "WhatYouSaid",
+      "subtitle": "Vector Data Hub"
+    },
+    "contexts": {
+      "title": "Knowledge Contexts",
+      "placeholder": "Filter contexts...",
+      "none": "No contexts found.",
+      "only": "Only"
+    },
+    "operations": {
+      "title": "Operations",
+      "chat": "RAG Chat (Locked)",
+      "search": "Semantic Search",
+      "sources": "Content Sources",
+      "chunks": "Sources > Chunks",
+      "activity": "Activity Monitor"
+    },
+    "profile": {
+      "name": "User",
+      "plan": "Pro Plan"
+    }
+  },
+  "search": {
+    "title": "Semantic Search",
+    "subtitle": "Explore your knowledge base using semantic, keyword, or hybrid search.",
+    "placeholder": "Ask anything or search by keywords...",
+    "modes": {
+      "title": "Search Strategy",
+      "semantic": "Semantic",
+      "bm25": "Keyword",
+      "hybrid": "Hybrid"
+    },
+    "options": {
+      "rerank": "Use Re-ranking (Better Quality)",
+      "topKn": "Top Results"
+    },
+    "results": {
+      "title": "Search Results",
+      "total": "results found",
+      "none": "No results found for your query.",
+      "score": "Score",
+      "source": "Source",
+      "id": "ID"
+    }
+  },
+  "sources": {
+    "title": "Content Sources",
+    "subtitle": {
+      "multiple": "Showing sources for {{count}} context(s).",
+      "all": "Showing all sources in the database."
+    },
+    "table": {
+      "title": "Title",
+      "type": "Type",
+      "date": "Date",
+      "chunks": "Chunks",
+      "status": "Status",
+      "model": "Model",
+      "origin": "Origin",
+      "none": "No sources found."
+    }
+  },
+  "activity": {
+    "title": "Activity Monitor",
+    "subtitle": "Real-time ingestion pipeline status.",
+    "loading": "Loading activity pipeline...",
+    "none": "No recent activity.",
+    "pagination": "Showing {{start}} to {{end}} of {{total}} tasks",
+    "page": "Page {{current}} of {{total}}"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": {
+      "title": "Interface Language",
+      "en": "English",
+      "pt-BR": "Portuguese (Brazil)"
+    }
+  },
+  "chat": {
+    "locked": {
+      "title": "RAG Chat is currently locked",
+      "description": "We are fine-tuning the chat experience. Please use the Semantic Search tab to explore your knowledge base."
+    }
+  }
+}

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Languages } from 'lucide-react';
 import { 
   X, Settings, Activity, Database, 
   Box, Server, Terminal, Key, Shield, 
@@ -13,6 +15,7 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+  const { t, i18n } = useTranslation();
   const [settingsData, setSettingsData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
@@ -60,7 +63,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <Settings className="w-5 h-5 text-zinc-300" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white tracking-tight">Settings</h2>
+                <h2 className="text-lg font-semibold text-white tracking-tight">{t('settings.title')}</h2>
                 <p className="text-xs text-zinc-500">Manage your local environment configurations</p>
               </div>
             </div>
@@ -74,10 +77,40 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           {/* Content Area */}
           <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+            {/* Language Selection */}
+            <div className="mb-10">
+              <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-4 px-1 flex items-center gap-2">
+                <Languages className="w-4 h-4" />
+                {t('settings.language.title')}
+              </h3>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => i18n.changeLanguage('en')}
+                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border transition-all ${
+                    i18n.language.startsWith('en')
+                      ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400'
+                      : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 hover:border-zinc-700'
+                  }`}
+                >
+                  <span className="text-xs font-bold uppercase tracking-widest">{t('settings.language.en')}</span>
+                </button>
+                <button
+                  onClick={() => i18n.changeLanguage('pt-BR')}
+                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border transition-all ${
+                    i18n.language === 'pt-BR'
+                      ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400'
+                      : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 hover:border-zinc-700'
+                  }`}
+                >
+                  <span className="text-xs font-bold uppercase tracking-widest">{t('settings.language.pt-BR')}</span>
+                </button>
+              </div>
+            </div>
+
             {loading && !settingsData ? (
               <div className="flex items-center justify-center h-full gap-3 text-zinc-500">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Loading settings...
+                {t('activity.loading')}
               </div>
             ) : (
               <UnifiedSettings settings={settingsData} />

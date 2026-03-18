@@ -39,7 +39,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [jobs, setJobs] = useState<IngestionTask[]>([]);
   const [isJobsLoaded, setIsJobsLoaded] = useState(false);
   const [currentView, setCurrentView] = useState<ViewState>(() => {
-    return (localStorage.getItem('currentView') as ViewState) || 'chat';
+    return (localStorage.getItem('currentView') as ViewState) || 'search';
   });
   const [selectedSourceIdForDb, setSelectedSourceIdForDb] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);

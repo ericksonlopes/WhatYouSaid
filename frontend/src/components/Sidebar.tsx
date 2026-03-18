@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../store/AppContext';
+import { useTranslation } from 'react-i18next';
 import { AddSubjectModal } from './AddSubjectModal';
 import { SettingsModal } from './SettingsModal';
 import { 
@@ -23,15 +24,16 @@ const getSubjectIcon = (iconName?: string) => {
 
 export function Sidebar() {
   const { subjects, selectedSubjects, toggleSubjectSelection, selectOnlySubject, currentView, setCurrentView } = useAppContext();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddSubjectModalOpen, setIsAddSubjectModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   const navItems = [
-    { id: 'chat', label: 'RAG Chat', icon: MessageSquare },
-    { id: 'search', label: 'Search', icon: Search },
-    { id: 'sources', label: 'Content Sources', icon: Database },
-    { id: 'activity', label: 'Activity Monitor', icon: ActivityIcon },
+    { id: 'chat', label: t('sidebar.operations.chat'), icon: MessageSquare, disabled: true },
+    { id: 'search', label: t('sidebar.operations.search'), icon: Search },
+    { id: 'sources', label: t('sidebar.operations.sources'), icon: Database },
+    { id: 'activity', label: t('sidebar.operations.activity'), icon: ActivityIcon },
   ] as const;
 
   const filteredSubjects = subjects.filter(s => 
@@ -47,8 +49,8 @@ export function Sidebar() {
             <span className="text-black text-sm font-black">W</span>
           </div>
           <div className="flex flex-col min-w-0">
-            <h1 className="text-base font-bold tracking-tight text-white truncate">WhatYouSaid</h1>
-            <p className="text-[10px] text-emerald-500/80 font-mono uppercase tracking-wider truncate">Vector Data Hub</p>
+            <h1 className="text-base font-bold tracking-tight text-white truncate">{t('sidebar.brand.title')}</h1>
+            <p className="text-[10px] text-emerald-500/80 font-mono uppercase tracking-wider truncate">{t('sidebar.brand.subtitle')}</p>
           </div>
         </div>
       </div>
@@ -57,7 +59,7 @@ export function Sidebar() {
       <div className="flex flex-col flex-1 min-h-0 border-b border-border-subtle">
         <div className="p-4 pb-2 flex items-center justify-between">
           <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider px-2">
-            Knowledge Contexts
+            {t('sidebar.contexts.title')}
           </h2>
           <button 
             onClick={() => setIsAddSubjectModalOpen(true)}
@@ -74,7 +76,7 @@ export function Sidebar() {
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
             <input 
               type="text" 
-              placeholder="Filter contexts..." 
+              placeholder={t('sidebar.contexts.placeholder')} 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-black/40 border border-border-subtle rounded-lg pl-8 pr-3 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-600 transition-colors placeholder:text-zinc-600"
@@ -85,7 +87,7 @@ export function Sidebar() {
         {/* Scrollable Context List */}
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1 custom-scrollbar">
           {filteredSubjects.length === 0 ? (
-            <div className="text-xs text-zinc-500 text-center py-4">No contexts found.</div>
+            <div className="text-xs text-zinc-500 text-center py-4">{t('sidebar.contexts.none')}</div>
           ) : (
             filteredSubjects.map((subject) => {
               const Icon = getSubjectIcon(subject.icon);
@@ -126,9 +128,9 @@ export function Sidebar() {
                         selectOnlySubject(subject);
                       }}
                       className="absolute right-3 opacity-0 group-hover:opacity-100 px-2 py-0.5 text-[10px] font-medium bg-zinc-600 text-white rounded hover:bg-emerald-500 hover:text-black transition-all shadow-sm"
-                      title="Select only this context"
+                      title={t('sidebar.contexts.only')}
                     >
-                      Only
+                      {t('sidebar.contexts.only')}
                     </button>
                   </div>
                 </div>
@@ -141,7 +143,7 @@ export function Sidebar() {
       {/* Navigation Views */}
       <div className="p-4">
         <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3 px-2">
-          Operations
+          {t('sidebar.operations.title')}
         </h2>
         <div className="space-y-1">
           {navItems.map((item) => {
@@ -161,7 +163,7 @@ export function Sidebar() {
               >
                 <Icon className={`w-4 h-4 transition-transform duration-200 group-hover:scale-110 ${isActive ? 'scale-110' : ''}`} />
                 <span className="truncate">
-                  {isSourcesGroup && currentView === 'database' ? 'Sources > Chunks' : item.label}
+                  {isSourcesGroup && currentView === 'database' ? t('sidebar.operations.chunks') : item.label}
                 </span>
               </button>
             );
@@ -177,8 +179,8 @@ export function Sidebar() {
               <span className="text-xs font-medium text-zinc-400">US</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-zinc-200">User</span>
-              <span className="text-[10px] text-emerald-500 uppercase tracking-wider font-mono">Pro Plan</span>
+              <span className="text-sm font-medium text-zinc-200">{t('sidebar.profile.name')}</span>
+              <span className="text-[10px] text-emerald-500 uppercase tracking-wider font-mono">{t('sidebar.profile.plan')}</span>
             </div>
           </div>
           <button 

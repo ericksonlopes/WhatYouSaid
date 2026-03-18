@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Search, Sparkles, Lock, FileText, PlayCircle, ExternalLink, 
   SlidersHorizontal, Database, TextSearch, Network, ListOrdered, 
@@ -27,6 +28,7 @@ interface SearchResult {
 
 export function SearchView() {
   const { selectedSubjects, sources } = useAppContext();
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -99,9 +101,9 @@ export function SearchView() {
       {/* Header & Search Bar */}
       <div className="p-8 pb-4 max-w-5xl mx-auto w-full flex-shrink-0">
         <div className="mb-8 text-center">
-          <h2 className="text-3xl font-bold text-white tracking-tight mb-3">Knowledge Search</h2>
+          <h2 className="text-3xl font-bold text-white tracking-tight mb-3">{t('search.title')}</h2>
           <p className="text-zinc-400 max-w-xl mx-auto">
-            Instantly find exact quotes, concepts, and moments across your selected knowledge bases using vector similarity.
+            {t('search.subtitle')}
           </p>
         </div>
 
@@ -112,7 +114,7 @@ export function SearchView() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={`Search in ${selectedSubjects.length} selected context${selectedSubjects.length !== 1 ? 's' : ''}...`}
+              placeholder={t('search.placeholder')}
               className="w-full bg-transparent text-xl text-zinc-100 placeholder:text-zinc-600 px-5 py-4 focus:outline-none font-sans"
             />
             <button
@@ -120,7 +122,7 @@ export function SearchView() {
               disabled={!query.trim() || isSearching || selectedSubjects.length === 0}
               className="px-8 py-4 bg-white text-black font-medium rounded-xl hover:bg-zinc-200 disabled:opacity-50 disabled:hover:bg-white transition-colors shadow-sm"
             >
-              {isSearching ? 'Searching...' : 'Search'}
+              {isSearching ? t('common.actions.syncing') : t('common.actions.search')}
             </button>
           </div>
         </form>
@@ -129,10 +131,10 @@ export function SearchView() {
         <div className="max-w-4xl mx-auto mt-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-sm min-w-0 flex-1">
             <Database className="w-4 h-4 text-zinc-500 flex-shrink-0" />
-            <span className="text-zinc-400 whitespace-nowrap flex-shrink-0">Searching in:</span>
+            <span className="text-zinc-400 whitespace-nowrap flex-shrink-0">{t('search.results.source')}:</span>
             <div className="flex gap-1.5 flex-nowrap overflow-hidden min-w-0">
               {selectedSubjects.length === 0 ? (
-                <span className="text-red-400 font-medium whitespace-nowrap">No context selected</span>
+                <span className="text-red-400 font-medium whitespace-nowrap">{t('sidebar.contexts.none')}</span>
               ) : selectedSubjects.length <= 2 ? (
                 selectedSubjects.map(s => (
                   <span key={s.id} className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs truncate max-w-[180px]" title={s.name}>
@@ -141,7 +143,7 @@ export function SearchView() {
                 ))
               ) : (
                 <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs whitespace-nowrap">
-                  {selectedSubjects.length} Contexts
+                  {selectedSubjects.length} {t('sidebar.contexts.title')}
                 </span>
               )}
             </div>
@@ -157,7 +159,7 @@ export function SearchView() {
                 className="flex items-center gap-2 bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 rounded-lg p-1.5 px-3 h-[34px] transition-colors"
               >
                 <ListOrdered className="w-3.5 h-3.5 text-zinc-500" />
-                <span className="text-xs text-zinc-400 font-medium">Top K:</span>
+                <span className="text-xs text-zinc-400 font-medium">{t('search.options.topKn')}:</span>
                 <span className="text-xs text-zinc-200 font-medium w-4 text-left">{topK}</span>
                 <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-200 ${isTopKOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -193,10 +195,10 @@ export function SearchView() {
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.1)]' 
                   : 'bg-zinc-900/80 text-zinc-500 border-zinc-800 hover:border-zinc-700 hover:text-zinc-300'
               }`}
-              title="Use Cross-Encoder to re-rank results for higher precision"
+              title={t('search.options.rerank')}
             >
               <ArrowUpDown className="w-3.5 h-3.5" />
-              Re-rank {useRerank ? 'ON' : 'OFF'}
+              {t('common.actions.filter')} {useRerank ? 'ON' : 'OFF'}
             </button>
 
             {/* Search Mode Toggle */}
@@ -212,7 +214,7 @@ export function SearchView() {
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              Semantic
+              {t('search.modes.semantic')}
             </button>
 
             {/* Keyword (BM25) */}
@@ -226,7 +228,7 @@ export function SearchView() {
               }`}
             >
               <TextSearch className="w-3.5 h-3.5" />
-              Keyword (BM25)
+              {t('search.modes.bm25')}
             </button>
 
             {/* Hybrid */}
@@ -240,7 +242,7 @@ export function SearchView() {
               }`}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
-              Hybrid
+              {t('search.modes.hybrid')}
             </button>
 
             {/* MMR (Disabled — needs dedicated implementation) */}
@@ -275,9 +277,9 @@ export function SearchView() {
                 <div className="absolute inset-0 bg-emerald-500/10 blur-xl"></div>
                 <Sparkles className="w-8 h-8 text-zinc-500 relative z-10" />
               </div>
-              <h3 className="text-xl font-medium text-zinc-200 mb-2 tracking-tight">Ready to explore</h3>
+              <h3 className="text-xl font-medium text-zinc-200 mb-2 tracking-tight">{t('common.actions.addData')}</h3>
               <p className="text-zinc-500 max-w-sm text-sm leading-relaxed">
-                Enter a query above to search through your indexed knowledge base using semantic similarity.
+                {t('search.subtitle')}
               </p>
             </motion.div>
           )}
@@ -307,8 +309,8 @@ export function SearchView() {
               className="space-y-6 mt-6"
             >
               <div className="text-xs font-mono text-zinc-500 uppercase tracking-wider mb-6 pb-3 border-b border-white/5 flex justify-between items-center">
-                <span>Found {results.length} results</span>
-                <span>Top {topK}</span>
+                <span>{results.length} {t('search.results.total')}</span>
+                <span>{t('search.options.topKn')} {topK}</span>
               </div>
               
               {results.map((result, index) => (
@@ -402,9 +404,9 @@ export function SearchView() {
               <div className="w-20 h-20 rounded-full bg-zinc-900/50 border border-white/5 flex items-center justify-center mb-6 shadow-2xl">
                 <Search className="w-8 h-8 text-zinc-600" />
               </div>
-              <h3 className="text-xl font-medium text-zinc-200 mb-2 tracking-tight">No results found</h3>
+              <h3 className="text-xl font-medium text-zinc-200 mb-2 tracking-tight">{t('search.results.none')}</h3>
               <p className="text-zinc-500 max-w-sm text-sm leading-relaxed">
-                We couldn't find any matches for "{query}". Try adjusting your search terms or selecting more contexts.
+                {t('search.results.none')}
               </p>
             </motion.div>
           )}

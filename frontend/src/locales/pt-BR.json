@@ -1,0 +1,110 @@
+{
+  "common": {
+    "actions": {
+      "save": "Salvar",
+      "cancel": "Cancelar",
+      "close": "Fechar",
+      "sync": "Sincronizar",
+      "syncing": "Sincronizando...",
+      "addData": "Adicionar Dados",
+      "search": "Buscar",
+      "filter": "Filtrar",
+      "clear": "Limpar filtros",
+      "copy": "Copiar",
+      "copied": "Copiado!"
+    },
+    "status": {
+      "pending": "PENDENTE",
+      "processing": "PROCESSANDO",
+      "done": "CONCLUÍDO",
+      "error": "ERRO",
+      "unknown": "DESCONHECIDO"
+    }
+  },
+  "sidebar": {
+    "brand": {
+      "title": "WhatYouSaid",
+      "subtitle": "Hub de Dados Vetoriais"
+    },
+    "contexts": {
+      "title": "Contextos de Conhecimento",
+      "placeholder": "Filtrar contextos...",
+      "none": "Nenhum contexto encontrado.",
+      "only": "Apenas"
+    },
+    "operations": {
+      "title": "Operações",
+      "chat": "Chat RAG (Bloqueado)",
+      "search": "Busca Semântica",
+      "sources": "Fontes de Conteúdo",
+      "chunks": "Fontes > Chunks",
+      "activity": "Monitor de Atividade"
+    },
+    "profile": {
+      "name": "Usuário",
+      "plan": "Plano Pro"
+    }
+  },
+  "search": {
+    "title": "Busca Semântica",
+    "subtitle": "Explore sua base de conhecimento usando busca semântica, palavra-chave ou híbrida.",
+    "placeholder": "Perunte qualquer coisa ou busque por palavras-chave...",
+    "modes": {
+      "title": "Estratégia de Busca",
+      "semantic": "Semântica",
+      "bm25": "Palavra-chave",
+      "hybrid": "Híbrida"
+    },
+    "options": {
+      "rerank": "Usar Re-ranking (Melhor Qualidade)",
+      "topKn": "Resultados"
+    },
+    "results": {
+      "title": "Resultados da Busca",
+      "total": "resultados encontrados",
+      "none": "Nenhum resultado encontrado para sua busca.",
+      "score": "Score",
+      "source": "Fonte",
+      "id": "ID"
+    }
+  },
+  "sources": {
+    "title": "Fontes de Conteúdo",
+    "subtitle": {
+      "multiple": "Mostrando fontes para {{count}} contexto(s).",
+      "all": "Mostrando todas as fontes no banco de dados."
+    },
+    "table": {
+      "title": "Título",
+      "type": "Tipo",
+      "date": "Data",
+      "chunks": "Chunks",
+      "status": "Status",
+      "model": "Modelo",
+      "origin": "Origem",
+      "none": "Nenhuma fonte encontrada."
+    }
+  },
+  "activity": {
+    "title": "Monitor de Atividade",
+    "subtitle": "Status da pipeline de ingestão em tempo real.",
+    "loading": "Carregando pipeline de atividade...",
+    "none": "Nenhuma atividade recente.",
+    "pagination": "Mostrando {{start}} a {{end}} de {{total}} tarefas",
+    "page": "Página {{current}} de {{total}}"
+  },
+  "settings": {
+    "title": "Configurações",
+    "language": {
+      "title": "Idioma da Interface",
+      "en": "Inglês",
+      "pt-BR": "Português (Brasil)"
+    }
+  },
+  "chat": {
+    "locked": {
+      "title": "O Chat RAG está bloqueado",
+      "description": "Estamos refinando a experiência do chat. Por favor, use a aba de Busca Semântica para explorar sua base de dados."
+    }
+  }
+}
