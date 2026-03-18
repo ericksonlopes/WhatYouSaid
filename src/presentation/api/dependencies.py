@@ -5,6 +5,7 @@ from fastapi import Depends
 from src.application.use_cases.ingest_youtube_use_case import IngestYoutubeUseCase
 from src.application.use_cases.search_chunks_use_case import SearchChunksUseCase
 from src.config.settings import Settings
+
 # Import services and repositories
 from src.domain.entities.enums.vector_store_type_enum import VectorStoreType
 from src.domain.interfaces.repository.retriver_repository import IVectorRepository

@@ -10,7 +10,7 @@ class DummyConfig:
     weaviate_host = "localhost"
     weaviate_port = 8080
     weaviate_grpc_port = 8090
-    weaviate_api_key = "key"
+    weaviate_api_key = None
     weaviate_url = "http://localhost:8080"
 
 
@@ -31,7 +31,7 @@ class FakeClient:
     def __enter__(self):
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args, **kwargs):
         self.close()
 
 
@@ -39,19 +39,25 @@ class FakeClient:
 class TestWeaviateClient:
     def test_create_client_local_success(self, monkeypatch):
         mock_weaviate = MagicMock()
-        mock_weaviate.connect_to_local.return_value = FakeClient()
+        fake = FakeClient()
+        mock_weaviate.connect_to_local.return_value = fake
         monkeypatch.setitem(sys.modules, "weaviate", mock_weaviate)
+        # Mocking Auth to avoid import errors if weaviate is not installed
+        mock_auth = MagicMock()
+        monkeypatch.setitem(sys.modules, "weaviate.classes.init", mock_auth)
 
         cfg = DummyConfig()
         wc = WeaviateClient(cfg, env="testing")
         client = wc._create_client()
-        assert isinstance(client, FakeClient)
+        assert client is fake
         mock_weaviate.connect_to_local.assert_called_once()
 
     def test_create_client_not_ready_raises(self, monkeypatch):
         mock_weaviate = MagicMock()
         mock_weaviate.connect_to_local.return_value = FakeClient(ready=False)
         monkeypatch.setitem(sys.modules, "weaviate", mock_weaviate)
+        mock_auth = MagicMock()
+        monkeypatch.setitem(sys.modules, "weaviate.classes.init", mock_auth)
 
         cfg = DummyConfig()
         wc = WeaviateClient(cfg, env="testing")
@@ -63,6 +69,8 @@ class TestWeaviateClient:
         fake = FakeClient()
         mock_weaviate.connect_to_local.return_value = fake
         monkeypatch.setitem(sys.modules, "weaviate", mock_weaviate)
+        mock_auth = MagicMock()
+        monkeypatch.setitem(sys.modules, "weaviate.classes.init", mock_auth)
 
         cfg = DummyConfig()
         wc = WeaviateClient(cfg, env="testing")
