@@ -15,21 +15,18 @@ class WeaviateClient:
         from weaviate.classes.init import Auth
 
         try:
-            if self._env == "testing":
-                logger.debug(
-                    "Creating WeaviateConfig client", context={"env": self._env}
-                )
-                client = weaviate.connect_to_local(
-                    host=self._weaviate_config.weaviate_host,
-                    port=self._weaviate_config.weaviate_port,
-                    grpc_port=self._weaviate_config.weaviate_grpc_port,
-                )
-            else:
+            if self._weaviate_config.weaviate_api_key:
                 client = weaviate.connect_to_weaviate_cloud(
                     cluster_url=self._weaviate_config.weaviate_url,
                     auth_credentials=Auth.api_key(
                         self._weaviate_config.weaviate_api_key
                     ),
+                )
+            else:
+                client = weaviate.connect_to_local(
+                    host=self._weaviate_config.weaviate_host,
+                    port=self._weaviate_config.weaviate_port,
+                    grpc_port=self._weaviate_config.weaviate_grpc_port,
                 )
 
             if client.is_ready() and client.is_live():

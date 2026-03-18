@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile.backend
     ports:
       - 5000:5000
+    env_file:
+      - .env
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 10s
@@ -12,17 +14,25 @@ services:
       retries: 5
     environment:
       - APP__ENV=production
-      - APP__LIST_LOG_LEVELS=INFO,WARNING,ERROR,CRITICAL
-      - VECTOR__STORE_TYPE=weaviate
-      - VECTOR__WEAVIATE_HOST=weaviate
-      - VECTOR__WEAVIATE_PORT=8080
-      - VECTOR__WEAVIATE_GRPC_PORT=50051
+      - APP__LIST_LOG_LEVELS=INFO,DEBUG,WARNING,ERROR,CRITICAL
+      - MODEL_EMBEDDING__NAME=${MODEL_EMBEDDING__NAME:-BAAI/bge-m3}
+      - VECTOR__STORE_TYPE=${VECTOR__STORE_TYPE:-faiss}
+      - VECTOR__VECTOR_INDEX_PATH=/app/data/vector_index
+      - VECTOR__COLLECTION_NAME_CHUNKS=${VECTOR__COLLECTION_NAME_CHUNKS:-chunks}
+      - VECTOR__WEAVIATE_HOST=${VECTOR__WEAVIATE_HOST:-weaviate}
+      - VECTOR__WEAVIATE_PORT=${VECTOR__WEAVIATE_PORT:-8080}
+      - VECTOR__WEAVIATE_API_KEY=${VECTOR__WEAVIATE_API_KEY:-}
+      - VECTOR__WEAVIATE_GRPC_PORT=${VECTOR__WEAVIATE_GRPC_PORT:-50051}
+      - SQL__TYPE=${SQL__TYPE:-sqlite}
+      - SQL__HOST=${SQL__HOST:-}
+      - SQL__PORT=${SQL__PORT:-}
+      - SQL__USER=${SQL__USER:-}
+      - SQL__PASSWORD=${SQL__PASSWORD:-}
+      - SQL__DATABASE=${SQL__DATABASE:-}
     volumes:
       - .:/app
       - /app/.venv
       - sqlite_data:/app/data
-    depends_on:
-      - weaviate
     restart: always
 
   frontend:
@@ -31,11 +41,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - 3001:80
-    healthcheck:
-      test: ["CMD", "sh", "-c", "wget -qO- http://localhost:80/ | grep '<!DOCTYPE html>'"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    env_file:
+      - .env
     depends_on:
       backend:
         condition: service_healthy
@@ -43,20 +50,75 @@ services:
 
   weaviate:
     image: cr.weaviate.io/semitechnologies/weaviate:1.35.9
+    profiles:
+      - weaviate
+      - base
     ports:
       - 8081:8080
       - 50051:50051
     volumes:
       - weaviate_data:/var/lib/weaviate
-    restart: on-failure:0
     environment:
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
       PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
-      ENABLE_MODULES: ''
       CLUSTER_HOSTNAME: 'node1'
+
+  postgres:
+    image: postgres:16-alpine
+    profiles:
+      - postgres
+      - base
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${SQL__USER:-user}
+      POSTGRES_PASSWORD: ${SQL__PASSWORD:-pass}
+      POSTGRES_DB: ${SQL__DATABASE:-whatyousaid}
+
+  mysql:
+    image: mysql:8.0
+    profiles:
+      - mysql
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${SQL__ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${SQL__DATABASE:-whatyousaid}
+      MYSQL_USER: ${SQL__USER:-user}
+      MYSQL_PASSWORD: ${SQL__PASSWORD:-pass}
+
+  mariadb:
+    image: mariadb:11
+    profiles:
+      - mariadb
+    ports:
+      - 3307:3306
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    environment:
+      MARIADB_ROOT_PASSWORD: ${SQL__ROOT_PASSWORD:-rootpass}
+      MARIADB_DATABASE: ${SQL__DATABASE:-whatyousaid}
+      MARIADB_USER: ${SQL__USER:-user}
+      MARIADB_PASSWORD: ${SQL__PASSWORD:-pass}
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    profiles:
+      - mssql
+    ports:
+      - 1433:1433
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SQL__PASSWORD:-Password123!}
+      MSSQL_PID: "Express"
 
 volumes:
     weaviate_data:
-      driver: local
     sqlite_data:
-      driver: local
+    postgres_data:
+    mysql_data:
+    mariadb_data:

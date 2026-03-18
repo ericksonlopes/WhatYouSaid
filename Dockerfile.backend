@@ -24,18 +24,17 @@ WORKDIR /app
 # Copy dependency files
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies using uv
+# Install core dependencies (fast build)
 RUN uv sync --locked --no-dev --no-install-project
 
 # Copy the rest of the application code
 COPY . .
 
-# Install the project itself
-RUN uv sync --locked --no-dev
+# Make entrypoint executable
+RUN chmod +x scripts/entrypoint.sh
 
 # Expose FastAPI port
 EXPOSE 5000
 
-# Command to run migrations and then the application
-# We use 0.0.0.0 to allow connections from outside the container
-CMD ["bash", "-c", "uv run alembic upgrade head && uv run uvicorn main:app --host 0.0.0.0 --port 5000"]
+# Use the automated entrypoint script
+ENTRYPOINT ["scripts/entrypoint.sh"]

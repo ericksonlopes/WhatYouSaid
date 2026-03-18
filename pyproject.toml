@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "what-you-said"
-version = "0.1.0"
+version = "1.0.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -27,6 +27,19 @@ weaviate = [
 ]
 faiss = [
     "faiss-cpu>=1.13.2",
+]
+mysql = [
+    "pymysql>=1.1.1",
+    "cryptography>=44.0.0",
+]
+mariadb = [
+    "mariadb",
+]
+mssql = [
+    "pymssql",
+]
+postgres = [
+    "psycopg2-binary>=2.9.10",
 ]
 
 [dependency-groups]
