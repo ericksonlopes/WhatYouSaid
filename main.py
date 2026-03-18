@@ -28,6 +28,18 @@ async def lifespan(app: FastAPI):
         logger.info("Database tables verified/created.")
     except Exception as e:
         logger.error(f"Error initializing database: {e}")
+
+    try:
+        from src.config.settings import Settings
+        from src.infrastructure.services.model_loader_service import ModelLoaderService
+
+        _settings = Settings()
+        app.state.model_loader = ModelLoaderService(model_name=_settings.model_embedding.name)
+        logger.info("Embedding model pre-loaded successfully.")
+    except Exception as e:
+        logger.error(f"Error pre-loading embedding model: {e}")
+        app.state.model_loader = None
+
     yield
     logger.info("Shutting down WhatYouSaid API...")
 

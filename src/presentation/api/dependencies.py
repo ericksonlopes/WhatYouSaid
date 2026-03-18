@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import Depends
+from fastapi import Depends, Request
 
 from src.application.use_cases.ingest_youtube_use_case import IngestYoutubeUseCase
 from src.application.use_cases.search_chunks_use_case import SearchChunksUseCase
@@ -59,8 +59,8 @@ def get_subject_repo() -> KnowledgeSubjectSQLRepository:
 
 
 # Services
-def get_model_loader(settings: Settings = Depends(get_settings)) -> ModelLoaderService:
-    return ModelLoaderService(model_name=settings.model_embedding.name)
+def get_model_loader(request: Request) -> ModelLoaderService:
+    return request.app.state.model_loader
 
 
 def get_embedding_service(
