@@ -17,7 +17,7 @@ class SearchRequest(BaseModel):
     subject_id: Optional[str] = None
     subject_name: Optional[str] = None
     search_mode: SearchMode = Field(
-        default=SearchMode.SEMANTIC,
+        default=SearchMode.HYBRID,
         description="Search strategy: semantic (vector), bm25 (keyword), or hybrid",
     )
     re_rank: bool = Field(
