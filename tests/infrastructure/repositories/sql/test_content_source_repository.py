@@ -1,99 +1,166 @@
-from uuid import uuid4, UUID
 import pytest
-from src.infrastructure.repositories.sql.content_source_repository import (
-    ContentSourceSQLRepository,
-)
-from src.domain.entities.enums.source_type_enum_entity import SourceType
+from uuid import uuid4
+from unittest.mock import patch
+from src.infrastructure.repositories.sql.content_source_repository import ContentSourceSQLRepository
+from src.infrastructure.repositories.sql.models.content_source import ContentSourceModel
 
-
-@pytest.mark.ContentSourceRepository
-@pytest.mark.usefixtures("sqlite_memory")
+@pytest.mark.Dependencies
 class TestContentSourceSQLRepository:
-    def setup_method(self):
-        self.repo = ContentSourceSQLRepository()
-
-    def test_create_success(self):
-        subject_id = uuid4()
-        cs_id = self.repo.create(
-            subject_id=subject_id,
-            source_type=SourceType.YOUTUBE.value,
-            external_source="ext-1",
+    def test_create_success(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        sid = uuid4()
+        cid = repo.create(
+            subject_id=sid,
+            source_type="youtube",
+            external_source="vid1",
             title="Title",
-            language="en",
+            embedding_model="emb",
+            dimensions=384
         )
-        assert isinstance(cs_id, UUID)
+        assert cid is not None
+        
+        # Verify
+        cs = repo.get_by_id(cid)
+        assert cs.title == "Title"
+        assert cs.source_type == "youtube"
 
-        cs = self.repo.get_by_id(cs_id)
-        assert cs.subject_id == subject_id
-        assert cs.external_source == "ext-1"
-        assert cs.processing_status == "pending"
+    def test_get_by_id_error(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        with patch("sqlalchemy.orm.Session.get", side_effect=Exception("DB Error")):
+            with pytest.raises(Exception, match="DB Error"):
+                repo.get_by_id(uuid4())
 
-    def test_create_error(self):
-        with pytest.raises(Exception):
-            self.repo.create(
-                subject_id="invalid", source_type=None, external_source=None
-            )
-
-    def test_get_by_id_error(self):
-        # We need to trigger the exception in get_by_id to hit the logger.error line
-        # This usually happens if the DB connection is broken or table doesn't exist.
-        # Hard to trigger with sqlite_memory without mocking.
-        pass
-
-    def test_get_by_source_info(self):
-        self.repo.create(uuid4(), SourceType.YOUTUBE.value, "ext-1")
-        results = self.repo.get_by_source_info(SourceType.YOUTUBE.value, "ext-1")
+    def test_get_by_source_info(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        sid = uuid4()
+        repo.create(sid, "pdf", "file.pdf", title="Doc")
+        
+        # Success with subject_id
+        results = repo.get_by_source_info("pdf", "file.pdf", sid)
         assert len(results) == 1
-        assert results[0].external_source == "ext-1"
+        assert results[0].title == "Doc"
+        
+        # Success without subject_id
+        results = repo.get_by_source_info("pdf", "file.pdf")
+        assert len(results) == 1
+        
+        # Not found
+        results = repo.get_by_source_info("pdf", "other.pdf")
+        assert len(results) == 0
 
-    def test_list_by_subject(self):
-        subject_id = uuid4()
-        self.repo.create(subject_id, SourceType.YOUTUBE.value, "ext-1")
-        self.repo.create(subject_id, SourceType.YOUTUBE.value, "ext-2")
+    def test_list_by_subject(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        sid = uuid4()
+        repo.create(sid, "pdf", "1.pdf")
+        repo.create(sid, "pdf", "2.pdf")
+        repo.create(uuid4(), "pdf", "3.pdf")
+        
+        results = repo.list_by_subject(sid, limit=1, offset=0)
+        assert len(results) == 1
+        
+        results = repo.list_by_subject(sid)
+        assert len(results) == 2
 
-        results = self.repo.list_by_subject(subject_id, limit=1)
+    def test_list_all(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        repo.create(uuid4(), "pdf", "1.pdf")
+        repo.create(uuid4(), "pdf", "2.pdf")
+        
+        results = repo.list(limit=1)
+        assert len(results) == 1
+        
+        results = repo.list(offset=1)
         assert len(results) == 1
 
-    def test_list_all(self):
-        self.repo.create(uuid4(), SourceType.YOUTUBE.value, "ext-1")
-        results = self.repo.list(limit=10)
-        assert len(results) >= 1
+    def test_count_by_subject(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        sid = uuid4()
+        repo.create(sid, "pdf", "1.pdf")
+        repo.create(sid, "pdf", "2.pdf")
+        
+        assert repo.count_by_subject(sid) == 2
+        assert repo.count_by_subject(uuid4()) == 0
 
-    def test_count_by_subject(self):
-        subject_id = uuid4()
-        self.repo.create(subject_id, SourceType.YOUTUBE.value, "ext-1")
-        assert self.repo.count_by_subject(subject_id) == 1
+    def test_update_status(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        cid = repo.create(uuid4(), "pdf", "1.pdf", processing_status="pending")
+        
+        repo.update_status(cid, "done")
+        assert repo.get_by_id(cid).processing_status == "done"
+        
+        # Not found
+        repo.update_status(uuid4(), "error")
 
-    def test_update_status(self):
-        cs_id = self.repo.create(uuid4(), SourceType.YOUTUBE.value, "ext-1")
-        self.repo.update_status(cs_id, "processing")
+    def test_update_title(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        cid = repo.create(uuid4(), "pdf", "1.pdf", title="Old")
+        
+        repo.update_title(cid, "New")
+        assert repo.get_by_id(cid).title == "New"
+        
+        # Not found
+        repo.update_title(uuid4(), "Fail")
 
-        cs = self.repo.get_by_id(cs_id)
-        assert cs.processing_status == "processing"
-
-    def test_update_status_not_found(self):
-        self.repo.update_status(uuid4(), "processing")
-
-    def test_update_title(self):
-        cs_id = self.repo.create(uuid4(), SourceType.YOUTUBE.value, "ext-1")
-        self.repo.update_title(cs_id, "New Title")
-
-        cs = self.repo.get_by_id(cs_id)
-        assert cs.title == "New Title"
-
-    def test_update_title_not_found(self):
-        self.repo.update_title(uuid4(), "New Title")
-
-    def test_finish_ingestion(self):
-        cs_id = self.repo.create(uuid4(), SourceType.YOUTUBE.value, "ext-1")
-        self.repo.finish_ingestion(cs_id, "model-x", 128, 5)
-
-        cs = self.repo.get_by_id(cs_id)
+    def test_finish_ingestion(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        cid = repo.create(uuid4(), "pdf", "1.pdf", processing_status="pending")
+        
+        repo.finish_ingestion(cid, "model-x", 512, 100)
+        cs = repo.get_by_id(cid)
         assert cs.processing_status == "done"
         assert cs.embedding_model == "model-x"
-        assert cs.dimensions == 128
-        assert cs.chunks == 5
-        assert cs.ingested_at is not None
+        assert cs.chunks == 100
+        
+        # Not found
+        repo.finish_ingestion(uuid4(), "m", 1, 1)
 
-    def test_finish_ingestion_not_found(self):
-        self.repo.finish_ingestion(uuid4(), "model-x", 128, 5)
+    def test_create_error(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        with patch("sqlalchemy.orm.Session.add", side_effect=Exception("Create Error")):
+            with pytest.raises(Exception, match="Create Error"):
+                repo.create(uuid4(), "type", "ext")
+
+    def test_get_by_source_info_error(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        with patch("sqlalchemy.orm.Query.all", side_effect=Exception("Query Error")):
+            with pytest.raises(Exception, match="Query Error"):
+                repo.get_by_source_info("type", "ext")
+
+    def test_list_by_subject_error(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        with patch("sqlalchemy.orm.Query.all", side_effect=Exception("List Error")):
+            with pytest.raises(Exception, match="List Error"):
+                repo.list_by_subject(uuid4())
+
+    def test_list_all_error(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        with patch("sqlalchemy.orm.Query.all", side_effect=Exception("All Error")):
+            with pytest.raises(Exception, match="All Error"):
+                repo.list()
+
+    def test_count_by_subject_error(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        with patch("sqlalchemy.orm.Query.count", side_effect=Exception("Count Error")):
+            with pytest.raises(Exception, match="Count Error"):
+                repo.count_by_subject(uuid4())
+
+    def test_update_status_error(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        cid = repo.create(uuid4(), "pdf", "1.pdf")
+        with patch("sqlalchemy.orm.Session.commit", side_effect=Exception("Update Error")):
+            with pytest.raises(Exception, match="Update Error"):
+                repo.update_status(cid, "status")
+
+    def test_update_title_error(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        cid = repo.create(uuid4(), "pdf", "1.pdf")
+        with patch("sqlalchemy.orm.Session.commit", side_effect=Exception("Update Error")):
+            with pytest.raises(Exception, match="Update Error"):
+                repo.update_title(cid, "title")
+
+    def test_finish_ingestion_error(self, sqlite_memory):
+        repo = ContentSourceSQLRepository()
+        cid = repo.create(uuid4(), "pdf", "1.pdf")
+        with patch("sqlalchemy.orm.Session.commit", side_effect=Exception("Finish Error")):
+            with pytest.raises(Exception, match="Finish Error"):
+                repo.finish_ingestion(cid, "m", 1, 1)

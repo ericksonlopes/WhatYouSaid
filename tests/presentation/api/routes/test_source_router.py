@@ -26,6 +26,14 @@ def mock_model_loader():
     app.dependency_overrides.pop(get_model_loader, None)
 
 
+def test_get_source_types():
+    response = client.get("/rest/sources/types")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert "youtube" in data
+    assert "pdf" in data
+
 def test_get_sources_success(mock_cs_service):
     mock_cs_service.list_all.return_value = []
 

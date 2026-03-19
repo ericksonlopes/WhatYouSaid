@@ -1,5 +1,6 @@
 import logging
 import sys
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -230,3 +231,22 @@ class TestStdLogger:
         StdLogger(log_format, name=logger_name, logger_id=logger_id)
         # Apenas um handler deve restar
         assert len(logger_obj.handlers) == 1
+
+    def test_intercept_handler_emit(self):
+        from src.infrastructure.loggers.std_logger import InterceptHandler
+        mock_logger = MagicMock()
+        handler = InterceptHandler(mock_logger)
+        
+        levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL", "UNKNOWN"]
+        for lvl in levels:
+            record = logging.LogRecord(
+                name="test", level=getattr(logging, lvl, logging.INFO),
+                pathname="test.py", lineno=1, msg=f"msg {lvl}", args=(), exc_info=None
+            )
+            handler.emit(record)
+            
+        assert mock_logger.debug.called
+        assert mock_logger.info.called
+        assert mock_logger.warning.called
+        assert mock_logger.error.called
+        assert mock_logger.critical.called
