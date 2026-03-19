@@ -1,5 +1,6 @@
 import re
 import uuid
+import concurrent.futures
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs, urlparse
@@ -131,28 +132,28 @@ class IngestYoutubeUseCase:
             if ingestion:
                 self._update_ingestion_processing(ingestion)
 
-            for video_url in video_list:
+            def process_video(video_url: str) -> Dict[str, Any]:
                 try:
                     video_id = self._extract_video_id_from_url(video_url)
                     if not video_id:
                         raise ValueError(
                             f"Unable to extract video id from url: {video_url}"
                         )
+                    return self._process_single_video(video_url, video_id, subject, cmd)
+                except Exception as e:
+                    logger.error(e, context={"video_url": video_url})
+                    return {"video_url": video_url, "error": str(e)}
 
-                    single_result = self._process_single_video(
-                        video_url, video_id, subject, cmd
-                    )
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                futures = [executor.submit(process_video, url) for url in video_list]
+                for future in concurrent.futures.as_completed(futures):
+                    single_result = future.result()
                     result.video_results.append(single_result)
-                    if not single_result.get("skipped", False):
+                    if not single_result.get("skipped", False) and "error" not in single_result:
                         result.created_chunks = (
                             result.created_chunks or 0
                         ) + single_result.get("created_chunks", 0)
                         result.vector_ids.extend(single_result.get("vector_ids", []))
-                except Exception as e:
-                    logger.error(e, context={"video_url": video_url})
-                    result.video_results.append(
-                        {"video_url": video_url, "error": str(e)}
-                    )
 
             # 1. Determine overall status
             any_failed = any("error" in r for r in result.video_results)
