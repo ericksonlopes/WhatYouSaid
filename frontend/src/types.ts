@@ -19,9 +19,11 @@ export type IngestionTask = {
   contentSourceId?: string;
   chunksCount?: number;
   subjectId: string;
+  subjectName?: string;
   createdAt: string;
   ingestionType?: string;
   errorMessage?: string;
+  externalSource?: string;
 };
 
 export type ContentSource = {

@@ -22,3 +22,5 @@ class IngestionJobEntity(BaseModel):
     chunks_count: Optional[int] = None
     embedding_model: Optional[str] = None
     pipeline_version: Optional[str] = None
+    external_source: Optional[str] = None
+    subject_id: Optional[UUID] = None

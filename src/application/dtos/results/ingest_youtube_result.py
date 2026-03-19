@@ -8,6 +8,7 @@ class IngestYoutubeResult:
     skipped: bool = False
     reason: Optional[str] = None
     source_id: Optional[UUID] = None
+    job_id: Optional[UUID] = None
     created_chunks: Optional[int] = None
     vector_ids: List[str] = field(default_factory=list)
 

@@ -8,6 +8,7 @@ from src.infrastructure.repositories.sql.models.chunk_index import ChunkIndexMod
 from src.infrastructure.repositories.sql.models.content_source import ContentSourceModel
 
 from sqlalchemy.orm import joinedload
+import sqlalchemy as sa
 
 logger = Logger()
 
@@ -133,6 +134,52 @@ class ChunkIndexSQLRepository:
                 session.rollback()
                 logger.error(
                     "Error deleting chunk index rows", context={"error": str(e)}
+                )
+                raise
+
+    def delete_by_job_id(self, job_id: UUID) -> int:
+        """Delete all chunks associated with a specific ingestion job."""
+        with Connector() as session:
+            try:
+                # 1. Find the content_source_id before deleting
+                chunks = (
+                    session.query(ChunkIndexModel.content_source_id)
+                    .filter_by(job_id=job_id)
+                    .all()
+                )
+                if not chunks:
+                    return 0
+
+                source_ids = {c.content_source_id for c in chunks if c.content_source_id}
+
+                # 2. Delete the chunks
+                deleted = (
+                    session.query(ChunkIndexModel)
+                    .filter_by(job_id=job_id)
+                    .delete(synchronize_session=False)
+                )
+
+                # 3. Update ContentSource counts (decrement by the number of chunks deleted)
+                if deleted > 0:
+                    for sid in source_ids:
+                        count = sum(
+                            1 for c in chunks if c.content_source_id == sid
+                        )
+                        session.query(ContentSourceModel).filter_by(id=sid).update(
+                            {"chunks": sa.text(f"chunks - {count}")}
+                        )
+
+                session.commit()
+                logger.info(
+                    "Deleted chunks by job_id",
+                    context={"job_id": str(job_id), "count": deleted},
+                )
+                return int(deleted)
+            except Exception as e:
+                session.rollback()
+                logger.error(
+                    "Error deleting chunks by job_id",
+                    context={"job_id": str(job_id), "error": str(e)},
                 )
                 raise
 

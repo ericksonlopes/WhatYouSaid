@@ -121,35 +121,17 @@ class YoutubeExtractor(IYoutubeExtractor):
             )
             return transcript
 
-        except NoTranscriptFound as ntf:
-            logger.error(
-                "Transcript not found.",
-                context={
-                    "video_id": self.video_id,
-                    "language": self.language,
-                    "error": str(ntf),
-                },
-            )
-            raise
+        except NoTranscriptFound:
+            msg = f"No transcript found for video {self.video_id}. Please ensure it has subtitles available."
+            logger.error(msg, context={"video_id": self.video_id})
+            raise ValueError(msg)
 
-        except TranscriptsDisabled as td:
-            logger.warning(
-                "Transcripts are disabled for this video.",
-                context={
-                    "video_id": self.video_id,
-                    "language": self.language,
-                    "error": str(td),
-                },
-            )
-            raise
+        except TranscriptsDisabled:
+            msg = f"Transcripts are disabled for video {self.video_id}."
+            logger.warning(msg, context={"video_id": self.video_id})
+            raise ValueError(msg)
 
         except Exception as error:
-            logger.error(
-                "Unexpected error while fetching transcript.",
-                context={
-                    "video_id": self.video_id,
-                    "language": self.language,
-                    "error": str(error),
-                },
-            )
-            raise
+            msg = f"Unexpected error while fetching transcript for video {self.video_id}: {str(error)}"
+            logger.error(msg, context={"video_id": self.video_id})
+            raise ValueError(msg)

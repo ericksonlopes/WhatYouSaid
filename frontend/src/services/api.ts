@@ -2,10 +2,26 @@ import { Subject, IngestionTask, ContentSource, ChatMessage, Chunk } from '../ty
 
 const API_BASE_URL = '/rest';
 
+async function handleResponseError(response: Response, defaultMessage: string) {
+  if (response.ok) return;
+  
+  let errorMessage = defaultMessage;
+  try {
+    const data = await response.json();
+    if (data && data.detail) {
+      errorMessage = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+    }
+  } catch (e) {
+    // Ignore JSON parse errors and use default message
+  }
+  
+  throw new Error(errorMessage);
+}
+
 export const api = {
   async fetchSubjects(): Promise<Subject[]> {
     const response = await fetch(`${API_BASE_URL}/subjects`);
-    if (!response.ok) throw new Error('Failed to fetch subjects');
+    await handleResponseError(response, 'Failed to fetch subjects');
     return response.json();
   },
 
@@ -15,13 +31,13 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, description, icon })
     });
-    if (!response.ok) throw new Error('Failed to create subject');
+    await handleResponseError(response, 'Failed to create subject');
     return response.json();
   },
 
   async fetchSources(): Promise<ContentSource[]> {
     const response = await fetch(`${API_BASE_URL}/sources`);
-    if (!response.ok) throw new Error('Failed to fetch sources');
+    await handleResponseError(response, 'Failed to fetch sources');
     const data = await response.json();
     return data.map((s: any) => ({
       id: s.id,
@@ -37,15 +53,22 @@ export const api = {
     }));
   },
 
+  async deleteSource(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/sources/${id}`, {
+      method: 'DELETE'
+    });
+    await handleResponseError(response, 'Failed to delete source');
+  },
+
   async fetchSourceTypes(): Promise<string[]> {
     const response = await fetch(`${API_BASE_URL}/sources/types`);
-    if (!response.ok) throw new Error('Failed to fetch source types');
+    await handleResponseError(response, 'Failed to fetch source types');
     return response.json();
   },
 
   async fetchJobs(): Promise<IngestionTask[]> {
     const response = await fetch(`${API_BASE_URL}/jobs`);
-    if (!response.ok) throw new Error('Failed to fetch jobs');
+    await handleResponseError(response, 'Failed to fetch jobs');
     const data = await response.json();
     return data.map((j: any) => ({
       id: j.id,
@@ -57,10 +80,11 @@ export const api = {
       statusMessage: j.status_message,
       contentSourceId: j.content_source_id || undefined,
       chunksCount: j.chunks_count || undefined,
-      subjectId: '', // Backend doesn't return subject_id directly in the job response model yet
+      subjectId: j.subject_id || '',
       createdAt: j.created_at,
       ingestionType: j.ingestion_type || undefined,
       errorMessage: j.error_message || undefined,
+      externalSource: j.external_source || undefined,
     }));
   },
 
@@ -76,7 +100,7 @@ export const api = {
         re_rank: reRank,
       })
     });
-    if (!response.ok) throw new Error('Search failed');
+    await handleResponseError(response, 'Search failed');
     return response.json();
   },
 
@@ -90,6 +114,7 @@ export const api = {
     tokens_overlap?: number;
     ingestion_job_id?: string;
     data_type?: string;
+    reprocess?: boolean;
   }): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/ingest/youtube`, {
       method: 'POST',
@@ -99,7 +124,7 @@ export const api = {
     if (response.status === 409) {
       throw new Error('DUPLICATE_SOURCE');
     }
-    if (!response.ok) throw new Error('Ingestion request failed');
+    await handleResponseError(response, 'Ingestion request failed');
     return response.json();
   },
 
@@ -111,7 +136,7 @@ export const api = {
     url.searchParams.append('offset', offset.toString());
 
     const response = await fetch(url.toString());
-    if (!response.ok) throw new Error('Failed to fetch chunks');
+    await handleResponseError(response, 'Failed to fetch chunks');
     return response.json();
   },
 
@@ -121,7 +146,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content })
     });
-    if (!response.ok) throw new Error('Failed to update chunk');
+    await handleResponseError(response, 'Failed to update chunk');
     return response.json();
   },
 
@@ -129,24 +154,24 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/chunks/${id}`, {
       method: 'DELETE'
     });
-    if (!response.ok) throw new Error('Failed to delete chunk');
+    await handleResponseError(response, 'Failed to delete chunk');
   },
 
   async fetchModelInfo(): Promise<{ name: string; dimensions: number; max_seq_length: number }> {
     const response = await fetch(`${API_BASE_URL}/sources/model`);
-    if (!response.ok) throw new Error('Failed to fetch model info');
+    await handleResponseError(response, 'Failed to fetch model info');
     return response.json();
   },
   
   async fetchSettings(): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/settings`);
-    if (!response.ok) throw new Error('Failed to fetch settings');
+    await handleResponseError(response, 'Failed to fetch settings');
     return response.json();
   },
   
   async checkHealth(component: string): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/settings/check/${component}`);
-    if (!response.ok) throw new Error(`Health check failed for ${component}`);
+    await handleResponseError(response, `Health check failed for ${component}`);
     return response.json();
   }
 };

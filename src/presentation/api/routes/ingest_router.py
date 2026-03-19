@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, BackgroundTasks
 
 from src.application.dtos.commands.ingest_youtube_command import IngestYoutubeCommand
 from src.application.use_cases.ingest_youtube_use_case import IngestYoutubeUseCase
@@ -26,6 +26,7 @@ router = APIRouter()
 def ingest_youtube(
     request: Annotated[YoutubeIngestRequest, Body()],
     use_case: Annotated[IngestYoutubeUseCase, Depends(get_ingest_youtube_use_case)],
+    background_tasks: BackgroundTasks,
 ):
     """
     Ingest data from YouTube videos or playlists into the vector store.
@@ -46,7 +47,14 @@ def ingest_youtube(
         tokens_overlap=request.tokens_overlap,
         data_type=request.data_type,
         ingestion_job_id=request.ingestion_job_id,
+        reprocess=request.reprocess,
     )
+
+    # If it's a reprocess request, we always run it in background
+    if request.reprocess:
+        logger.info("Running reprocessing in background")
+        background_tasks.add_task(use_case.execute, cmd)
+        return IngestResponse(skipped=False, reason="Reprocessing started in background.")
 
     try:
         result = use_case.execute(cmd)

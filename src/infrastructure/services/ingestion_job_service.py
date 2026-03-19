@@ -28,6 +28,7 @@ class IngestionJobService:
         ingestion_type: Optional[str] = None,
         vector_store_type: Optional[str] = None,
         source_title: Optional[str] = None,
+        external_source: Optional[str] = None,
     ) -> IngestionJobEntity:
         """Create an ingestion job. Accepts IngestionJobStatus enum and persists its string value."""
         job_id = self._repo.create_job(
@@ -38,6 +39,7 @@ class IngestionJobService:
             ingestion_type=ingestion_type,
             vector_store_type=vector_store_type,
             source_title=source_title,
+            external_source=external_source,
         )
         model = self._repo.get_by_id(job_id)
         entity = IngestionJobMapper.model_to_entity(model)
@@ -54,6 +56,7 @@ class IngestionJobService:
         total_steps: Optional[int] = None,
         chunks_count: Optional[int] = None,
         source_title: Optional[str] = None,
+        content_source_id: Optional[UUID] = None,
     ) -> None:
         """Update a job — accept IngestionJobStatus enum and progress info."""
         self._repo.update_job(
@@ -65,6 +68,7 @@ class IngestionJobService:
             total_steps=total_steps,
             chunks_count=chunks_count,
             source_title=source_title,
+            content_source_id=content_source_id,
         )
 
     def link_job_to_source(

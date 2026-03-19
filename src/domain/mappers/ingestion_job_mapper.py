@@ -25,8 +25,11 @@ class IngestionJobMapper:
                 status_enum = None
 
         source_title = getattr(model, "source_title", None)
-        if not source_title and hasattr(model, "content_source") and model.content_source:
-            source_title = getattr(model.content_source, "title", None)
+        subject_id = None
+        if hasattr(model, "content_source") and model.content_source:
+            if not source_title:
+                source_title = getattr(model.content_source, "title", None)
+            subject_id = getattr(model.content_source, "subject_id", None)
 
         return IngestionJobEntity(
             id=cast(UUID, getattr(model, "id")),
@@ -50,6 +53,8 @@ class IngestionJobMapper:
             pipeline_version=cast(
                 Optional[str], getattr(model, "pipeline_version", None)
             ),
+            external_source=cast(Optional[str], getattr(model, "external_source", None)),
+            subject_id=cast(Optional[UUID], subject_id),
         )
 
     @staticmethod

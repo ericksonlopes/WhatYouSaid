@@ -42,6 +42,7 @@ class IngestionJobModel(Base):
     embedding_model = Column(Text, nullable=True)
     vector_store_type = Column(Text, nullable=True)
     pipeline_version = Column(Text, nullable=True)
+    external_source = Column(Text, nullable=True)
 
     content_source = relationship("ContentSourceModel", back_populates="ingestion_jobs")
     chunks = relationship(

@@ -60,6 +60,10 @@ class ChunkIndexService:
         """Delete from SQL. Vector store sync should happen at Use Case level."""
         return self._repo.delete_by_content_source(content_source_id=content_source_id)
 
+    def delete_by_job_id(self, job_id: UUID) -> int:
+        """Delete from SQL by job_id. Vector store sync should happen at Use Case level."""
+        return self._repo.delete_by_job_id(job_id=job_id)
+
     def search(
         self, query: Optional[str], top_k: int = 10, filters: Optional[Any] = None
     ) -> List[ChunkEntity]:

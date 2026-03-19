@@ -73,3 +73,14 @@ class YouTubeVectorService:
         result = self._repository.delete(filters=filters)
 
         return result
+
+    def delete_by_job_id(self, job_id: Any) -> int:
+        """Delete all chunks from vector store associated with a specific job_id."""
+        if not job_id:
+            return 0
+
+        # Most vector stores expect string IDs
+        filters = {"job_id": str(job_id)}
+        result = self._repository.delete(filters=filters)
+
+        return result

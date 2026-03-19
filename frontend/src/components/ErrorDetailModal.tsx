@@ -1,5 +1,6 @@
 import React from 'react';
-import { X, Copy, Check, AlertCircle, Clock, Hash } from 'lucide-react';
+import { X, Copy, Check, AlertCircle, Clock, Hash, RotateCcw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { IngestionTask } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -7,9 +8,12 @@ interface ErrorDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   task: IngestionTask;
+  onReprocess?: () => void;
+  isReprocessing?: boolean;
 }
 
-export function ErrorDetailModal({ isOpen, onClose, task }: ErrorDetailModalProps) {
+export function ErrorDetailModal({ isOpen, onClose, task, onReprocess, isReprocessing }: ErrorDetailModalProps) {
+  const { t } = useTranslation();
   const [copied, setCopied] = React.useState(false);
 
   const handleCopy = () => {
@@ -107,12 +111,26 @@ export function ErrorDetailModal({ isOpen, onClose, task }: ErrorDetailModalProp
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-border-subtle bg-zinc-900/50 flex justify-end">
+            <div className="p-4 border-t border-border-subtle bg-zinc-900/50 flex justify-between gap-3">
+              {onReprocess && task.externalSource && (
+                <button
+                  onClick={onReprocess}
+                  disabled={isReprocessing}
+                  className={`flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-xl transition-all active:scale-95 disabled:opacity-50 ${
+                    isReprocessing 
+                      ? 'bg-zinc-800 text-emerald-400 border border-emerald-500/20' 
+                      : 'bg-emerald-500 hover:bg-emerald-400 text-black shadow-[0_0_20px_rgba(16,185,129,0.1)]'
+                  }`}
+                >
+                  <RotateCcw className={`w-4 h-4 ${isReprocessing ? 'animate-spin' : ''}`} />
+                  {isReprocessing ? t('common.actions.syncing') : t('common.actions.reprocess')}
+                </button>
+              )}
               <button
                 onClick={onClose}
-                className="px-5 py-2 text-sm font-bold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-all border border-zinc-700 hover:border-zinc-600 active:scale-95"
+                className="px-5 py-2 text-sm font-bold text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-all border border-zinc-700 hover:border-zinc-600 active:scale-95 ml-auto"
               >
-                Close Detail
+                {t('common.actions.close')}
               </button>
             </div>
           </motion.div>

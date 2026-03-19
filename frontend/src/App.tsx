@@ -14,10 +14,11 @@ import {ErrorBoundary} from './components/ErrorBoundary';
 import {ContentSource} from './types';
 
 function ActivityMonitorView() {
-  const { jobs = [], refreshJobs, isJobsLoaded, sources = [], addToast } = useAppContext();
+  const { jobs = [], refreshJobs, isJobsLoaded, sources = [], subjects = [], addToast } = useAppContext();
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const pageSize = 12;
 
   const handleRefresh = async () => {
@@ -35,22 +36,36 @@ function ActivityMonitorView() {
 
   const enrichedJobs = React.useMemo(() => {
     return jobs.map(job => {
+      const subject = subjects.find(s => s.id === job.subjectId);
+      const subjectName = subject?.name || '';
+      
       if (job.contentSourceId) {
         const source = sources.find(s => s.id === job.contentSourceId);
         if (source) {
           return { 
             ...job, 
             title: (job.title === job.statusMessage || job.title.includes('Job')) ? source.title : job.title,
-            chunksCount: source.chunkCount || job.chunksCount
+            chunksCount: source.chunkCount || job.chunksCount,
+            subjectName
           };
         }
       }
-      return job;
+      return { ...job, subjectName };
     });
-  }, [jobs, sources]);
+  }, [jobs, sources, subjects]);
 
-  const totalPages = Math.ceil(enrichedJobs.length / pageSize);
-  const paginatedJobs = enrichedJobs.slice((page - 1) * pageSize, page * pageSize);
+  const filteredJobs = React.useMemo(() => {
+    if (!searchQuery.trim()) return enrichedJobs;
+    const query = searchQuery.toLowerCase().trim();
+    return enrichedJobs.filter(job => 
+      (job.title?.toLowerCase().includes(query) ?? false) || 
+      (job.statusMessage?.toLowerCase().includes(query) ?? false) ||
+      (job.status?.toLowerCase().includes(query) ?? false)
+    );
+  }, [enrichedJobs, searchQuery]);
+
+  const totalPages = Math.ceil(filteredJobs.length / pageSize);
+  const paginatedJobs = filteredJobs.slice((page - 1) * pageSize, page * pageSize);
 
   const stats = React.useMemo(() => {
     return {
@@ -83,6 +98,21 @@ function ActivityMonitorView() {
           </div>
           
           <div className="flex items-center gap-2">
+            <div className="relative group/search">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-zinc-500 group-focus-within/search:text-emerald-500 transition-colors" />
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setPage(1);
+                }}
+                placeholder={t('activity.search_placeholder') || 'Search tasks...'}
+                className="block w-full md:w-64 pl-9 pr-3 py-1.5 bg-zinc-900 border border-white/5 rounded-lg text-sm text-zinc-300 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 focus:border-emerald-500/30 transition-all"
+              />
+            </div>
              <button 
                 onClick={handleRefresh}
                 disabled={isSyncing}
@@ -96,10 +126,10 @@ function ActivityMonitorView() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: 'Pipeline Total', value: stats.total, color: 'text-zinc-400', icon: Database, bg: 'bg-zinc-400/5' },
-            { label: 'Active Tasks', value: stats.processing, color: 'text-amber-400', icon: Loader2, bg: 'bg-amber-400/5', pulse: stats.processing > 0 },
-            { label: 'Successfully Ingested', value: stats.completed, color: 'text-emerald-400', icon: CheckCircle2, bg: 'bg-emerald-400/5' },
-            { label: 'Critical Errors', value: stats.failed, color: 'text-rose-400', icon: AlertCircle, bg: 'bg-rose-400/5' }
+            { label: t('activity.stats.total'), value: stats.total, color: 'text-zinc-400', icon: Database, bg: 'bg-zinc-400/5' },
+            { label: t('activity.stats.active'), value: stats.processing, color: 'text-amber-400', icon: Loader2, bg: 'bg-amber-400/5', pulse: stats.processing > 0 },
+            { label: t('activity.stats.completed'), value: stats.completed, color: 'text-emerald-400', icon: CheckCircle2, bg: 'bg-emerald-400/5' },
+            { label: t('activity.stats.failed'), value: stats.failed, color: 'text-rose-400', icon: AlertCircle, bg: 'bg-rose-400/5' }
           ].map((stat, i) => (
             <motion.div 
               key={i} 
@@ -110,7 +140,7 @@ function ActivityMonitorView() {
             >
               <div className="flex items-center justify-between mb-3">
                 <stat.icon className={`w-4 h-4 ${stat.color} ${stat.pulse ? 'animate-spin' : ''}`} />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600">Metric</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600">{t('activity.stats.metric')}</span>
               </div>
               <span className="text-3xl font-mono font-black text-white mb-1 leading-none">{stat.value}</span>
               <span className={`text-[10px] font-bold uppercase tracking-wider ${stat.color} opacity-80`}>{stat.label}</span>
@@ -125,21 +155,24 @@ function ActivityMonitorView() {
           <div className="flex items-center justify-center py-20">
             <RefreshCw className="w-10 h-10 text-emerald-500 animate-spin opacity-20" />
           </div>
-        ) : enrichedJobs.length === 0 ? (
+        ) : filteredJobs.length === 0 ? (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="flex flex-col items-center justify-center py-32 text-center bg-zinc-900/20 border border-dashed border-white/5 rounded-3xl"
           >
             <div className="w-20 h-20 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center mb-6 shadow-2xl">
-              <ActivityIcon className="w-10 h-10 text-zinc-800" />
+              <Search className="w-10 h-10 text-zinc-800" />
             </div>
-            <h3 className="text-zinc-200 font-bold text-xl mb-2">{t('activity.none')}</h3>
-            <p className="text-zinc-500 text-sm max-w-sm mx-auto leading-relaxed">{t('activity.none_desc') || 'The ingestion pipeline is currently dormant. Initialize a data source to begin monitoring.'}</p>
+            <h3 className="text-zinc-200 font-bold text-xl mb-2">{t('activity.no_results')}</h3>
+            <p className="text-zinc-500 text-sm max-w-sm mx-auto leading-relaxed">{t('activity.no_results_desc')}</p>
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-10 mt-6">
-            {paginatedJobs.map(task => <TaskCard key={task.id} task={task} />)}
+            {paginatedJobs.map((task) => (
+              // @ts-ignore - IntrinsicAttributes should include key, but TS is being difficult here
+              <TaskCard key={task.id} task={task} />
+            ))}
           </div>
         )}
       </div>
@@ -150,7 +183,7 @@ function ActivityMonitorView() {
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">
-              Live Monitor Active
+              {t('activity.status.live')}
             </span>
           </div>
           
@@ -158,8 +191,8 @@ function ActivityMonitorView() {
             <span className="text-[11px] text-zinc-500 font-medium">
               {t('activity.pagination', { 
                 start: (page - 1) * pageSize + 1, 
-                end: Math.min(page * pageSize, enrichedJobs.length), 
-                total: enrichedJobs.length 
+                end: Math.min(page * pageSize, filteredJobs.length), 
+                total: filteredJobs.length 
               })}
             </span>
             <div className="flex items-center gap-1.5 p-1 bg-zinc-950 rounded-xl border border-white/5">
@@ -196,11 +229,12 @@ function ContentSourcesView() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [isSyncing, setIsSyncing] = useState(false);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
 
   const filteredSources = React.useMemo(() => {
-    let result = sources;
-    
+    // 0. Base filter: Only show 'done' status
+     let result = sources;
+
     // 1. Filter by subject context
     if (selectedSubjects.length > 0) {
       const selectedIds = new Set(selectedSubjects.map(s => s.id));
@@ -324,6 +358,7 @@ function ContentSourcesView() {
             onSearchSubmit={handleSearchSubmit}
             typeFilter={typeFilter}
             onTypeFilterChange={handleTypeChange}
+            onPageSizeChange={setPageSize}
             emptyMessage={appliedSearchQuery || typeFilter !== 'all' ? undefined : t('chat.locked.description')}
           />
         )}
@@ -334,9 +369,8 @@ function ContentSourcesView() {
 
 // --- Main Layout ---
 function MainContent() {
-  const { currentView, selectedSubjects } = useAppContext();
+  const { currentView, selectedSubjects, isAddModalOpen, setIsAddModalOpen, addToast } = useAppContext();
   const { t } = useTranslation();
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // @ts-ignore
   return (
@@ -371,14 +405,23 @@ function MainContent() {
           {currentView === 'activity' && <ActivityMonitorView />}
           {currentView === 'sources' && <ContentSourcesView />}
           {currentView === 'chat' && (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-              <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-                <span className="text-2xl">🔒</span>
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-2xl mx-auto h-full">
+              <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+                <span className="text-3xl">🚀</span>
               </div>
-              <h2 className="text-xl font-semibold mb-2">{t('chat.locked.title')}</h2>
-              <p className="text-zinc-400 max-w-md">
+              <h2 className="text-2xl font-bold mb-3 bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent">
+                {t('chat.locked.title')}
+              </h2>
+              <p className="text-zinc-400 text-lg mb-8 leading-relaxed">
                 {t('chat.locked.description')}
               </p>
+              <button 
+                onClick={() => setIsAddModalOpen(true)}
+                className="group flex items-center gap-3 px-8 py-3.5 text-base font-bold text-black bg-emerald-500 rounded-xl hover:bg-emerald-400 transition-all shadow-[0_0_25px_rgba(16,185,129,0.3)] active:scale-95 border border-emerald-400/20"
+              >
+                <Plus className="w-5 h-5 transition-transform duration-300 group-hover:rotate-90" />
+                {t('common.actions.addData')}
+              </button>
             </div>
           )}
           {currentView === 'search' && <SearchView />}

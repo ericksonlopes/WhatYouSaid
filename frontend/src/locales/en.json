@@ -11,7 +11,11 @@
       "filter": "Filter",
       "clear": "Clear all filters",
       "copy": "Copy",
-      "copied": "Copied!"
+      "copied": "Copied!",
+      "reprocess": "Reprocess",
+      "delete": "Delete",
+      "view_details": "View Details",
+      "go_to_source": "Go to Source"
     },
     "status": {
       "pending": "PENDING",
@@ -25,6 +29,7 @@
       "started": "STARTED",
       "completed": "COMPLETED",
       "failed": "FAILED",
+      "duplicate": "DUPLICATE",
       "cancelled": "CANCELLED"
     },
     "time": {
@@ -96,6 +101,7 @@
       "multiple": "Showing sources for {{count}} context(s).",
       "all": "Showing all sources in the database."
     },
+    "delete_confirm": "Are you sure you want to delete this content source? This will permanently remove all associated chunks and embeddings.",
     "table": {
       "title": "Title",
       "type": "ORIGIN",
@@ -105,6 +111,7 @@
       "model": "Model",
       "origin": "identifier",
       "dimensions": "Dimensions",
+      "actions": "Actions",
       "none": "No sources found.",
       "pagination": "Showing {{start}} to {{end}} of {{total}} results",
       "types": {
@@ -114,6 +121,10 @@
         "transcript": "Transcripts",
         "youtube": "YouTube"
       }
+    },
+    "notifications": {
+      "delete_success": "Content source deleted successfully.",
+      "delete_error": "Failed to delete content source."
     },
     "chunks": {
       "title": "Sources > Chunks",
@@ -132,8 +143,23 @@
     "loading": "Loading activity pipeline...",
     "none": "No recent activity.",
     "none_desc": "The ingestion pipeline is currently dormant. Initialize a data source to begin monitoring.",
+    "search_placeholder": "Search tasks by title, status...",
+    "no_results": "No tasks found",
+    "no_results_desc": "No tasks match your current search query. Try adjusting your search criteria.",
     "pagination": "Showing {{start}} to {{end}} of {{total}} tasks",
-    "page": "Page {{current}} of {{total}}"
+    "page": "Page {{current}} of {{total}}",
+    "stats": {
+      "total": "Pipeline Total",
+      "active": "Active Tasks",
+      "completed": "Successfully Ingested",
+      "failed": "Critical Errors",
+      "metric": "Metric"
+    },
+    "status": {
+      "live": "Live Monitor Active"
+    },
+    "pipeline_optimized": "Pipeline optimized",
+    "phase": "Phase"
   },
   "settings": {
     "title": "Settings",
@@ -188,7 +214,21 @@
     "subtitle": "Import new content to your vector store",
     "url": {
       "label": "YouTube URL",
-      "placeholder": "https://www.youtube.com/watch?v=..."
+      "placeholder": "https://www.youtube.com/watch?v=...",
+      "reprocess_started": "Reprocessing started!",
+      "reprocess_error": "Error starting reprocessing.",
+      "missing_origin": "Cannot reprocess: original video URL is missing."
+    },
+    "youtube": {
+      "reprocess_started": "Reprocessing started!",
+      "reprocess_error": "Error starting reprocessing.",
+      "missing_origin": "Cannot reprocess: original video URL is missing.",
+      "errors": {
+        "disabled_transcripts": "Transcripts are disabled for this video.",
+        "no_transcript": "No transcript available for this video.",
+        "invalid_url": "Invalid YouTube URL.",
+        "unavailable": "Video is unavailable or private."
+      }
     },
     "subject": {
       "label": "Target Knowledge Base",
@@ -291,8 +331,8 @@
   },
   "chat": {
     "locked": {
-      "title": "RAG Chat is currently locked",
-      "description": "We are fine-tuning the chat experience. Please use the Semantic Search tab to explore your knowledge base."
+      "title": "RAG Chat is coming!",
+      "description": "While we prepare the chat experience, why not feed your knowledge base? Add new data to make your searches even more powerful."
     }
   }
 }

@@ -1,25 +1,27 @@
 # 🗺️ WhatYouSaid Agent Guide (Architecture & Workflows)
 
-Este documento serve como a "Bússola Arquitetural" para agentes de IA no projeto. Para fluxos de trabalho especializados (testes, commits, banco de dados), consulte as **Skills** em `.agents/skills/`.
+This document serves as the "Architectural Compass" for AI agents on the project.
+- For specialized workflows (tests, commits, database), see the **Skills** in `.agents/skills/`.
+- For step-by-step procedures (SOPs), see the **Workflows** in `.agents/workflows/`.
 
 ## 🏗️ Big Picture Architecture
 
-### Propósito
-O `WhatYouSaid` é um hub de dados vetorizados centrado em pessoas, projetado para extrair, processar e indexar informações de diversas fontes (YouTube, Áudio, Texto) para busca semântica e RAG.
+### Purpose
+`WhatYouSaid` is a person-centric vectorized data hub designed to extract, process, and index information from various sources (YouTube, Audio, Text) for semantic search and RAG.
 
-### Estrutura do Projeto
-- `src/domain/`: Entidades, Enums e Interfaces (DDD).
-- `src/application/`: Casos de Uso (Orquestração).
-- `src/infrastructure/`: Implementações concretas (Extratores, Repositórios SQL/Vetor, Serviços de LLM).
-- `src/presentation/api/`: Rotas FastAPI e Schemas.
-- `frontend/`: Dashboard React/TypeScript.
-- `tests/`: Estrutura espelhada do `src/`.
+### Project Structure
+- `src/domain/`: Entities, Enums, and Interfaces (DDD).
+- `src/application/`: Use Cases (Orchestration).
+- `src/infrastructure/`: Concrete implementations (Extractors, SQL/Vector Repositories, LLM Services).
+- `src/presentation/api/`: FastAPI Routes and Schemas.
+- `frontend/`: React/TypeScript Dashboard.
+- `tests/`: Mirrored structure of `src/`.
 
 ---
 
 ## 💻 Developer Workflows
 
-### Setup Rápido (Backend)
+### Quick Setup (Backend)
 ```bash
 python -m venv .venv
 .\.venv\Scripts\Activate
@@ -27,40 +29,40 @@ uv sync --group dev
 python -m pip install -e .
 ```
 
-### Setup Rápido (Frontend)
+### Quick Setup (Frontend)
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-### Comandos de Infraestrutura
-- **Migrações (Alembic)**: `alembic upgrade head`
+### Infrastructure Commands
+- **Migrations (Alembic)**: `alembic upgrade head`
 - **Docker Compose**: `docker compose -f .devcontainer/docker-compose.yml up --build`
-- **Testes (Pytest)**: `pytest`
-- **Qualidade**: `ruff check . --fix`, `mypy .`, `bandit -r src/`
+- **Testing (Pytest)**: `pytest`
+- **Quality**: `ruff check . --fix`, `mypy .`, `bandit -r src/`
 
 ---
 
 ## 🎨 Frontend (React/TypeScript)
 
 - **Entry point**: `frontend/src/App.tsx`.
-- **State**: Gerenciado via `AppContext` em `frontend/src/store/`.
-- **Services**: Comunicação com a API em `frontend/src/services/api.ts`.
+- **State**: Managed via `AppContext` in `frontend/src/store/`.
+- **Services**: API communication in `frontend/src/services/api.ts`.
 
 ---
 
-## 🔧 Convenções do Projeto
+## 🔧 Project Conventions
 
-- **Variáveis de Ambiente**: Delimitador duplo `__` para variáveis aninhadas no Pydantic (ex: `VECTOR__STORE_TYPE`).
-- **Timezones**: Sempre use `datetime.now(timezone.utc)`.
-- **Testes**: Novos arquivos em `src/` exigem testes correspondentes em `tests/` (verifique a Skill `secure-commit`).
-
----
-
-## 🧠 Integrações e LLMs
-- **Vector Stores**: Suporte nativo para Weaviate e FAISS via `IVectorRepository`.
-- **Embeddings**: Abstraídos via `EmbeddingService`. Modelos padrão: `BAAI/bge-m3`.
+- **Environment Variables**: Double delimiter `__` for nested variables in Pydantic (e.g., `VECTOR__STORE_TYPE`).
+- **Timezones**: Always use `datetime.now(timezone.utc)`.
+- **Testing**: New files in `src/` require corresponding tests in `tests/` (see `secure-commit` Skill).
 
 ---
-*Este guia deve ser mantido atualizado conforme a arquitetura evolui.*
+
+## 🧠 Integrations and LLMs
+- **Vector Stores**: Native support for Weaviate and FAISS via `IVectorRepository`.
+- **Embeddings**: Abstracted via `EmbeddingService`. Default models: `BAAI/bge-m3`.
+
+---
+*This guide must be kept up to date as the architecture evolves.*

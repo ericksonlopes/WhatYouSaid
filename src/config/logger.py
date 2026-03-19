@@ -20,36 +20,42 @@ def setup_logging():
     custom_logger = Logger()
     intercept_handler = custom_logger.get_intercept_handler()
 
-    # loggers to keep at INFO or DEBUG
-    app_loggers = [None]  # Root logger
+    # Configure root logger to only show ERRORs by default for all libraries
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+    root_logger.addHandler(intercept_handler)
+    root_logger.setLevel(logging.ERROR)
 
-    # infrastructure loggers to silence or set to WARNING/ERROR
-    silence_loggers = {
-        "uvicorn": logging.WARNING,
-        "uvicorn.access": logging.CRITICAL,  # Silence HTTP request logs
-        "uvicorn.error": logging.ERROR,
-        "fastapi": logging.WARNING,
-        "starlette": logging.WARNING,
-        "sqlalchemy.engine": logging.WARNING,
-        "httpcore": logging.WARNING,
-        "httpx": logging.WARNING,
-    }
+    # Configure our app's 'src' logger to show normal logs (INFO, DEBUG, etc.)
+    src_logger = logging.getLogger("src")
+    src_logger.setLevel(logging.INFO)
+    src_logger.propagate = True
 
-    # Configure root and main loggers
-    for logger_name in app_loggers:
-        logging_logger = logging.getLogger(logger_name)
-        for handler in logging_logger.handlers[:]:
-            logging_logger.removeHandler(handler)
-        logging_logger.addHandler(intercept_handler)
-        logging_logger.setLevel(logging.INFO)
+    # Force specific known infrastructure loggers to ERROR to prevent their default setups from overriding
+    silence_loggers = [
+        "uvicorn",
+        "uvicorn.access",
+        "uvicorn.error",
+        "fastapi",
+        "starlette",
+        "sqlalchemy",
+        "sqlalchemy.engine",
+        "httpcore",
+        "httpx",
+        "urllib3",
+        "chromadb",
+        "sentence_transformers",
+        "weaviate",
+        "faiss"
+    ]
 
-    # Configure infrastructure loggers with higher thresholds
-    for logger_name, level in silence_loggers.items():
+    for logger_name in silence_loggers:
         logging_logger = logging.getLogger(logger_name)
         for handler in logging_logger.handlers[:]:
             logging_logger.removeHandler(handler)
         logging_logger.addHandler(intercept_handler)
         logging_logger.propagate = False
-        logging_logger.setLevel(level)
+        logging_logger.setLevel(logging.ERROR)
 
     return custom_logger

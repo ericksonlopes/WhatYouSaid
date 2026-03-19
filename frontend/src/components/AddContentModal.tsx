@@ -31,7 +31,7 @@ interface AddContentModalProps {
     onClose: () => void;
 }
 
-type ContentType = 'youtube' | 'wikipedia' | 'web' | 'notion' | 'pdf';
+type ContentType = 'youtube' | 'wikipedia' | 'web' | 'notion' | 'pdf' | 'article';
 
 interface SourceOption {
     id: ContentType;
@@ -216,7 +216,7 @@ function ProcessingStrategy({
 
 export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
     const { t } = useTranslation();
-    const {subjects, selectedSubjects, modelInfo} = useAppContext();
+    const {subjects, selectedSubjects, modelInfo, addToast} = useAppContext();
     const {startIngestion} = useIngestion();
     
     const SOURCES: SourceOption[] = [
@@ -267,10 +267,11 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (contentType !== 'youtube' && contentType !== 'pdf') return;
-
+        
         const targetSubject = subjects.find(s => s.id === targetSubjectId);
         if (!targetSubject) return;
+
+        if (contentType !== 'youtube' && contentType !== 'pdf') return;
 
         if (contentType === 'youtube') {
             startIngestion(inputValue, contentType, targetSubject, tokensPerChunk, tokensOverlap, youtubeDataType);
@@ -331,6 +332,11 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
     const selectedSource = SOURCES.find(s => s.id === contentType);
     const selectedTarget = subjects.find(s => s.id === targetSubjectId);
     const filteredSubjects = subjects.filter(s => s.name.toLowerCase().includes(subjectSearch.toLowerCase()));
+
+    const isSubmitDisabled = !selectedSource?.enabled || 
+        (contentType === 'youtube' && !inputValue.trim()) || 
+        (contentType === 'pdf' && !selectedFile) || 
+        uploadStatus !== 'idle';
 
     return (
         <AnimatePresence>
@@ -676,7 +682,7 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
                                         </button>
                                         <button
                                             type="submit"
-                                            disabled={!selectedSource?.enabled || (contentType === 'youtube' && !inputValue.trim()) || (contentType === 'pdf' && !selectedFile) || uploadStatus !== 'idle'}
+                                            disabled={isSubmitDisabled}
                                             className="px-6 py-2.5 text-sm font-medium text-black bg-emerald-500 rounded-xl hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.15)] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
                                         >
                                             {t('common.actions.addData')}

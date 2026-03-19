@@ -4,6 +4,7 @@ from fastapi import Depends, Request
 
 from src.application.use_cases.ingest_youtube_use_case import IngestYoutubeUseCase
 from src.application.use_cases.search_chunks_use_case import SearchChunksUseCase
+from src.application.use_cases.delete_content_source_use_case import DeleteContentSourceUseCase
 from src.config.settings import Settings
 
 # Import services and repositories
@@ -193,4 +194,16 @@ def get_ingest_youtube_use_case(
         chunk_service=chunk_svc,
         vector_service=yt_vector_svc,
         vector_store_type=settings.vector.store_type.value,
+    )
+
+
+def get_delete_source_use_case(
+    cs_svc: ContentSourceService = Depends(get_cs_service),
+    chunk_svc: ChunkIndexService = Depends(get_chunk_index_service),
+    vector_repo: IVectorRepository = Depends(get_vector_repository),
+) -> DeleteContentSourceUseCase:
+    return DeleteContentSourceUseCase(
+        cs_service=cs_svc,
+        chunk_service=chunk_svc,
+        vector_repo=vector_repo,
     )

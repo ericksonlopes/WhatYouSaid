@@ -5,8 +5,9 @@ from fastapi import Depends, HTTPException, APIRouter
 from src.config.logger import Logger
 from src.infrastructure.services.content_source_service import ContentSourceService
 from src.infrastructure.services.model_loader_service import ModelLoaderService
-from src.presentation.api.dependencies import get_cs_service, get_model_loader
+from src.presentation.api.dependencies import get_cs_service, get_model_loader, get_delete_source_use_case
 from src.domain.entities.enums.source_type_enum_entity import SourceType
+from src.application.use_cases.delete_content_source_use_case import DeleteContentSourceUseCase
 from src.presentation.api.schemas.model_schemas import ModelInfoResponse
 from src.presentation.api.schemas.source_schemas import SourceResponse
 
@@ -53,3 +54,26 @@ def get_model_info(
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.delete("/{id}", responses={404: {"description": "Source not found"}})
+def delete_source(
+    id: str,
+    use_case: Annotated[
+        DeleteContentSourceUseCase, Depends(get_delete_source_use_case)
+    ],
+):
+    """Delete a content source and all its related data (chunks, embeddings)."""
+    try:
+        import uuid
+
+        source_id = uuid.UUID(id)
+        success = use_case.execute(source_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Content source not found")
+        return {"success": True, "message": f"Source {id} deleted successfully"}
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+    except Exception as e:
+        logger.error(f"Error deleting source {id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

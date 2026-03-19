@@ -11,7 +11,11 @@
       "filter": "Filtrar",
       "clear": "Limpar filtros",
       "copy": "Copiar",
-      "copied": "Copiado!"
+      "copied": "Copiado!",
+      "reprocess": "Reprocessar",
+      "delete": "Excluir",
+      "view_details": "Ver detalhes",
+      "go_to_source": "Ver na fonte"
     },
     "status": {
       "pending": "PENDENTE",
@@ -25,6 +29,7 @@
       "started": "INICIADO",
       "completed": "CONCLUÍDO",
       "failed": "FALHOU",
+      "duplicate": "DUPLICADO",
       "cancelled": "CANCELADO"
     },
     "time": {
@@ -96,6 +101,7 @@
       "multiple": "Mostrando fontes para {{count}} contexto(s).",
       "all": "Mostrando todas as fontes no banco de dados."
     },
+    "delete_confirm": "Tem certeza que deseja excluir esta fonte de conteúdo? Isso removerá permanentemente todos os fragmentos e embeddings associados.",
     "table": {
       "title": "Título",
       "type": "ORIGEM",
@@ -105,6 +111,7 @@
       "model": "Modelo",
       "origin": "identificador",
       "dimensions": "Dimensões",
+      "actions": "Ações",
       "none": "Nenhuma fonte encontrada.",
       "pagination": "Exibindo {{start}} a {{end}} de {{total}} resultados",
       "types": {
@@ -114,6 +121,10 @@
         "transcript": "Transcrições",
         "youtube": "YouTube"
       }
+    },
+    "notifications": {
+      "delete_success": "Fonte de conteúdo excluída com sucesso.",
+      "delete_error": "Falha ao excluir a fonte de conteúdo."
     },
     "chunks": {
       "title": "Fontes > Chunks",
@@ -132,8 +143,23 @@
     "loading": "Carregando pipeline de atividade...",
     "none": "Nenhuma atividade recente.",
     "none_desc": "A pipeline de ingestão está inativa no momento. Inicialize uma fonte de dados para começar o monitoramento.",
+    "search_placeholder": "Buscar tarefas por título, status...",
+    "no_results": "Nenhuma tarefa encontrada",
+    "no_results_desc": "Nenhuma tarefa corresponde à sua pesquisa. Tente ajustar seus critérios.",
     "pagination": "Mostrando {{start}} a {{end}} de {{total}} tarefas",
-    "page": "Página {{current}} de {{total}}"
+    "page": "Página {{current}} de {{total}}",
+    "stats": {
+      "total": "Total da Pipeline",
+      "active": "Tarefas Ativas",
+      "completed": "Ingerido com Sucesso",
+      "failed": "Erros Críticos",
+      "metric": "Métrica"
+    },
+    "status": {
+      "live": "Monitoramento em Tempo Real"
+    },
+    "pipeline_optimized": "Pipeline otimizada",
+    "phase": "Fase"
   },
   "settings": {
     "title": "Configurações",
@@ -158,7 +184,7 @@
       "collection_name": "Nome da Coleção",
       "embedding_model": "Modelo de Embedding",
       "status_stable": "Estável",
-      "status_active": "Ativo",
+      "status_active": "Active",
       "model_desc": "Modelo de vetorização de texto",
       "api_desc": "Conexão com o servidor de API",
       "sql_desc": "Banco de dados relacional",
@@ -188,7 +214,21 @@
     "subtitle": "Importe novo conteúdo para sua base vetorial",
     "url": {
       "label": "URL do YouTube",
-      "placeholder": "https://www.youtube.com/watch?v=..."
+      "placeholder": "https://www.youtube.com/watch?v=...",
+      "reprocess_started": "Reprocessamento iniciado!",
+      "reprocess_error": "Erro ao iniciar reprocessamento.",
+      "missing_origin": "Não foi possível reprocessar: URL original do vídeo ausente."
+    },
+    "youtube": {
+      "reprocess_started": "Reprocessamento iniciado!",
+      "reprocess_error": "Erro ao iniciar reprocessamento.",
+      "missing_origin": "Não foi possível reprocessar: URL original do vídeo ausente.",
+      "errors": {
+        "disabled_transcripts": "As legendas estão desativadas para este vídeo.",
+        "no_transcript": "Nenhuma legenda disponível para este vídeo.",
+        "invalid_url": "URL do YouTube inválida.",
+        "unavailable": "O vídeo está indisponível ou é privado."
+      }
     },
     "subject": {
       "label": "Base de Conhecimento Alvo",
@@ -291,8 +331,8 @@
   },
   "chat": {
     "locked": {
-      "title": "O Chat RAG está bloqueado",
-      "description": "Estamos refinando a experiência do chat. Por favor, use a aba de Busca Semântica para explorar sua base de dados."
+      "title": "O Chat RAG está chegando!",
+      "description": "Enquanto preparamos a experiência de chat, que tal alimentar sua base de conhecimento? Adicione novos dados para tornar suas buscas ainda mais poderosas."
     }
   }
 }

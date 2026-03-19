@@ -30,8 +30,11 @@ interface AppState {
   toasts: Toast[];
   addToast: (message: string, type?: ToastType) => void;
   removeToast: (id: string) => void;
+  deleteSource: (id: string) => Promise<void>;
   modelInfo: ModelInfo | null;
   refreshModelInfo: () => Promise<void>;
+  isAddModalOpen: boolean;
+  setIsAddModalOpen: (isOpen: boolean) => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -55,6 +58,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [selectedSourceIdForDb, setSelectedSourceIdForDb] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  // Tracks which jobs have already triggered a notification to avoid duplicates
+  const notifiedJobIds = React.useRef<Set<string>>(new Set());
+  const [hasInitializedNotified, setHasInitializedNotified] = useState(false);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
+  const addToast = useCallback((message: string, type: ToastType = 'info') => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { id, message, type }]);
+
+    // Auto remove after 8 seconds
+    setTimeout(() => {
+      removeToast(id);
+    }, 8000);
+  }, [removeToast]);
 
   const handleSetCurrentView = useCallback((view: ViewState) => {
     if (currentView !== view) {
@@ -161,6 +183,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [refreshJobs]);
 
+  // Job Status Watcher: Triggers notifications when background tasks change status
+  useEffect(() => {
+    if (!isJobsLoaded || jobs.length === 0) return;
+
+    // Initialize the set with already finished/failed jobs on first load to avoid spamming
+    if (!hasInitializedNotified) {
+      jobs.forEach(job => {
+        if (['done', 'finished', 'error', 'failed'].includes(job.status)) {
+          notifiedJobIds.current.add(job.id);
+        }
+      });
+      setHasInitializedNotified(true);
+      return;
+    }
+
+    // Check for status changes in subsequent loads
+    jobs.forEach(job => {
+      const isFinished = ['done', 'finished'].includes(job.status);
+      const isFailed = ['error', 'failed'].includes(job.status);
+
+      if ((isFinished || isFailed) && !notifiedJobIds.current.has(job.id)) {
+        notifiedJobIds.current.add(job.id);
+        
+        const title = job.title || 'Source';
+        if (isFinished) {
+          addToast(t('notifications.ingestion.complete', { name: title }), 'success');
+          refreshSources(); // Auto refresh sources when a job finishes
+        } else if (isFailed) {
+          addToast(t('notifications.ingestion.error', { name: title }), 'error');
+        }
+      }
+    });
+  }, [jobs, isJobsLoaded, hasInitializedNotified, t, addToast, refreshSources]);
+
   useEffect(() => {
     const interval = setInterval(() => {
       refreshSources();
@@ -198,19 +254,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSelectedSubjects([subject]);
   }, []);
 
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  }, []);
-
-  const addToast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, message, type }]);
-
-    // Auto remove after 4 seconds
-    setTimeout(() => {
-      removeToast(id);
-    }, 4000);
-  }, [removeToast]);
+  const deleteSource = useCallback(async (id: string) => {
+    try {
+      await api.deleteSource(id);
+      setSources((prev) => prev.filter((s) => s.id !== id));
+      addToast(t('sources.notifications.delete_success'), 'success');
+    } catch (err) {
+      console.error('Error deleting source:', err);
+      addToast(t('sources.notifications.delete_error'), 'error');
+      throw err;
+    }
+  }, [addToast, t]);
 
   const addSubject = useCallback(async (subjectData: Omit<Subject, 'id' | 'sourceCount'>) => {
     try {
@@ -250,8 +304,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toasts,
         addToast,
         removeToast,
+        deleteSource,
         modelInfo,
         refreshModelInfo,
+        isAddModalOpen,
+        setIsAddModalOpen,
       }}
     >
       {children}

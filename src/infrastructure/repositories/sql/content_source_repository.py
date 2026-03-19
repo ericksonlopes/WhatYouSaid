@@ -280,3 +280,25 @@ class ContentSourceSQLRepository:
                 )
                 session.rollback()
                 raise
+
+    def delete(self, content_source_id: UUID) -> bool:
+        """Delete a content source by ID."""
+        with Connector() as session:
+            try:
+                extra = {"content_source_id": content_source_id}
+                logger.debug("Deleting ContentSource", context=extra)
+                cs = session.get(ContentSourceModel, content_source_id)
+                if cs is None:
+                    logger.warning("ContentSource not found for deletion", context=extra)
+                    return False
+                session.delete(cs)
+                session.commit()
+                logger.debug("ContentSource deleted successfully", context=extra)
+                return True
+            except Exception as e:
+                logger.error(
+                    "Error deleting ContentSource",
+                    context={**extra, "error": str(e)},
+                )
+                session.rollback()
+                raise

@@ -17,12 +17,14 @@ class YoutubeIngestRequest(BaseModel):
     tokens_overlap: int = 50
     data_type: YoutubeDataType = YoutubeDataType.VIDEO
     ingestion_job_id: Optional[str] = None
+    reprocess: bool = False
 
 
 class IngestResponse(BaseModel):
     skipped: bool = False
     reason: Optional[str] = None
     source_id: Optional[UUID] = None
+    job_id: Optional[UUID] = None
     created_chunks: Optional[int] = None
     vector_ids: List[str] = []
     video_results: List[Dict] = []

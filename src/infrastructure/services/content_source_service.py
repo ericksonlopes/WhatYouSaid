@@ -132,3 +132,7 @@ class ContentSourceService:
             dimensions=dimensions,
             chunks=chunks,
         )
+
+    def delete_source(self, content_source_id: UUID) -> bool:
+        """Delete a content source by ID."""
+        return self._repo.delete(content_source_id=content_source_id)

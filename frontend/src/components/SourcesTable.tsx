@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { ContentSource } from '../types';
 import { useTranslation } from 'react-i18next';
-import { FileText, ChevronLeft, ChevronRight, Search, Filter, ChevronDown, Check, Database, Youtube, BookOpen, Globe, Newspaper } from 'lucide-react';
+import { FileText, ChevronLeft, ChevronRight, Search, Filter, ChevronDown, Check, Database, Youtube, BookOpen, Globe, Newspaper, RotateCcw, Plus, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppContext } from '../store/AppContext';
+import { api } from '../services/api';
 
 interface SourcesTableProps {
   sources: ContentSource[];
@@ -11,6 +12,7 @@ interface SourcesTableProps {
   page: number;
   pageSize: number;
   onPageChange: (newPage: number) => void;
+  onPageSizeChange?: (newSize: number) => void;
   onRowClick: (source: ContentSource) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -32,12 +34,68 @@ const getIcon = (type: string) => {
 };
 
 export function SourcesTable({
-  sources, totalCount, page, pageSize, onPageChange, onRowClick,
+  sources, totalCount, page, pageSize, onPageChange, onPageSizeChange, onRowClick,
   searchQuery, onSearchChange, onSearchSubmit, typeFilter, onTypeFilterChange,
   emptyMessage
 }: SourcesTableProps) {
   const { t } = useTranslation();
-  const { sourceTypes } = useAppContext();
+  const { sourceTypes, addToast, refreshJobs, refreshSources, setIsAddModalOpen, deleteSource } = useAppContext();
+  const [reprocessingIds, setReprocessingIds] = useState<Set<string>>(new Set());
+
+  const handleReprocess = async (e: React.MouseEvent, source: ContentSource) => {
+    e.stopPropagation();
+    
+    if (reprocessingIds.has(source.id)) return;
+    
+    if (source.type.toLowerCase() !== 'youtube') return;
+
+    if (!source.origin) {
+      addToast(t('ingestion.youtube.missing_origin'), 'error');
+      return;
+    }
+
+    setReprocessingIds(prev => new Set(prev).add(source.id));
+    try {
+      await api.ingestYoutube({
+        video_url: source.origin,
+        reprocess: true,
+        subject_id: source.subjectId
+      });
+      addToast(t('ingestion.youtube.reprocess_started'), 'success');
+      refreshJobs();
+      refreshSources();
+    } catch (err: any) {
+      let errorMessage = err.message || t('ingestion.youtube.reprocess_error');
+      
+      // Map backend error messages to localized keys
+      if (errorMessage.includes('Transcripts are disabled')) {
+        errorMessage = t('ingestion.youtube.errors.disabled_transcripts');
+      } else if (errorMessage.includes('No transcript found')) {
+        errorMessage = t('ingestion.youtube.errors.no_transcript');
+      } else if (errorMessage.includes('unavailable')) {
+        errorMessage = t('ingestion.youtube.errors.unavailable');
+      }
+      
+      addToast(errorMessage, 'error');
+    } finally {
+      setReprocessingIds(prev => {
+        const next = new Set(prev);
+        next.delete(source.id);
+        return next;
+      });
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, source: ContentSource) => {
+    e.stopPropagation();
+    if (!window.confirm(t('sources.delete_confirm'))) return;
+
+    try {
+      await deleteSource(source.id);
+    } catch (err) {
+      // Error handled in AppContext
+    }
+  };
   const typeOptions = [
     { value: 'all', label: t('sources.table.types.all'), icon: getIcon('all') },
     ...sourceTypes.map(type => ({
@@ -149,12 +207,13 @@ export function SourcesTable({
               <th className="px-6 py-3 font-medium text-left">{t('sources.table.model')}</th>
               <th className="px-6 py-3 font-medium text-left">{t('sources.table.dimensions')}</th>
               <th className="px-6 py-3 font-medium text-left">{t('sources.table.date')}</th>
+              <th className="px-6 py-3 font-medium text-center">{t('sources.table.actions') || 'Actions'}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-subtle">
             {sources.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-20 text-center">
+                <td colSpan={10} className="py-20 text-center">
                   <div className="flex flex-col items-center justify-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
                       <Search className="w-5 h-5 text-zinc-600" />
@@ -166,6 +225,13 @@ export function SourcesTable({
                           {emptyMessage}
                         </p>
                       )}
+                      <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="mt-6 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-black bg-emerald-500 rounded-lg hover:bg-emerald-400 transition-colors shadow-lg active:scale-95"
+                      >
+                        <Plus className="w-4 h-4" />
+                        {t('common.actions.addData')}
+                      </button>
                     </div>
                   </div>
                 </td>
@@ -205,6 +271,28 @@ export function SourcesTable({
                     <td className="px-6 py-4 text-xs font-mono text-zinc-400">{source.model || 'Unknown'}</td>
                     <td className="px-6 py-4 text-xs font-mono text-zinc-400">{source.dimensions || '-'}</td>
                     <td className="px-6 py-4 font-mono text-xs">{new Date(source.date).toLocaleDateString()}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        {source.type.toLowerCase() === 'youtube' && (
+                          <button
+                            onClick={(e) => handleReprocess(e, source)}
+                            disabled={reprocessingIds.has(source.id)}
+                            title={t('common.actions.reprocess')}
+                            className="p-1.5 rounded-lg bg-zinc-800 border border-white/5 text-zinc-400 hover:text-orange-400 hover:bg-orange-500/10 transition-all active:scale-95 disabled:opacity-50"
+                          >
+                            <RotateCcw className={`w-3.5 h-3.5 ${reprocessingIds.has(source.id) ? 'animate-spin text-emerald-400' : ''}`} />
+                          </button>
+                        )}
+                        
+                        <button
+                          onClick={(e) => handleDelete(e, source)}
+                          title={t('common.actions.delete')}
+                          className="p-1.5 rounded-lg bg-zinc-800 border border-white/5 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all active:scale-95"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })
@@ -215,13 +303,37 @@ export function SourcesTable({
 
       {/* Pagination Footer */}
       <div className="p-4 border-t border-border-subtle flex items-center justify-between bg-black/20">
-        <span className="text-xs text-zinc-500">
-          {t('sources.table.pagination', { 
-            start: totalCount > 0 ? startIndex + 1 : 0, 
-            end: endIndex, 
-            total: totalCount 
-          })}
-        </span>
+        <div className="flex items-center gap-6">
+          <span className="text-xs text-zinc-500">
+            {t('sources.table.pagination', { 
+              start: totalCount > 0 ? startIndex + 1 : 0, 
+              end: endIndex, 
+              total: totalCount 
+            })}
+          </span>
+
+          {onPageSizeChange && (
+            <div className="flex items-center gap-2 border-l border-white/5 pl-6">
+              <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Rows:</span>
+              <div className="flex items-center gap-1 bg-zinc-900/50 rounded-lg p-0.5 border border-white/5">
+                {[10, 20, 30, 50].map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => onPageSizeChange(size)}
+                    className={`px-2 py-1 text-[10px] font-bold rounded-md transition-all ${
+                      pageSize === size 
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                        : 'text-zinc-500 hover:text-zinc-300'
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="flex items-center gap-2">
           <button
             onClick={() => onPageChange(page - 1)}

@@ -14,7 +14,9 @@ class JobResponse(BaseModel):
     ingestion_type: Optional[str] = None
     source_title: Optional[str] = None
     content_source_id: Optional[UUID] = None
+    subject_id: Optional[UUID] = None
     chunks_count: Optional[int] = None
+    external_source: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

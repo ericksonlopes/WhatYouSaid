@@ -127,6 +127,8 @@ class IngestYoutubeUseCase:
                     raise ValueError("No video_url(s) provided in command")
 
             result = IngestYoutubeResult()
+            if ingestion:
+                result.job_id = ingestion.id
 
             # For tracking the main job status in case of playlist, we update it to PROCESSING
             if ingestion:
@@ -178,7 +180,13 @@ class IngestYoutubeUseCase:
                 else:
                     self._finish_job(ingestion, chunks_count=result.created_chunks)
 
-            # 3. Update the parent Source
+            # 3. For single video ingestion, if it fails, we raise an error here
+            # so the API returns a non-200 status and the user gets a notification.
+            if any_failed and cmd.data_type != YoutubeDataType.PLAYLIST:
+                failed_item = next(r for r in result.video_results if "error" in r)
+                raise ValueError(failed_item["error"])
+
+            # 4. Update the parent Source
             if source:
                 if any_failed:
                     self._fail_ingestion(source)
@@ -234,9 +242,13 @@ class IngestYoutubeUseCase:
         )
 
         existing = self._check_existing_source(video_id, subject.id)
-        if existing and existing.processing_status == "done":
+        if (
+            existing
+            and existing.processing_status == "done"
+            and not getattr(cmd, "reprocess", False)
+        ):
             logger.info(
-                "Source already exists and is DONE, skipping ingestion",
+                "Source already exists and is DONE, skipping ingestion (reprocess=False)",
                 context={"source_id": str(existing.id), "external_source": video_id},
             )
 
@@ -277,6 +289,24 @@ class IngestYoutubeUseCase:
         source = existing
         ingestion = None
         try:
+            # --- REPROCESSING CLEANUP ---
+            if source and getattr(cmd, "reprocess", False):
+                logger.info(
+                    "REPROCESSING: Performing pre-ingestion cleanup",
+                    context={"source_id": str(source.id), "video_id": video_id},
+                )
+                try:
+                    sql_del = self.chunk_service.delete_by_content_source(source.id)
+                    vec_del = self.vector_service.delete_by_video_id(video_id)
+                    logger.info(
+                        "Reprocessing cleanup finished",
+                        context={"sql_deleted": sql_del, "vector_deleted": vec_del},
+                    )
+                except Exception as ce:
+                    logger.warning(
+                        f"Error during reprocessing cleanup for source {source.id}: {ce}"
+                    )
+
             # 1. Reuse or create Ingestion Job EARLY (even before source exists)
             if cmd.ingestion_job_id:
                 try:
@@ -292,7 +322,9 @@ class IngestYoutubeUseCase:
                         logger.warning(
                             f"Job {cmd.ingestion_job_id} not found, creating new one"
                         )
-                        ingestion = self._create_ingestion_job(source)
+                        ingestion = self._create_ingestion_job(
+                            source=source, external_source=video_id
+                        )
                     else:
                         logger.debug(
                             "Reusing pre-created ingestion job",
@@ -302,9 +334,13 @@ class IngestYoutubeUseCase:
                     logger.warning(
                         f"Failed to retrieve pre-created job {cmd.ingestion_job_id}, creating new one: {ej}"
                     )
-                    ingestion = self._create_ingestion_job(source)
+                    ingestion = self._create_ingestion_job(
+                        source=source, external_source=video_id
+                    )
             else:
-                ingestion = self._create_ingestion_job(source)
+                ingestion = self._create_ingestion_job(
+                    source=source, external_source=video_id
+                )
 
             if ingestion is None:
                 raise ValueError("Failed to create or retrieve ingestion job")
@@ -321,13 +357,20 @@ class IngestYoutubeUseCase:
                 )
                 extracted_title = f"YouTube Video {video_id}"
 
-            logger.debug(
-                "Video title determined",
-                context={"video_id": video_id, "title": extracted_title},
-            )
+            # 3. Create or Get Source EARLY
+            if source is None:
+                logger.info(
+                    "Creating new ContentSource",
+                    context={"video_id": video_id, "title": extracted_title},
+                )
+                source = self._create_content_source(
+                    subject, cmd, video_id, title=extracted_title
+                )
 
+            # Update Job with source info and status
             self.ingestion_service.update_job(
                 job_id=ingestion.id,
+                content_source_id=source.id,
                 status=IngestionJobStatus.PROCESSING,
                 status_message="Downloading & splitting transcript...",
                 current_step=1,
@@ -335,8 +378,7 @@ class IngestYoutubeUseCase:
                 source_title=extracted_title,
             )
 
-            # 3. Extract and split transcript (CRITICAL STEP)
-            # If this fails, the Source is NEVER created in the DB (unless it already existed).
+            # 4. Extract and split transcript (CRITICAL STEP)
             docs = self._extract_and_split(cmd, video_id, yt_extractor=yt_extractor)
 
             if not docs:
@@ -344,27 +386,10 @@ class IngestYoutubeUseCase:
                     f"No transcript chunks generated for video {video_id}. It might be too short or have no available subtitles."
                 )
 
-            # 4. Now that we have data, ensure Source exists
-            if source is None:
-                source = self._create_content_source(
-                    subject, cmd, video_id, title=extracted_title
-                )
-                # Link job to the newly created source
-                self.ingestion_service.link_job_to_source(
-                    job_id=ingestion.id,
-                    content_source_id=source.id,
-                    ingestion_type=SourceType.YOUTUBE.value,
-                )
-            else:
-                self.cs_service._repo.update_title(
-                    content_source_id=source.id, title=extracted_title
-                )
-                if ingestion.content_source_id is None:
-                    self.ingestion_service.link_job_to_source(
-                        job_id=ingestion.id,
-                        content_source_id=source.id,
-                        ingestion_type=SourceType.YOUTUBE.value,
-                    )
+            # Ensure source has latest title
+            self.cs_service._repo.update_title(
+                content_source_id=source.id, title=extracted_title
+            )
 
             self._mark_source_processing(source)
 
@@ -415,6 +440,28 @@ class IngestYoutubeUseCase:
                 f"Error processing video {video_id}: {error_msg}",
                 context={"video_url": video_url},
             )
+
+            # --- ROLLBACK LOGIC ---
+            if ingestion:
+                logger.info(
+                    "Starting rollback for failed ingestion",
+                    context={"job_id": str(ingestion.id), "video_id": video_id},
+                )
+                try:
+                    # 1. Delete from SQL
+                    sql_deleted = self.chunk_service.delete_by_job_id(ingestion.id)
+                    # 2. Delete from Vector Store
+                    vec_deleted = self.vector_service.delete_by_job_id(ingestion.id)
+                    logger.info(
+                        "Rollback completed",
+                        context={
+                            "job_id": str(ingestion.id),
+                            "sql_deleted": sql_deleted,
+                            "vector_deleted": vec_deleted,
+                        },
+                    )
+                except Exception as er:
+                    logger.error(f"Failed to perform rollback for job {ingestion.id}: {er}")
 
             if source:
                 try:
@@ -546,7 +593,9 @@ class IngestYoutubeUseCase:
         )
         return source
 
-    def _create_ingestion_job(self, source: Optional[Any] = None):
+    def _create_ingestion_job(
+        self, source: Optional[Any] = None, external_source: Optional[str] = None
+    ):
         source_id = source.id if source else None
         ingestion = self.ingestion_service.create_job(
             content_source_id=source_id,
@@ -555,6 +604,7 @@ class IngestYoutubeUseCase:
             pipeline_version="1.0",
             ingestion_type=SourceType.YOUTUBE.value,
             vector_store_type=self.vector_store_type,
+            external_source=external_source,
         )
         if ingestion:
             logger.debug(

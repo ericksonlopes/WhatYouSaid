@@ -4,10 +4,11 @@ import { IngestionTask } from '../types';
 import { 
   CheckCircle2, Loader2, XCircle, ExternalLink, 
   Youtube, FileText, Newspaper, BookOpen, Globe, Database, Clock, 
-  Layers, ChevronRight, AlertCircle, Calendar, Hash, Activity
+  Layers, ChevronRight, AlertCircle, Calendar, Hash, Activity, RotateCcw
 } from 'lucide-react';
 import { ErrorDetailModal } from './ErrorDetailModal';
 import { useAppContext } from '../store/AppContext';
+import { api } from '../services/api';
 import { motion } from 'motion/react';
 
 interface TaskCardProps {
@@ -41,10 +42,11 @@ const formatRelativeTime = (dateString: string, t: any) => {
 
 export function TaskCard({ task }: TaskCardProps) {
   const { t } = useTranslation();
-  const { setSelectedSourceIdForDb, setCurrentView } = useAppContext();
+  const { setSelectedSourceIdForDb, setCurrentView, addToast, refreshJobs } = useAppContext();
   const [isErrorModalOpen, setIsErrorModalOpen] = React.useState(false);
+  const [isReprocessing, setIsReprocessing] = React.useState(false);
   
-  const statusConfig = {
+  const statusConfig: Record<string, { color: string, bg: string, border: string, icon: any, label: string, animate?: boolean }> = {
     pending: { color: 'text-zinc-500', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20', icon: Clock, label: t('common.status.pending') },
     started: { color: 'text-blue-400', bg: 'bg-blue-400/10', border: 'border-blue-400/20', icon: Loader2, label: t('common.status.started'), animate: true },
     processing: { color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/20', icon: Loader2, label: t('common.status.processing'), animate: true },
@@ -55,18 +57,74 @@ export function TaskCard({ task }: TaskCardProps) {
     cancelled: { color: 'text-zinc-500', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20', icon: XCircle, label: t('common.status.cancelled') }
   };
 
-  const config = statusConfig[task.status] || statusConfig.pending;
+  const config = React.useMemo(() => {
+    const baseConfig = statusConfig[task.status] || statusConfig.pending;
+    const isDuplicate = task.errorMessage?.includes('Duplicate') || task.statusMessage?.includes('Duplicate');
+    
+    if (isDuplicate && (['failed', 'error'].includes(task.status))) {
+      return {
+        ...baseConfig,
+        color: 'text-orange-400',
+        bg: 'bg-orange-400/10',
+        border: 'border-orange-400/30',
+        label: t('common.status.duplicate') || 'DUPLICATE'
+      };
+    }
+    return baseConfig;
+  }, [task.status, task.errorMessage, task.statusMessage, t]);
+
   const isFailed = ['failed', 'error'].includes(task.status);
+  const isDuplicate = task.errorMessage?.includes('Duplicate') || task.statusMessage?.includes('Duplicate');
   const isProcessing = ['processing', 'started'].includes(task.status);
   const isCompleted = ['done', 'finished'].includes(task.status);
   const SourceIcon = getSourceIcon(task.ingestionType);
 
+  const handleReprocess = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (isReprocessing || !task.externalSource) return;
+    
+    setIsReprocessing(true);
+    try {
+      if (task.ingestionType === 'youtube') {
+        await api.ingestYoutube({
+          video_url: task.externalSource,
+          reprocess: true,
+          subject_id: task.subjectId
+        });
+      } else {
+        // Fallback for other types if they support reprocess via the same or similar logic
+        // For now, most use cases are covered by the generic reprocess flag if implemented in backend
+        addToast("Reprocessing of this type is not yet fully implemented", "info");
+        return;
+      }
+      addToast(t('ingestion.url.reprocess_started'), 'success');
+      refreshJobs();
+    } catch (err) {
+      addToast(t('ingestion.url.reprocess_error'), 'error');
+    } finally {
+      setIsReprocessing(false);
+    }
+  };
+
   const handleClick = () => {
-    if (isFailed) setIsErrorModalOpen(true);
-    else if (isCompleted && task.contentSourceId) {
+    if (isDuplicate && task.contentSourceId) {
+      setSelectedSourceIdForDb(task.contentSourceId);
+      setCurrentView('database');
+    } else if (isFailed) {
+      setIsErrorModalOpen(true);
+    } else if (isCompleted && task.contentSourceId) {
       setSelectedSourceIdForDb(task.contentSourceId);
       setCurrentView('database');
     }
+  };
+
+  const getLocalizedError = (error?: string) => {
+    if (!error) return 'Unknown system failure during ingestion.';
+    if (error.includes('Transcripts are disabled')) return t('ingestion.youtube.errors.disabled_transcripts');
+    if (error.includes('No transcript found')) return t('ingestion.youtube.errors.no_transcript');
+    if (error.includes('unavailable')) return t('ingestion.youtube.errors.unavailable');
+    if (error.includes('Duplicate')) return t('ingestion.messages.duplicate');
+    return error;
   };
 
   return (
@@ -78,7 +136,7 @@ export function TaskCard({ task }: TaskCardProps) {
         whileHover={{ y: -2 }}
         onClick={handleClick}
         className={`group relative flex flex-col bg-zinc-900/40 backdrop-blur-md border ${config.border} rounded-2xl p-4 transition-all duration-300 ${
-          isFailed || (isCompleted && task.contentSourceId) ? 'cursor-pointer hover:bg-zinc-800/60' : ''
+          isFailed || (isCompleted && task.contentSourceId) || (isDuplicate && task.contentSourceId) ? 'cursor-pointer hover:bg-zinc-800/60' : ''
         }`}
       >
         {/* Top Section: Icon & Identity */}
@@ -95,6 +153,11 @@ export function TaskCard({ task }: TaskCardProps) {
                 <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-white/5 text-zinc-500 border border-white/5 uppercase tracking-tighter">
                   {task.ingestionType || 'Unknown'}
                 </span>
+                {task.subjectName && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-tighter">
+                    {task.subjectName}
+                  </span>
+                )}
                 <span className="text-[9px] font-mono text-zinc-600">
                   {task.id.substring(0, 8)}
                 </span>
@@ -102,16 +165,13 @@ export function TaskCard({ task }: TaskCardProps) {
             </div>
           </div>
           <div className="flex flex-col items-end shrink-0">
-            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${config.border} ${config.bg} ${config.color} text-[9px] font-black uppercase tracking-widest shadow-sm`}>
-              {config.animate && <config.icon className="w-2.5 h-2.5 animate-spin" />}
-              {!config.animate && <config.icon className="w-2.5 h-2.5" />}
-              {config.label}
+            <div className="flex items-center gap-2">
+              <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${config.border} ${config.bg} ${config.color} text-[9px] font-black uppercase tracking-widest shadow-sm`}>
+                {config.animate && <config.icon className="w-2.5 h-2.5 animate-spin" />}
+                {!config.animate && <config.icon className="w-2.5 h-2.5" />}
+                {config.label}
+              </div>
             </div>
-            {isCompleted && (
-              <span className="text-[10px] text-zinc-500 font-medium mt-1 pr-1">
-                {formatRelativeTime(task.createdAt, t)}
-              </span>
-            )}
           </div>
         </div>
 
@@ -133,29 +193,49 @@ export function TaskCard({ task }: TaskCardProps) {
                   className="absolute h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.4)]"
                 />
               </div>
-              {task.currentStep && (
-                <div className="flex items-center gap-1 text-[9px] font-bold text-zinc-600 uppercase tracking-widest">
-                  <Layers className="w-2.5 h-2.5" />
-                  <span>Phase {task.currentStep} <ChevronRight className="inline w-2 h-2" /> {task.totalSteps}</span>
+              <div className="flex items-center justify-between">
+                {task.currentStep && (
+                  <div className="flex items-center gap-1 text-[9px] font-bold text-zinc-600 uppercase tracking-widest">
+                    <Layers className="w-2.5 h-2.5" />
+                    <span>{t('activity.phase')} {task.currentStep} <ChevronRight className="inline w-2 h-2" /> {task.totalSteps}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5 text-[9px] text-zinc-600 font-bold ml-auto uppercase tracking-tighter">
+                  <Clock className="w-3 h-3" />
+                  {formatRelativeTime(task.createdAt, t)}
                 </div>
-              )}
+              </div>
             </div>
           ) : isFailed ? (
-            <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/10 group-hover:border-rose-500/30 transition-colors">
-              <p className="text-[11px] text-rose-400/80 leading-relaxed line-clamp-2 italic font-serif">
-                "{task.errorMessage || 'Unknown system failure during ingestion.'}"
+            <div className={`p-3 rounded-xl border transition-colors ${
+              isDuplicate 
+                ? 'bg-orange-500/5 border-orange-500/10 group-hover:border-orange-500/30' 
+                : 'bg-rose-500/5 border-rose-500/10 group-hover:border-rose-500/30'
+            }`}>
+              <p className={`text-[11px] leading-relaxed line-clamp-2 italic font-serif ${
+                isDuplicate ? 'text-orange-400/80' : 'text-rose-400/80'
+              }`}>
+                "{getLocalizedError(task.errorMessage)}"
               </p>
-              <div className="mt-2 flex items-center gap-1 text-[9px] font-black text-rose-500/60 uppercase tracking-widest">
-                <AlertCircle className="w-3 h-3" />
-                {t('common.actions.view_details')}
+              <div className="mt-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[9px] text-zinc-500/60 font-bold uppercase tracking-tighter">
+                  <Clock className="w-3 h-3" />
+                  {formatRelativeTime(task.createdAt, t)}
+                </div>
+                <div className={`flex items-center gap-1 text-[9px] font-black uppercase tracking-widest ${
+                  isDuplicate ? 'text-orange-500/60' : 'text-rose-500/60'
+                }`}>
+                  <AlertCircle className="w-3 h-3" />
+                  {isDuplicate && task.contentSourceId ? t('common.actions.go_to_source') : t('common.actions.view_details')}
+                </div>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-2.5">
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-500/[0.03] border border-emerald-500/10">
+            <div className="p-3 rounded-xl border border-emerald-500/10 bg-emerald-500/[0.02] group-hover:border-emerald-500/30 transition-colors">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
-                  <span className="text-[11px] text-zinc-400 font-medium">Pipeline optimized</span>
+                  <span className="text-[11px] text-emerald-400/80 font-medium">{t('activity.pipeline_optimized')}</span>
                 </div>
                 {task.chunksCount && (
                   <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-zinc-900 border border-white/5 text-[10px] font-bold text-emerald-400">
@@ -164,18 +244,25 @@ export function TaskCard({ task }: TaskCardProps) {
                   </div>
                 )}
               </div>
-              {!isCompleted && (
-                 <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 font-medium ml-1">
-                    <Clock className="w-3.5 h-3.5" />
-                    {formatRelativeTime(task.createdAt, t)}
-                 </div>
-              )}
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[9px] text-zinc-500/60 font-bold uppercase tracking-tighter">
+                  <Clock className="w-3 h-3" />
+                  {formatRelativeTime(task.createdAt, t)}
+                </div>
+                {isCompleted && task.contentSourceId && (
+                  <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-emerald-500/60">
+                    <Database className="w-3 h-3" />
+                    {t('common.actions.go_to_source')}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
 
         {/* Hover Action Indicator */}
-        {(isFailed || (isCompleted && task.contentSourceId)) && (
+        {(isFailed || (isCompleted && task.contentSourceId) || (isDuplicate && task.contentSourceId)) && (
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <div className="p-1 rounded-full bg-white/10 text-white backdrop-blur-md">
               <ChevronRight className="w-3 h-3" />
@@ -188,6 +275,8 @@ export function TaskCard({ task }: TaskCardProps) {
         isOpen={isErrorModalOpen}
         onClose={() => setIsErrorModalOpen(false)}
         task={task}
+        onReprocess={() => handleReprocess()}
+        isReprocessing={isReprocessing}
       />
     </>
   );
