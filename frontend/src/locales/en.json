@@ -106,6 +106,7 @@
       "origin": "identifier",
       "dimensions": "Dimensions",
       "none": "No sources found.",
+      "pagination": "Showing {{start}} to {{end}} of {{total}} results",
       "types": {
         "all": "All Types",
         "video": "Videos",
@@ -130,6 +131,7 @@
     "subtitle": "Real-time ingestion pipeline status.",
     "loading": "Loading activity pipeline...",
     "none": "No recent activity.",
+    "none_desc": "The ingestion pipeline is currently dormant. Initialize a data source to begin monitoring.",
     "pagination": "Showing {{start}} to {{end}} of {{total}} tasks",
     "page": "Page {{current}} of {{total}}"
   },

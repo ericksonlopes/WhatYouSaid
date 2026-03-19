@@ -50,7 +50,15 @@ class TestIngestionJobService:
         )
         
         assert result.id == jid
-        mock_repo.create_job.assert_called_once()
+        mock_repo.create_job.assert_called_once_with(
+            content_source_id=mock_repo.create_job.call_args.kwargs.get("content_source_id"),
+            status="started",
+            embedding_model="emb",
+            pipeline_version="1.0",
+            ingestion_type="youtube",
+            vector_store_type="weaviate",
+            source_title=None
+        )
 
     def test_update_job(self, service, mock_repo):
         jid = uuid4()
@@ -67,7 +75,8 @@ class TestIngestionJobService:
             status_message="working",
             current_step=2,
             total_steps=None,
-            chunks_count=None
+            chunks_count=None,
+            source_title=None
         )
 
     def test_link_job_to_source(self, service, mock_repo):

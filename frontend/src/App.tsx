@@ -83,13 +83,6 @@ function ActivityMonitorView() {
           </div>
           
           <div className="flex items-center gap-2">
-             <div className="flex -space-x-2 mr-2">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="w-8 h-8 rounded-full border-2 border-bg-dark bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-500">
-                    {String.fromCharCode(65 + i)}
-                  </div>
-                ))}
-             </div>
              <button 
                 onClick={handleRefresh}
                 disabled={isSyncing}
@@ -163,7 +156,11 @@ function ActivityMonitorView() {
           
           <div className="flex items-center gap-4">
             <span className="text-[11px] text-zinc-500 font-medium">
-              Showing <span className="text-zinc-200 font-bold">{(page - 1) * pageSize + 1}</span> - <span className="text-zinc-200 font-bold">{Math.min(page * pageSize, enrichedJobs.length)}</span> of <span className="text-zinc-200 font-bold">{enrichedJobs.length}</span>
+              {t('activity.pagination', { 
+                start: (page - 1) * pageSize + 1, 
+                end: Math.min(page * pageSize, enrichedJobs.length), 
+                total: enrichedJobs.length 
+              })}
             </span>
             <div className="flex items-center gap-1.5 p-1 bg-zinc-950 rounded-xl border border-white/5">
               <button 
@@ -256,9 +253,18 @@ function ContentSourcesView() {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto h-full flex flex-col">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="p-8 max-w-6xl mx-auto h-full flex flex-col"
+    >
       <div className="mb-8 flex justify-between items-center">
-        <div>
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+        >
         <div className="flex items-center gap-3">
           <Database className="w-10 h-10 text-emerald-500" />
           <h2 className="text-2xl font-bold text-white tracking-tight">{t('sources.title')}</h2>
@@ -279,90 +285,50 @@ function ContentSourcesView() {
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
 
-        <button 
+        <motion.button 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
           onClick={handleRefresh}
           disabled={isSyncing}
           className="group flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-zinc-300 bg-panel-bg border border-border-subtle rounded-lg hover:bg-panel-hover hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${isSyncing ? 'animate-spin text-emerald-400' : 'group-hover:rotate-180'}`} />
           {isSyncing ? t('common.actions.syncing') : t('common.actions.sync')}
-        </button>
+        </motion.button>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+        className="flex-1 min-h-0 flex flex-col"
+      >
         {!isSourcesLoaded && sources.length === 0 ? (
           <div className="flex items-center gap-3 text-zinc-500 text-sm">
             <RefreshCw className="w-4 h-4 animate-spin text-emerald-500" />
             {t('activity.loading')}
           </div>
         ) : (
-          <>
-            {filteredSources.length === 0 ? (
-              <div className="flex flex-col h-full border border-border-subtle rounded-xl bg-panel-bg overflow-hidden">
-                <SourcesTable 
-                  sources={[]} 
-                  totalCount={0}
-                  page={1}
-                  pageSize={pageSize}
-                  onPageChange={setPage}
-                  onRowClick={handleRowClick}
-                  searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                  onSearchSubmit={handleSearchSubmit}
-                  typeFilter={typeFilter}
-                  onTypeFilterChange={handleTypeChange}
-                />
-                <div className="flex-1 p-12 text-center text-zinc-500 bg-black/20 flex flex-col items-center justify-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-                    <Search className="w-5 h-5 text-zinc-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-zinc-300">{t('sources.table.none')}</p>
-                    <p className="text-sm text-zinc-500 mt-1 max-w-xs mx-auto">
-                      {appliedSearchQuery || typeFilter !== 'all' 
-                        ? `${t('search.results.none')}`
-                        : t('sources.table.none')}
-                    </p>
-                    {appliedSearchQuery || typeFilter !== 'all' ? (
-                      <button 
-                        onClick={() => {
-                          setSearchQuery('');
-                          setAppliedSearchQuery('');
-                          setTypeFilter('all');
-                        }}
-                        className="mt-4 text-xs text-emerald-500 hover:text-emerald-400 font-medium underline underline-offset-4"
-                      >
-                        {t('common.actions.clear')}
-                      </button>
-                    ) : (
-                      <p className="mt-4 text-xs text-zinc-600">
-                        {t('chat.locked.description')}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <SourcesTable 
-                sources={filteredSources.slice((page - 1) * pageSize, page * pageSize)} 
-                totalCount={filteredSources.length}
-                page={page}
-                pageSize={pageSize}
-                onPageChange={setPage}
-                onRowClick={handleRowClick}
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                onSearchSubmit={handleSearchSubmit}
-                typeFilter={typeFilter}
-                onTypeFilterChange={handleTypeChange}
-              />
-            )}
-          </>
+          <SourcesTable 
+            sources={filteredSources.slice((page - 1) * pageSize, page * pageSize)} 
+            totalCount={filteredSources.length}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onRowClick={handleRowClick}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onSearchSubmit={handleSearchSubmit}
+            typeFilter={typeFilter}
+            onTypeFilterChange={handleTypeChange}
+            emptyMessage={appliedSearchQuery || typeFilter !== 'all' ? undefined : t('chat.locked.description')}
+          />
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 

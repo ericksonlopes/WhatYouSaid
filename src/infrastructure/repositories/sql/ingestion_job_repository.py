@@ -23,6 +23,7 @@ class IngestionJobSQLRepository:
         pipeline_version: Optional[str] = None,
         ingestion_type: Optional[str] = None,
         vector_store_type: Optional[str] = None,
+        source_title: Optional[str] = None,
     ) -> UUID:
         with Connector() as session:
             try:
@@ -33,6 +34,7 @@ class IngestionJobSQLRepository:
                     "pipeline_version": pipeline_version,
                     "ingestion_type": ingestion_type,
                     "vector_store_type": vector_store_type,
+                    "source_title": source_title,
                 }
                 logger.debug("Creating ingestion job", context=extra)
                 job = IngestionJobModel(
@@ -42,6 +44,7 @@ class IngestionJobSQLRepository:
                     pipeline_version=pipeline_version,
                     ingestion_type=ingestion_type,
                     vector_store_type=vector_store_type,
+                    source_title=source_title,
                 )
                 session.add(job)
                 session.commit()
@@ -67,6 +70,7 @@ class IngestionJobSQLRepository:
         current_step: Optional[int] = None,
         total_steps: Optional[int] = None,
         chunks_count: Optional[int] = None,
+        source_title: Optional[str] = None,
     ) -> None:
         """Update an ingestion job's status, error_message and progress info."""
         with Connector() as session:
@@ -79,6 +83,7 @@ class IngestionJobSQLRepository:
                     "current_step": current_step,
                     "total_steps": total_steps,
                     "chunks_count": chunks_count,
+                    "source_title": source_title,
                 }
                 logger.debug("Updating ingestion job", context=extra)
                 job = session.get(IngestionJobModel, job_id)
@@ -100,6 +105,8 @@ class IngestionJobSQLRepository:
                     job.total_steps = total_steps
                 if chunks_count is not None:
                     job.chunks_count = chunks_count
+                if source_title is not None:
+                    job.source_title = source_title
 
                 session.commit()
                 logger.debug("Ingestion job updated successfully", context=extra)

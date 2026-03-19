@@ -331,6 +331,7 @@ class IngestYoutubeUseCase:
                 status_message="Downloading & splitting transcript...",
                 current_step=1,
                 total_steps=4,
+                source_title=extracted_title,
             )
 
             # 3. Extract and split transcript (CRITICAL STEP)

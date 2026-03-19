@@ -7,7 +7,7 @@ import {
   Info, Clock, ArrowUpDown, Youtube, BookOpen, Globe, Filter, Newspaper
 } from 'lucide-react';
 import { useAppContext } from '../store/AppContext';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../services/api';
 
 // --- Types ---
@@ -110,17 +110,33 @@ export function SearchView() {
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="h-full flex flex-col overflow-hidden"
+    >
       {/* Header & Search Bar */}
       <div className="p-8 pb-4 max-w-5xl mx-auto w-full flex-shrink-0">
-        <div className="mb-8 text-center">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          className="mb-8 text-center"
+        >
           <h2 className="text-3xl font-bold text-white tracking-tight mb-3">{t('search.title')}</h2>
           <p className="text-zinc-400">
             {t('search.subtitle')}
           </p>
-        </div>
+        </motion.div>
 
-        <form onSubmit={handleSearch} className="relative max-w-4xl mx-auto">
+        <motion.form 
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+          onSubmit={handleSearch} 
+          className="relative max-w-4xl mx-auto"
+        >
           <div className="relative flex items-center bg-zinc-900/60 backdrop-blur-xl border border-white/10 hover:border-white/20 focus-within:border-emerald-500/50 focus-within:ring-4 focus-within:ring-emerald-500/10 rounded-2xl shadow-2xl transition-all p-2">
             <Search className="w-6 h-6 text-zinc-400 ml-4" />
             <input
@@ -133,15 +149,25 @@ export function SearchView() {
             <button
               type="submit"
               disabled={!query.trim() || isSearching || selectedSubjects.length === 0}
-              className="px-8 py-4 bg-white text-black font-medium rounded-xl hover:bg-zinc-200 disabled:opacity-50 disabled:hover:bg-white transition-colors shadow-sm"
+              className="group px-8 py-4 bg-emerald-500 text-black font-bold rounded-xl hover:bg-emerald-400 disabled:opacity-50 disabled:hover:bg-emerald-500 transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] active:scale-95 flex items-center gap-3 uppercase tracking-wider text-sm"
             >
+              {isSearching ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Search className="w-5 h-5 transition-transform group-hover:scale-110" />
+              )}
               {isSearching ? t('common.actions.syncing') : t('common.actions.search')}
             </button>
           </div>
-        </form>
+        </motion.form>
 
         {/* Search Controls */}
-        <div className="max-w-4xl mx-auto mt-6 flex flex-wrap items-center justify-between gap-4">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className="max-w-4xl mx-auto mt-6 flex flex-wrap items-center justify-between gap-4"
+        >
           <div className="flex items-center gap-2 text-sm min-w-0 flex-1">
             <Database className="w-4 h-4 text-zinc-500 flex-shrink-0" />
             <span className="text-zinc-400 whitespace-nowrap flex-shrink-0">{t('search.results.source')}:</span>
@@ -177,26 +203,34 @@ export function SearchView() {
                 <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-200 ${isTopKOpen ? 'rotate-180' : ''}`} />
               </button>
               
-              {isTopKOpen && (
-                <div className="absolute top-full right-0 mt-1 w-24 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl overflow-hidden z-20 animate-in fade-in zoom-in-95 duration-100">
-                  {[3, 5, 10, 20, 50].map((val) => (
-                    <button
-                      key={val}
-                      onClick={() => {
-                        setTopK(val);
-                        setIsTopKOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 text-xs transition-colors ${
-                        topK === val 
-                          ? 'bg-emerald-500/10 text-emerald-400 font-medium' 
-                          : 'text-zinc-300 hover:bg-zinc-800/80 hover:text-white'
-                      }`}
-                    >
-                      {val}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <AnimatePresence>
+                {isTopKOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    transition={{ duration: 0.1 }}
+                    className="absolute top-full right-0 mt-1 w-24 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl overflow-hidden z-20"
+                  >
+                    {[3, 5, 10, 20, 50].map((val) => (
+                      <button
+                        key={val}
+                        onClick={() => {
+                          setTopK(val);
+                          setIsTopKOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                          topK === val 
+                            ? 'bg-emerald-500/10 text-emerald-400 font-medium' 
+                            : 'text-zinc-300 hover:bg-zinc-800/80 hover:text-white'
+                        }`}
+                      >
+                        {val}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Re-rank Toggle */}
@@ -274,7 +308,7 @@ export function SearchView() {
             </div>
           </div>
           </div>
-        </div>
+        </motion.div>
       </div>
       {/* Results Area */}
       <div className="flex-1 overflow-y-auto p-8 pt-0 custom-scrollbar">
@@ -331,7 +365,7 @@ export function SearchView() {
                   key={result.id} 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05, duration: 0.4, ease: "easeOut" }}
+                  transition={{ delay: Math.min(index * 0.05, 0.3), duration: 0.4, ease: "easeOut" }}
                   onClick={() => setSelectedResult(result)}
                   className="group relative p-6 rounded-2xl bg-zinc-900/40 border border-white/5 hover:border-emerald-500/30 hover:bg-zinc-900/80 transition-all cursor-pointer overflow-hidden shadow-sm hover:shadow-xl"
                 >
@@ -430,136 +464,146 @@ export function SearchView() {
       </div>
 
       {/* Chunk Detail Modal */}
-      {selectedResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setSelectedResult(null)}>
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.2 }}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-zinc-900 border border-zinc-700/50 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden"
-          >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-5 border-b border-zinc-800">
-              <div className="flex items-center gap-3 min-w-0">
-                {React.createElement(getIcon(selectedResult.sourceType || ''), { className: "w-5 h-5 text-emerald-400 flex-shrink-0" })}
-                <div className="flex items-center gap-2 min-w-0">
-                  {selectedResult.index !== undefined && (
-                    <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded border border-emerald-500/20 font-bold font-mono shrink-0">
-                      #{selectedResult.index + 1}
+      <AnimatePresence>
+        {selectedResult && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedResult(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative bg-zinc-900 border border-zinc-700/50 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-5 border-b border-zinc-800">
+                <div className="flex items-center gap-3 min-w-0">
+                  {React.createElement(getIcon(selectedResult.sourceType || ''), { className: "w-5 h-5 text-emerald-400 flex-shrink-0" })}
+                  <div className="flex items-center gap-2 min-w-0">
+                    {selectedResult.index !== undefined && (
+                      <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-1.5 py-0.5 rounded border border-emerald-500/20 font-bold font-mono shrink-0">
+                        #{selectedResult.index + 1}
+                      </span>
+                    )}
+                    <h3 className="text-lg font-semibold text-white truncate">{selectedResult.source}</h3>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedResult.text);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                    title={t('common.actions.copy')}
+                  >
+                    {copied ? <Check className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
+                  </button>
+                  <button 
+                    onClick={() => setSelectedResult(null)}
+                    className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors flex-shrink-0"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Metadata Sub-header */}
+              <div className="flex flex-wrap items-center gap-4 px-5 py-3 border-b border-zinc-800/50 bg-black/20">
+                <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-zinc-950 border border-white/10 flex-shrink-0">
+                  <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)] ${
+                    searchMode === 'bm25' ? 'bg-sky-400' : searchMode === 'hybrid' ? 'bg-violet-400' : 'bg-emerald-500'
+                  }`} />
+                  <span className={`text-[11px] font-mono font-medium ${
+                    searchMode === 'bm25' ? 'text-sky-400' : searchMode === 'hybrid' ? 'text-violet-400' : 'text-emerald-400'
+                  }`}>
+                    {searchMode === 'bm25'
+                      ? `BM25: ${selectedResult.score.toFixed(2)}`
+                      : searchMode === 'hybrid'
+                      ? `${(selectedResult.score * 100).toFixed(1)}% HYBRID`
+                      : `${(selectedResult.score * 100).toFixed(1)}% MATCH`
+                    }
+                  </span>
+                </div>
+                
+                {selectedResult.timestamp && (
+                  <div className="flex items-center gap-1.5 text-xs text-emerald-500/80 font-mono bg-emerald-500/10 px-2 py-0.5 rounded flex-shrink-0 border border-emerald-500/20">
+                    <Clock className="w-3.5 h-3.5" />
+                    {selectedResult.timestamp}
+                  </div>
+                )}
+                {selectedResult.language && (
+                  <div className="flex items-center gap-1.5 text-xs text-zinc-400 flex-shrink-0">
+                    <Languages className="w-3.5 h-3.5" />
+                    {selectedResult.language.toUpperCase()}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Content */}
+              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-gradient-to-b from-zinc-900 to-zinc-950">
+                <div className="max-w-2xl mx-auto">
+                  <p className="text-lg text-zinc-200 leading-relaxed whitespace-pre-wrap font-serif italic">
+                    "{selectedResult.text}"
+                  </p>
+                </div>
+              </div>
+
+              {/* Detailed Metadata Grid */}
+              <div className="p-5 border-t border-zinc-800 bg-zinc-950">
+                <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <span className="w-1 h-3 bg-emerald-500 rounded-full" />
+                  {t('search.results.metadata')}
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-zinc-600">{t('search.results.type')}</span>
+                    <span className="text-xs text-zinc-300 flex items-center gap-1.5 capitalize">
+                      {React.createElement(getIcon(selectedResult.sourceType || ''), { className: "w-3.5 h-3.5 text-zinc-500" })}
+                      {selectedResult.sourceType?.toLowerCase() || 'Unknown'}
                     </span>
-                  )}
-                  <h3 className="text-lg font-semibold text-white truncate">{selectedResult.source}</h3>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-zinc-600">{t('search.results.model')}</span>
+                    <span className="text-xs text-zinc-300 flex items-center gap-1.5">
+                      <Cpu className="w-3.5 h-3.5 text-zinc-500" />
+                      {selectedResult.embeddingModel || 'Unknown'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-zinc-600">{t('search.results.tokens')}</span>
+                    <span className="text-xs text-zinc-300 flex items-center gap-1.5">
+                      <Hash className="w-3.5 h-3.5 text-zinc-500" />
+                      {selectedResult.tokensCount || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-zinc-600">{t('search.results.date')}</span>
+                    <span className="text-xs text-zinc-300 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+                      {selectedResult.createdAt ? new Date(selectedResult.createdAt).toLocaleDateString() : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-zinc-600">{t('search.results.chunk_id')}</span>
+                    <span className="text-xs text-zinc-400 font-mono truncate" title={selectedResult.id}>
+                      {selectedResult.id.substring(0, 8)}...
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(selectedResult.text);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                  }}
-                  className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-                  title={t('common.actions.copy')}
-                >
-                  {copied ? <Check className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
-                </button>
-                <button 
-                  onClick={() => setSelectedResult(null)}
-                  className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors flex-shrink-0"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Metadata Sub-header */}
-            <div className="flex flex-wrap items-center gap-4 px-5 py-3 border-b border-zinc-800/50 bg-black/20">
-              <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-zinc-950 border border-white/10 flex-shrink-0">
-                <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)] ${
-                  searchMode === 'bm25' ? 'bg-sky-400' : searchMode === 'hybrid' ? 'bg-violet-400' : 'bg-emerald-500'
-                }`} />
-                <span className={`text-[11px] font-mono font-medium ${
-                  searchMode === 'bm25' ? 'text-sky-400' : searchMode === 'hybrid' ? 'text-violet-400' : 'text-emerald-400'
-                }`}>
-                  {searchMode === 'bm25'
-                    ? `BM25: ${selectedResult.score.toFixed(2)}`
-                    : searchMode === 'hybrid'
-                    ? `${(selectedResult.score * 100).toFixed(1)}% HYBRID`
-                    : `${(selectedResult.score * 100).toFixed(1)}% MATCH`
-                  }
-                </span>
-              </div>
-              
-              {selectedResult.timestamp && (
-                <div className="flex items-center gap-1.5 text-xs text-emerald-500/80 font-mono bg-emerald-500/10 px-2 py-0.5 rounded flex-shrink-0 border border-emerald-500/20">
-                  <Clock className="w-3.5 h-3.5" />
-                  {selectedResult.timestamp}
-                </div>
-              )}
-              {selectedResult.language && (
-                <div className="flex items-center gap-1.5 text-xs text-zinc-400 flex-shrink-0">
-                  <Languages className="w-3.5 h-3.5" />
-                  {selectedResult.language.toUpperCase()}
-                </div>
-              )}
-            </div>
-
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-gradient-to-b from-zinc-900 to-zinc-950">
-              <div className="max-w-2xl mx-auto">
-                <p className="text-lg text-zinc-200 leading-relaxed whitespace-pre-wrap font-serif italic">
-                  "{selectedResult.text}"
-                </p>
-              </div>
-            </div>
-
-            {/* Detailed Metadata Grid */}
-            <div className="p-5 border-t border-zinc-800 bg-zinc-950">
-              <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <span className="w-1 h-3 bg-emerald-500 rounded-full" />
-                {t('search.results.metadata')}
-              </h4>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-zinc-600">{t('search.results.type')}</span>
-                  <span className="text-xs text-zinc-300 flex items-center gap-1.5 capitalize">
-                    {React.createElement(getIcon(selectedResult.sourceType || ''), { className: "w-3.5 h-3.5 text-zinc-500" })}
-                    {selectedResult.sourceType?.toLowerCase() || 'Unknown'}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-zinc-600">{t('search.results.model')}</span>
-                  <span className="text-xs text-zinc-300 flex items-center gap-1.5">
-                    <Cpu className="w-3.5 h-3.5 text-zinc-500" />
-                    {selectedResult.embeddingModel || 'Unknown'}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-zinc-600">{t('search.results.tokens')}</span>
-                  <span className="text-xs text-zinc-300 flex items-center gap-1.5">
-                    <Hash className="w-3.5 h-3.5 text-zinc-500" />
-                    {selectedResult.tokensCount || 'N/A'}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-zinc-600">{t('search.results.date')}</span>
-                  <span className="text-xs text-zinc-300 flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-zinc-500" />
-                    {selectedResult.createdAt ? new Date(selectedResult.createdAt).toLocaleDateString() : 'N/A'}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-zinc-600">{t('search.results.chunk_id')}</span>
-                  <span className="text-xs text-zinc-400 font-mono truncate" title={selectedResult.id}>
-                    {selectedResult.id.substring(0, 8)}...
-                  </span>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

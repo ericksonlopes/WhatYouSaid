@@ -36,88 +36,88 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        />
-        
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-3xl bg-zinc-950/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[650px] max-h-[90vh]"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-6 py-5 border-b border-white/5 bg-white/[0.02]">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-                <Settings className="w-5 h-5 text-zinc-300" />
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+          
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="relative w-full max-w-3xl bg-zinc-950/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[650px] max-h-[90vh] z-10"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-white/5 bg-white/[0.02]">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <Settings className="w-5 h-5 text-zinc-300" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-white tracking-tight">{t('settings.title')}</h2>
+                  <p className="text-xs text-zinc-500">{t('settings.subtitle')}</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-semibold text-white tracking-tight">{t('settings.title')}</h2>
-                <p className="text-xs text-zinc-500">{t('settings.subtitle')}</p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-full text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Content Area */}
-          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-            {/* Language Selection */}
-            <div className="mb-10">
-              <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-4 px-1 flex items-center gap-2">
-                <Languages className="w-4 h-4" />
-                {t('settings.language.title')}
-              </h3>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => i18n.changeLanguage('en')}
-                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border transition-all ${
-                    i18n.language.startsWith('en')
-                      ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400'
-                      : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 hover:border-zinc-700'
-                  }`}
-                >
-                  <span className="text-xs font-bold uppercase tracking-widest">{t('settings.language.en')}</span>
-                </button>
-                <button
-                  onClick={() => i18n.changeLanguage('pt-BR')}
-                  className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border transition-all ${
-                    i18n.language === 'pt-BR'
-                      ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400'
-                      : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 hover:border-zinc-700'
-                  }`}
-                >
-                  <span className="text-xs font-bold uppercase tracking-widest">{t('settings.language.pt-BR')}</span>
-                </button>
-              </div>
+              <button
+                onClick={onClose}
+                className="p-2 rounded-full text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {loading && !settingsData ? (
-              <div className="flex items-center justify-center h-full gap-3 text-zinc-500 py-20">
-                <Loader2 className="w-5 h-5 animate-spin" />
-                {t('activity.loading')}
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+              {/* Language Selection */}
+              <div className="mb-10">
+                <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-4 px-1 flex items-center gap-2">
+                  <Languages className="w-4 h-4" />
+                  {t('settings.language.title')}
+                </h3>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => i18n.changeLanguage('en')}
+                    className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border transition-all ${
+                      i18n.language.startsWith('en')
+                        ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400'
+                        : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 hover:border-zinc-700'
+                    }`}
+                  >
+                    <span className="text-xs font-bold uppercase tracking-widest">{t('settings.language.en')}</span>
+                  </button>
+                  <button
+                    onClick={() => i18n.changeLanguage('pt-BR')}
+                    className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border transition-all ${
+                      i18n.language === 'pt-BR'
+                        ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400'
+                        : 'bg-zinc-900/50 border-zinc-800 text-zinc-500 hover:border-zinc-700'
+                    }`}
+                  >
+                    <span className="text-xs font-bold uppercase tracking-widest">{t('settings.language.pt-BR')}</span>
+                  </button>
+                </div>
               </div>
-            ) : (
-              <UnifiedSettings settings={settingsData} />
-            )}
-          </div>
-        </motion.div>
-      </div>
+
+              {loading && !settingsData ? (
+                <div className="flex items-center justify-center h-full gap-3 text-zinc-500 py-20">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  {t('activity.loading')}
+                </div>
+              ) : (
+                <UnifiedSettings settings={settingsData} />
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
     </AnimatePresence>
   );
 }

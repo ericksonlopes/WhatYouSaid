@@ -106,6 +106,7 @@
       "origin": "identificador",
       "dimensions": "Dimensões",
       "none": "Nenhuma fonte encontrada.",
+      "pagination": "Exibindo {{start}} a {{end}} de {{total}} resultados",
       "types": {
         "all": "Todos os Tipos",
         "video": "Vídeos",
@@ -130,6 +131,7 @@
     "subtitle": "Status da pipeline de ingestão em tempo real.",
     "loading": "Carregando pipeline de atividade...",
     "none": "Nenhuma atividade recente.",
+    "none_desc": "A pipeline de ingestão está inativa no momento. Inicialize uma fonte de dados para começar o monitoramento.",
     "pagination": "Mostrando {{start}} a {{end}} de {{total}} tarefas",
     "page": "Página {{current}} de {{total}}"
   },

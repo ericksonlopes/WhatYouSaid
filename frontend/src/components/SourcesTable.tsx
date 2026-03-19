@@ -17,6 +17,7 @@ interface SourcesTableProps {
   onSearchSubmit: () => void;
   typeFilter: string;
   onTypeFilterChange: (type: string) => void;
+  emptyMessage?: string;
 }
 
 const getIcon = (type: string) => {
@@ -32,7 +33,8 @@ const getIcon = (type: string) => {
 
 export function SourcesTable({
   sources, totalCount, page, pageSize, onPageChange, onRowClick,
-  searchQuery, onSearchChange, onSearchSubmit, typeFilter, onTypeFilterChange
+  searchQuery, onSearchChange, onSearchSubmit, typeFilter, onTypeFilterChange,
+  emptyMessage
 }: SourcesTableProps) {
   const { t } = useTranslation();
   const { sourceTypes } = useAppContext();
@@ -124,8 +126,9 @@ export function SourcesTable({
             </div>
             <button
               onClick={onSearchSubmit}
-              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-1.5 text-xs font-medium border-l border-border-subtle transition-colors"
+              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-1.5 text-xs font-bold border-l border-border-subtle transition-all active:scale-95 flex items-center gap-2 uppercase tracking-wider"
             >
+              <Search className="w-3.5 h-3.5" />
               {t('common.actions.search')}
             </button>
           </div>
@@ -149,43 +152,63 @@ export function SourcesTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-border-subtle">
-            {sources.map((source) => {
-              const Icon = getIcon(source.type);
-              return (
-                <tr
-                  key={source.id}
-                  onClick={() => onRowClick(source)}
-                  className="hover:bg-panel-hover cursor-pointer transition-colors group"
-                >
-                  <td className="w-14 pl-4 pr-4 py-4 text-center">
-                    <Icon className={`w-6 h-6 text-zinc-500 group-hover:text-emerald-400 transition-colors mx-auto`} />
-                  </td>
-                  <td className="pl-0 pr-6 py-4 font-medium text-zinc-200">{source.title}</td>
-                  <td className="px-6 py-4">
-                    <span className="text-xs text-zinc-400 font-bold uppercase tracking-wider">
-                      {t(`ingestion.sources.${source.type.toLowerCase()}`, { defaultValue: source.type.toUpperCase() })}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-zinc-500 font-mono text-xs truncate max-w-[200px]" title={source.origin || ''}>
-                    {source.origin || 'n/a'}
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono text-xs">{source.chunkCount}</td>
-                  <td className="px-6 py-4 text-center">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${['done', 'finished', 'active', 'ingested'].includes(source.processingStatus.toLowerCase())
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                      : ['failed', 'error'].includes(source.processingStatus.toLowerCase())
-                        ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                        : 'bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse'
-                      }`}>
-                      {source.processingStatus.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-xs font-mono text-zinc-400">{source.model || 'Unknown'}</td>
-                  <td className="px-6 py-4 text-xs font-mono text-zinc-400">{source.dimensions || '-'}</td>
-                  <td className="px-6 py-4 font-mono text-xs">{new Date(source.date).toLocaleDateString()}</td>
-                </tr>
-              );
-            })}
+            {sources.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="py-20 text-center">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+                      <Search className="w-5 h-5 text-zinc-600" />
+                    </div>
+                    <div className="max-w-md mx-auto">
+                      <p className="text-zinc-300 font-medium">{t('sources.table.none')}</p>
+                      {emptyMessage && (
+                        <p className="text-sm text-zinc-500 mt-2 leading-relaxed italic">
+                          {emptyMessage}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              sources.map((source) => {
+                const Icon = getIcon(source.type);
+                return (
+                  <tr
+                    key={source.id}
+                    onClick={() => onRowClick(source)}
+                    className="hover:bg-panel-hover cursor-pointer transition-colors group"
+                  >
+                    <td className="w-14 pl-4 pr-4 py-4 text-center">
+                      <Icon className={`w-6 h-6 text-zinc-500 group-hover:text-emerald-400 transition-colors mx-auto`} />
+                    </td>
+                    <td className="pl-0 pr-6 py-4 font-medium text-zinc-200">{source.title}</td>
+                    <td className="px-6 py-4">
+                      <span className="text-xs text-zinc-400 font-bold uppercase tracking-wider">
+                        {t(`ingestion.sources.${source.type.toLowerCase()}`, { defaultValue: source.type.toUpperCase() })}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-zinc-500 font-mono text-xs truncate max-w-[200px]" title={source.origin || ''}>
+                      {source.origin || 'n/a'}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-xs">{source.chunkCount}</td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${['done', 'finished', 'active', 'ingested'].includes(source.processingStatus.toLowerCase())
+                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        : ['failed', 'error'].includes(source.processingStatus.toLowerCase())
+                          ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse'
+                        }`}>
+                        {source.processingStatus.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-xs font-mono text-zinc-400">{source.model || 'Unknown'}</td>
+                    <td className="px-6 py-4 text-xs font-mono text-zinc-400">{source.dimensions || '-'}</td>
+                    <td className="px-6 py-4 font-mono text-xs">{new Date(source.date).toLocaleDateString()}</td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
@@ -193,7 +216,11 @@ export function SourcesTable({
       {/* Pagination Footer */}
       <div className="p-4 border-t border-border-subtle flex items-center justify-between bg-black/20">
         <span className="text-xs text-zinc-500">
-          Showing <span className="text-zinc-300 font-medium">{startIndex + 1}</span> to <span className="text-zinc-300 font-medium">{endIndex}</span> of <span className="text-zinc-300 font-medium">{totalCount}</span> results
+          {t('sources.table.pagination', { 
+            start: totalCount > 0 ? startIndex + 1 : 0, 
+            end: endIndex, 
+            total: totalCount 
+          })}
         </span>
         <div className="flex items-center gap-2">
           <button
