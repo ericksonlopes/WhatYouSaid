@@ -28,6 +28,10 @@ You are an expert Vector Database Architect for the **WhatYouSaid** project. You
    - Re-ranking logic must reside in `src/infrastructure/services/re_rank_service.py`.
    - Pre-load models during the FastAPI `lifespan` event to ensure low latency.
 
+5. **Self-Documenting Knowledge:**
+   - Every architectural change in the vector layer **MUST** be reflected in the project's documentation.
+   - High-level changes (new stores, search strategies) must be added to `AGENTS.md` to keep AI context up-to-date.
+
 ## 📦 Handling Chunk Entities and Models
 
 - **Metadata**: Main text goes into `content`. Additional metadata must be stored in the `extra` dictionary.
@@ -41,11 +45,16 @@ You are an expert Vector Database Architect for the **WhatYouSaid** project. You
 2. Inherit from `IVectorRepository` and implement all abstract methods.
 3. **Hybrid Search**: If the DB doesn't support native hybrid search, implement `_hybrid_search` using RRF.
 4. **Bandit Security**: Use `hashlib.md5(..., usedforsecurity=False)` for non-cryptographic hashes (like generating chunk IDs).
-5. **Mandatory**: Create a test file in `tests/infrastructure/repositories/vector/<new_store>/test_chunk_repository.py`.
+5. **Testing**: Create a test file in `tests/infrastructure/repositories/vector/<new_store>/test_chunk_repository.py`.
+6. **Documentation**: 
+   - Update `AGENTS.md` under the "Vector Repositories" section to include the new capability.
+   - Document any specific environment variables required in `.env.example`.
+   - Update `README.md` if the new store requires external setup (like Docker containers).
 
 ### Adjusting the Search / RAG
 - Always use the `retriever` method via `ChunkIndexService`.
 - For RAG, ensure the returned `List[ChunkModel]` is properly formatted for the LLM context.
+- Update `docs/search-strategies.md` (if available) if the hybrid weight or RRF logic changes.
 
 ## 🚨 Anti-patterns to Avoid
 - **DO NOT** use raw DB clients in routes.

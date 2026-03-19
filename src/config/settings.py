@@ -1,12 +1,13 @@
 import logging
 from typing import List, Annotated, Optional
-from src.domain.entities.enums.vector_store_type_enum import VectorStoreType
 
-from pydantic import field_validator, Field
+from pydantic import field_validator, Field, BaseModel
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+from src.domain.entities.enums.vector_store_type_enum import VectorStoreType
 
-class SQLConfig(BaseSettings):
+
+class SQLConfig(BaseModel):
     type: Optional[str] = Field(
         default=None, description="SQL database connection type"
     )
@@ -15,9 +16,16 @@ class SQLConfig(BaseSettings):
     user: Optional[str] = Field(default=None, description="SQL database username")
     password: Optional[str] = Field(default=None, description="SQL database password")
     database: str = Field(default="whatyousaid", description="SQL database name")
+    url_override: Optional[str] = Field(
+        default=None, description="Direct SQL connection string (overrides other fields)",
+        alias="url"
+    )
 
     @property
     def url(self) -> str:
+        if self.url_override:
+            return self.url_override
+
         if not self.type:
             return "sqlite:///./data/app/app.sqlite"
 
@@ -39,7 +47,7 @@ class SQLConfig(BaseSettings):
 class VectorConfig(BaseSettings):
     store_type: VectorStoreType = Field(
         default=VectorStoreType.FAISS,
-        description="Type of vector store to use (CHROMA, WEAVIATE, FAISS)",
+        description="Type of vector store to use (CHROMA, WEAVIATE, FAISS, POSTGRES)",
     )
     vector_index_path: str = Field(
         default="./data/app/vector_index",
@@ -63,6 +71,10 @@ class VectorConfig(BaseSettings):
     collection_name_chunks: str = Field(
         default="chunks",
         description="Collection name for YouTube transcripts (used by vector stores like Weaviate)",
+    )
+
+    sql: SQLConfig = Field(
+        default_factory=SQLConfig, description="SQL database connection settings"
     )
 
     @property
@@ -131,7 +143,10 @@ class ModelEmbedding(BaseSettings):
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", env_nested_delimiter="__"
+        env_file=".env", 
+        env_file_encoding="utf-8", 
+        env_nested_delimiter="__",
+        extra="ignore"
     )
     app: App = Field(default_factory=App, description="Application settings")
     vector: VectorConfig = Field(
@@ -143,9 +158,10 @@ class Settings(BaseSettings):
     model_rerank: ModelRerank = Field(
         default_factory=ModelRerank, description="Model rerank settings"
     )
-    sql: SQLConfig = Field(
-        default_factory=SQLConfig, description="SQL database connection settings"
-    )
+
+    @property
+    def sql(self) -> SQLConfig:
+        return self.vector.sql
 
 
 settings = Settings()

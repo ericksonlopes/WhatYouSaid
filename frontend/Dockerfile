@@ -1,13 +1,14 @@
 # Build stage
-FROM node:20-slim AS build
+FROM node:20 AS build
 
 WORKDIR /app
 
-# Copy package files (wildcard makes package-lock.json optional)
+# Copy package files
 COPY package.json package-lock.json* ./
 
-# Install dependencies
-RUN npm install --include=dev
+# Install dependencies 
+# Using install instead of ci because we might not have a consistent lockfile for all platforms yet
+RUN npm install
 
 # Copy source code
 COPY . .

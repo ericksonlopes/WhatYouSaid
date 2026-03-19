@@ -7,3 +7,4 @@ class VectorStoreType(Enum):
     CHROMA = "chroma"
     WEAVIATE = "weaviate"
     FAISS = "faiss"
+    POSTGRES = "postgres"

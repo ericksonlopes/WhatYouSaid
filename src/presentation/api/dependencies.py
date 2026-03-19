@@ -123,6 +123,16 @@ def get_vector_repository(
             index_name="chunks",
         )
 
+    if settings.vector.store_type == VectorStoreType.POSTGRES:
+        from src.infrastructure.repositories.vector.postgres.chunk_repository import (
+            ChunkPostgresRepository,
+        )
+
+        return ChunkPostgresRepository(
+            embedding_service=emb_service,
+            collection_name=settings.vector.collection_name_chunks,
+        )
+
     raise ValueError(f"Unsupported vector store type: {settings.vector.store_type}")
 
 

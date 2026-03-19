@@ -15,6 +15,7 @@ esac
 # Detecta o Banco Vetorial
 case "$VECTOR__STORE_TYPE" in
   "weaviate") EXTRAS="$EXTRAS --extra weaviate" ;;
+  "postgres") EXTRAS="$EXTRAS --extra postgres" ;;
   "faiss")    EXTRAS="$EXTRAS --extra faiss"    ;;
   "chroma")   EXTRAS="$EXTRAS --extra chroma"   ;;
 esac

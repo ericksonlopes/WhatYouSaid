@@ -31,7 +31,7 @@ RUN uv sync --locked --no-dev --no-install-project
 COPY . .
 
 # Make entrypoint executable
-RUN chmod +x scripts/entrypoint.sh
+RUN sed -i 's/\r$//' scripts/entrypoint.sh && chmod +x scripts/entrypoint.sh
 
 # Expose FastAPI port
 EXPOSE 5000
