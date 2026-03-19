@@ -13,6 +13,11 @@ export type IngestionTask = {
   title: string;
   status: TaskStatus;
   progress: number; // 0 to 100
+  currentStep?: number;
+  totalSteps?: number;
+  statusMessage?: string;
+  contentSourceId?: string;
+  chunksCount?: number;
   subjectId: string;
   createdAt: string;
   ingestionType?: string;

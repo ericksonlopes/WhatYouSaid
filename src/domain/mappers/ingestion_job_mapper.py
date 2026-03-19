@@ -24,6 +24,10 @@ class IngestionJobMapper:
             except ValueError:
                 status_enum = None
 
+        source_title = None
+        if hasattr(model, "content_source") and model.content_source:
+            source_title = getattr(model.content_source, "title", None)
+
         return IngestionJobEntity(
             id=cast(UUID, getattr(model, "id")),
             content_source_id=cast(
@@ -38,6 +42,7 @@ class IngestionJobMapper:
             current_step=cast(Optional[int], getattr(model, "current_step", None)),
             total_steps=cast(Optional[int], getattr(model, "total_steps", None)),
             ingestion_type=cast(Optional[str], getattr(model, "ingestion_type", None)),
+            source_title=source_title,
             chunks_count=cast(Optional[int], getattr(model, "chunks_count", None)),
             embedding_model=cast(
                 Optional[str], getattr(model, "embedding_model", None)

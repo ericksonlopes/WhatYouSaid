@@ -37,7 +37,16 @@ const getIcon = (type: string) => {
 
 export function ChunksViewer() {
   const { t } = useTranslation();
-  const { subjects, selectedSubjects, selectedSourceIdForDb, setSelectedSourceIdForDb, sources, addToast, setCurrentView } = useAppContext();
+  const { 
+    subjects, 
+    selectedSourceIdForDb, 
+    setSelectedSourceIdForDb, 
+    sources, 
+    addToast, 
+    setCurrentView,
+    goBack,
+    previousView
+  } = useAppContext();
   const [chunks, setChunks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -141,10 +150,10 @@ export function ChunksViewer() {
         <button 
           onClick={() => {
             setSelectedSourceIdForDb(null);
-            setCurrentView('sources');
+            goBack();
           }}
           className="p-2 rounded-xl bg-zinc-900 border border-border-subtle hover:border-zinc-600 text-zinc-400 hover:text-white transition-all group shadow-sm"
-          title="Return to Sources"
+          title={previousView === 'activity' ? "Return to Activity Monitor" : "Return to Sources"}
         >
           <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
         </button>

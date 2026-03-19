@@ -18,6 +18,7 @@ class IngestionJobEntity(BaseModel):
     current_step: Optional[int] = None
     total_steps: Optional[int] = None
     ingestion_type: Optional[str] = None
+    source_title: Optional[str] = None
     chunks_count: Optional[int] = None
     embedding_model: Optional[str] = None
     pipeline_version: Optional[str] = None

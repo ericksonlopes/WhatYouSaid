@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { Subject, ViewState, Toast, ToastType, ContentSource, IngestionTask, ModelInfo } from '../types';
 import { api } from '../services/api';
+import { useTranslation } from 'react-i18next';
 
 // 1. Estrutura de classes/objetos para gerenciar o estado da aplicação.
 // Utilizamos a Context API do React para simular o st.session_state de forma reativa e tipada.
@@ -10,7 +11,9 @@ interface AppState {
   toggleSubjectSelection: (subject: Subject) => void;
   selectOnlySubject: (subject: Subject) => void;
   currentView: ViewState;
+  previousView: ViewState | null;
   setCurrentView: (view: ViewState) => void;
+  goBack: () => void;
   selectedSourceIdForDb: string | null;
   setSelectedSourceIdForDb: (id: string | null) => void;
   subjects: Subject[];
@@ -21,6 +24,7 @@ interface AppState {
   sources: ContentSource[];
   sourceTypes: string[];
   jobs: IngestionTask[];
+  isJobsLoaded: boolean;
   refreshJobs: () => Promise<void>;
   addOptimisticJob: (title: string) => void;
   toasts: Toast[];
@@ -33,6 +37,7 @@ interface AppState {
 const AppContext = createContext<AppState | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<Subject[]>([]);
   const [sources, setSources] = useState<ContentSource[]>([]);
@@ -46,9 +51,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const initial = validViews.includes(saved) ? saved : 'search';
     return initial;
   });
+  const [previousView, setPreviousView] = useState<ViewState | null>(null);
   const [selectedSourceIdForDb, setSelectedSourceIdForDb] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
+
+  const handleSetCurrentView = useCallback((view: ViewState) => {
+    if (currentView !== view) {
+      setPreviousView(currentView);
+      setCurrentView(view);
+    }
+  }, [currentView]);
+
+  const goBack = useCallback(() => {
+    if (previousView) {
+      setCurrentView(previousView);
+      setPreviousView(null);
+    } else {
+      setCurrentView('sources');
+    }
+  }, [previousView]);
 
   const refreshSubjects = useCallback(async () => {
     try {
@@ -200,7 +222,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.error('Error creating subject:', err);
       addToast(t('notifications.subject.error'), 'error');
     }
-  }, [addToast]);
+  }, [addToast, t]);
 
   return (
     <AppContext.Provider
@@ -209,7 +231,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toggleSubjectSelection,
         selectOnlySubject,
         currentView,
-        setCurrentView,
+        previousView,
+        setCurrentView: handleSetCurrentView,
+        goBack,
         selectedSourceIdForDb,
         setSelectedSourceIdForDb,
         subjects,

@@ -26,6 +26,10 @@
       "completed": "CONCLUÍDO",
       "failed": "FALHOU",
       "cancelled": "CANCELADO"
+    },
+    "time": {
+      "now": "agora mesmo",
+      "ago": "atrás"
     }
   },
   "sidebar": {

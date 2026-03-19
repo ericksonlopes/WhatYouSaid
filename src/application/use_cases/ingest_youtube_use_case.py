@@ -371,7 +371,7 @@ class IngestYoutubeUseCase:
                 job_id=ingestion.id,
                 status=IngestionJobStatus.PROCESSING,
                 status_message=f"Generating embeddings for {len(docs)} chunks...",
-                current_step=3,
+                current_step=2,
                 total_steps=4,
             )
             chunks = self._build_chunk_entities(
@@ -383,7 +383,7 @@ class IngestYoutubeUseCase:
                 job_id=ingestion.id,
                 status=IngestionJobStatus.PROCESSING,
                 status_message="Indexing in vector store...",
-                current_step=4,
+                current_step=3,
                 total_steps=4,
             )
             created_ids = self._index_chunks(chunks)

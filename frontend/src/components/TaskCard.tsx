@@ -1,141 +1,189 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { IngestionTask } from '../types';
-import { CheckCircle2, CircleDashed, Loader2, XCircle, ExternalLink } from 'lucide-react';
+import { 
+  CheckCircle2, Loader2, XCircle, ExternalLink, 
+  Youtube, FileText, Newspaper, BookOpen, Globe, Database, Clock, 
+  Layers, ChevronRight, AlertCircle, Calendar, Hash, Activity
+} from 'lucide-react';
 import { ErrorDetailModal } from './ErrorDetailModal';
-
-// 2. Componente de 'Task Card' dinâmico
-// Muda de cor e ícone baseando-se no enum de status.
+import { useAppContext } from '../store/AppContext';
+import { motion } from 'motion/react';
 
 interface TaskCardProps {
   task: IngestionTask;
-  key?: string | number;
 }
+
+const getSourceIcon = (type?: string) => {
+  switch (type?.toLowerCase()) {
+    case 'youtube': return Youtube;
+    case 'article': return Newspaper;
+    case 'pdf': return FileText;
+    case 'file': return FileText;
+    case 'wikipedia': return BookOpen;
+    case 'web': return Globe;
+    default: return Database;
+  }
+};
+
+const formatRelativeTime = (dateString: string, t: any) => {
+  const normalizedDate = dateString.endsWith('Z') || dateString.includes('+') ? dateString : `${dateString}Z`;
+  const date = new Date(normalizedDate);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (diffInSeconds < 5) return t('common.time.now');
+  if (diffInSeconds < 60) return `${diffInSeconds}s ${t('common.time.ago')}`;
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ${t('common.time.ago')}`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ${t('common.time.ago')}`;
+  return date.toLocaleDateString();
+};
 
 export function TaskCard({ task }: TaskCardProps) {
   const { t } = useTranslation();
+  const { setSelectedSourceIdForDb, setCurrentView } = useAppContext();
   const [isErrorModalOpen, setIsErrorModalOpen] = React.useState(false);
+  
   const statusConfig = {
-    pending: {
-      icon: CircleDashed,
-      textColor: 'text-zinc-400',
-      bgColor: 'bg-zinc-500/10',
-      borderColor: 'border-zinc-500/20',
-      label: t('common.status.pending'),
-      spin: false,
-    },
-    started: {
-      icon: CircleDashed,
-      textColor: 'text-zinc-400',
-      bgColor: 'bg-zinc-500/10',
-      borderColor: 'border-zinc-500/20',
-      label: t('common.status.started'),
-      spin: false,
-    },
-    processing: {
-      icon: Loader2,
-      textColor: 'text-blue-400',
-      bgColor: 'bg-blue-500/10',
-      borderColor: 'border-blue-500/20',
-      label: t('common.status.processing'),
-      spin: true,
-    },
-    finished: {
-      icon: CheckCircle2,
-      textColor: 'text-emerald-400',
-      bgColor: 'bg-emerald-500/10',
-      borderColor: 'border-emerald-500/20',
-      label: t('common.status.completed'),
-      spin: false,
-    },
-    done: {
-      icon: CheckCircle2,
-      textColor: 'text-emerald-400',
-      bgColor: 'bg-emerald-500/10',
-      borderColor: 'border-emerald-500/20',
-      label: t('common.status.completed'),
-      spin: false,
-    },
-    failed: {
-      icon: XCircle,
-      textColor: 'text-rose-400',
-      bgColor: 'bg-rose-500/10',
-      borderColor: 'border-rose-500/20',
-      label: t('common.status.failed'),
-      spin: false,
-    },
-    error: {
-      icon: XCircle,
-      textColor: 'text-rose-400',
-      bgColor: 'bg-rose-500/10',
-      borderColor: 'border-rose-500/20',
-      label: t('common.status.failed'),
-      spin: false,
-    },
-    cancelled: {
-      icon: XCircle,
-      textColor: 'text-zinc-500',
-      bgColor: 'bg-zinc-500/10',
-      borderColor: 'border-zinc-500/20',
-      label: t('common.status.cancelled'),
-      spin: false,
-    },
+    pending: { color: 'text-zinc-500', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20', icon: Clock, label: t('common.status.pending') },
+    started: { color: 'text-blue-400', bg: 'bg-blue-400/10', border: 'border-blue-400/20', icon: Loader2, label: t('common.status.started'), animate: true },
+    processing: { color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/20', icon: Loader2, label: t('common.status.processing'), animate: true },
+    finished: { color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/20', icon: CheckCircle2, label: t('common.status.completed') },
+    done: { color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/20', icon: CheckCircle2, label: t('common.status.completed') },
+    failed: { color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/20', icon: AlertCircle, label: t('common.status.failed') },
+    error: { color: 'text-rose-400', bg: 'bg-rose-400/10', border: 'border-rose-400/20', icon: AlertCircle, label: t('common.status.failed') },
+    cancelled: { color: 'text-zinc-500', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20', icon: XCircle, label: t('common.status.cancelled') }
   };
 
   const config = statusConfig[task.status] || statusConfig.pending;
-  const Icon = config.icon;
+  const isFailed = ['failed', 'error'].includes(task.status);
+  const isProcessing = ['processing', 'started'].includes(task.status);
+  const isCompleted = ['done', 'finished'].includes(task.status);
+  const SourceIcon = getSourceIcon(task.ingestionType);
+
+  const handleClick = () => {
+    if (isFailed) setIsErrorModalOpen(true);
+    else if (isCompleted && task.contentSourceId) {
+      setSelectedSourceIdForDb(task.contentSourceId);
+      setCurrentView('database');
+    }
+  };
 
   return (
     <>
-      <div 
-        onClick={() => (task.status === 'failed' || task.status === 'error') && setIsErrorModalOpen(true)}
-        className={`p-4 rounded-xl border border-border-subtle bg-panel-bg flex flex-col gap-3 transition-all ${
-          (task.status === 'failed' || task.status === 'error') 
-            ? 'hover:bg-rose-500/5 hover:border-rose-500/30 cursor-pointer group' 
-            : 'hover:bg-panel-hover'
+      <motion.div 
+        layout
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -2 }}
+        onClick={handleClick}
+        className={`group relative flex flex-col bg-zinc-900/40 backdrop-blur-md border ${config.border} rounded-2xl p-4 transition-all duration-300 ${
+          isFailed || (isCompleted && task.contentSourceId) ? 'cursor-pointer hover:bg-zinc-800/60' : ''
         }`}
       >
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${config.bgColor} ${config.borderColor} border`}>
-            <Icon className={`w-5 h-5 ${config.textColor} ${config.spin ? 'animate-spin' : ''}`} />
-          </div>
-          <div>
-            <h4 className="text-sm font-medium text-zinc-200">{task.title}</h4>
-            <p className="text-xs text-zinc-500 mt-0.5">ID: {task.id} • {new Date(task.createdAt).toLocaleTimeString()}</p>
-            {((task.status === 'failed' || task.status === 'error')) && task.errorMessage && (
-              <div className="mt-2 flex flex-col gap-1">
-                <p className="text-xs text-rose-400/80 line-clamp-2">{task.errorMessage}</p>
-                <span className="flex items-center gap-1.5 text-[10px] font-bold text-rose-500/60 group-hover:text-rose-400 uppercase tracking-widest transition-colors mt-1">
-                  <ExternalLink className="w-3 h-3" />
-                  View details
+        {/* Top Section: Icon & Identity */}
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`p-2.5 rounded-xl bg-zinc-950 border border-white/5 shadow-inner text-zinc-400 group-hover:text-zinc-200 transition-colors`}>
+              <SourceIcon className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-[13px] font-bold text-zinc-100 truncate leading-tight tracking-tight mb-1" title={task.title}>
+                {task.title}
+              </h4>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md bg-white/5 text-zinc-500 border border-white/5 uppercase tracking-tighter">
+                  {task.ingestionType || 'Unknown'}
+                </span>
+                <span className="text-[9px] font-mono text-zinc-600">
+                  {task.id.substring(0, 8)}
                 </span>
               </div>
+            </div>
+          </div>
+          <div className="flex flex-col items-end shrink-0">
+            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${config.border} ${config.bg} ${config.color} text-[9px] font-black uppercase tracking-widest shadow-sm`}>
+              {config.animate && <config.icon className="w-2.5 h-2.5 animate-spin" />}
+              {!config.animate && <config.icon className="w-2.5 h-2.5" />}
+              {config.label}
+            </div>
+            {isCompleted && (
+              <span className="text-[10px] text-zinc-500 font-medium mt-1 pr-1">
+                {formatRelativeTime(task.createdAt, t)}
+              </span>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {task.ingestionType && (
-            <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700 uppercase tracking-wider">
-              {task.ingestionType}
-            </span>
-          )}
-          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${config.bgColor} ${config.textColor} border ${config.borderColor}`}>
-            {config.label}
-          </span>
-        </div>
-      </div>
 
-      {/* Progress Bar for Processing State */}
-      {task.status === 'processing' && (
-        <div className="w-full bg-zinc-800 rounded-full h-1.5 mt-2 overflow-hidden">
-          <div
-            className="bg-blue-500 h-1.5 rounded-full transition-all duration-500 ease-out"
-            style={{ width: `${task.progress}%` }}
-          ></div>
+        {/* Content Section: Progress or Result */}
+        <div className="flex-1">
+          {isProcessing ? (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center text-[10px] font-bold text-zinc-400">
+                <div className="flex items-center gap-1.5">
+                  <Activity className="w-3 h-3 text-amber-500 animate-pulse" />
+                  <span className="uppercase tracking-wide">{task.statusMessage || t('common.status.processing')}</span>
+                </div>
+                <span className="text-amber-400 font-mono">{task.progress}%</span>
+              </div>
+              <div className="relative h-1.5 w-full bg-zinc-950 rounded-full overflow-hidden border border-white/5 shadow-inner">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${task.progress}%` }}
+                  className="absolute h-full bg-gradient-to-r from-amber-500 to-orange-400 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.4)]"
+                />
+              </div>
+              {task.currentStep && (
+                <div className="flex items-center gap-1 text-[9px] font-bold text-zinc-600 uppercase tracking-widest">
+                  <Layers className="w-2.5 h-2.5" />
+                  <span>Phase {task.currentStep} <ChevronRight className="inline w-2 h-2" /> {task.totalSteps}</span>
+                </div>
+              )}
+            </div>
+          ) : isFailed ? (
+            <div className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/10 group-hover:border-rose-500/30 transition-colors">
+              <p className="text-[11px] text-rose-400/80 leading-relaxed line-clamp-2 italic font-serif">
+                "{task.errorMessage || 'Unknown system failure during ingestion.'}"
+              </p>
+              <div className="mt-2 flex items-center gap-1 text-[9px] font-black text-rose-500/60 uppercase tracking-widest">
+                <AlertCircle className="w-3 h-3" />
+                {t('common.actions.view_details')}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-500/[0.03] border border-emerald-500/10">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                  <span className="text-[11px] text-zinc-400 font-medium">Pipeline optimized</span>
+                </div>
+                {task.chunksCount && (
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-zinc-900 border border-white/5 text-[10px] font-bold text-emerald-400">
+                    <Database className="w-3 h-3" />
+                    <span>{task.chunksCount}</span>
+                  </div>
+                )}
+              </div>
+              {!isCompleted && (
+                 <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 font-medium ml-1">
+                    <Clock className="w-3.5 h-3.5" />
+                    {formatRelativeTime(task.createdAt, t)}
+                 </div>
+              )}
+            </div>
+          )}
         </div>
-      )}
-      </div>
+
+        {/* Hover Action Indicator */}
+        {(isFailed || (isCompleted && task.contentSourceId)) && (
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="p-1 rounded-full bg-white/10 text-white backdrop-blur-md">
+              <ChevronRight className="w-3 h-3" />
+            </div>
+          </div>
+        )}
+      </motion.div>
+
       <ErrorDetailModal 
         isOpen={isErrorModalOpen}
         onClose={() => setIsErrorModalOpen(false)}

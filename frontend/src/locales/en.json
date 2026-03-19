@@ -26,6 +26,10 @@
       "completed": "COMPLETED",
       "failed": "FAILED",
       "cancelled": "CANCELLED"
+    },
+    "time": {
+      "now": "just now",
+      "ago": "ago"
     }
   },
   "sidebar": {

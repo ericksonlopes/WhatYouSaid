@@ -49,9 +49,14 @@ export const api = {
     const data = await response.json();
     return data.map((j: any) => ({
       id: j.id,
-      title: j.status_message || `Job ${j.id}`,
+      title: j.source_title || j.status_message || `Job ${j.id.substring(0, 8)}`,
       status: j.status.toLowerCase() as any, // backend uses uppercase
       progress: j.total_steps ? Math.round((j.current_step / j.total_steps) * 100) : 0,
+      currentStep: j.current_step,
+      totalSteps: j.total_steps,
+      statusMessage: j.status_message,
+      contentSourceId: j.content_source_id || undefined,
+      chunksCount: j.chunks_count || undefined,
       subjectId: '', // Backend doesn't return subject_id directly in the job response model yet
       createdAt: j.created_at,
       ingestionType: j.ingestion_type || undefined,

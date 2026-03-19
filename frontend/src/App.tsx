@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import {ChevronLeft, ChevronRight, Plus, RefreshCw, Search, Database} from 'lucide-react';
+import {ChevronLeft, ChevronRight, Plus, RefreshCw, Search, Database, Activity as ActivityIcon, Loader2, CheckCircle2, AlertCircle} from 'lucide-react';
+import { motion } from 'motion/react';
 import {AppProvider, useAppContext} from './store/AppContext';
 import {Sidebar} from './components/Sidebar';
 import {TaskCard} from './components/TaskCard';
@@ -13,13 +14,52 @@ import {ErrorBoundary} from './components/ErrorBoundary';
 import {ContentSource} from './types';
 
 function ActivityMonitorView() {
-  const { jobs = [], refreshJobs, isJobsLoaded } = useAppContext();
+  const { jobs = [], refreshJobs, isJobsLoaded, sources = [], addToast } = useAppContext();
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
+  const [isSyncing, setIsSyncing] = useState(false);
   const pageSize = 12;
 
-  const totalPages = Math.ceil(jobs.length / pageSize);
-  const paginatedJobs = jobs.slice((page - 1) * pageSize, page * pageSize);
+  const handleRefresh = async () => {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      await refreshJobs?.();
+      addToast(t('notifications.sync.success'), 'success');
+    } catch (err) {
+      addToast(t('notifications.sync.error'), 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const enrichedJobs = React.useMemo(() => {
+    return jobs.map(job => {
+      if (job.contentSourceId) {
+        const source = sources.find(s => s.id === job.contentSourceId);
+        if (source) {
+          return { 
+            ...job, 
+            title: (job.title === job.statusMessage || job.title.includes('Job')) ? source.title : job.title,
+            chunksCount: source.chunkCount || job.chunksCount
+          };
+        }
+      }
+      return job;
+    });
+  }, [jobs, sources]);
+
+  const totalPages = Math.ceil(enrichedJobs.length / pageSize);
+  const paginatedJobs = enrichedJobs.slice((page - 1) * pageSize, page * pageSize);
+
+  const stats = React.useMemo(() => {
+    return {
+      total: enrichedJobs.length,
+      processing: enrichedJobs.filter(j => ['processing', 'started'].includes(j.status)).length,
+      completed: enrichedJobs.filter(j => ['done', 'finished'].includes(j.status)).length,
+      failed: enrichedJobs.filter(j => ['failed', 'error'].includes(j.status)).length
+    };
+  }, [enrichedJobs]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -28,56 +68,122 @@ function ActivityMonitorView() {
   };
 
   return (
-    <div className="p-8 max-w-5xl mx-auto h-full flex flex-col">
-      <div className="mb-8 flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">{t('activity.title')}</h2>
-          <p className="text-zinc-400 mt-1">{t('activity.subtitle')}</p>
+    <div className="p-8 pt-10 max-w-7xl mx-auto h-full flex flex-col">
+      {/* Header & Bento Stats */}
+      <div className="mb-10 space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+              <ActivityIcon className="w-7 h-7 text-emerald-400" />
+            </div>
+            <div>
+              <h2 className="text-3xl font-black text-white tracking-tight leading-none">{t('activity.title')}</h2>
+              <p className="text-zinc-500 text-sm mt-2 font-medium">{t('activity.subtitle')}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+             <div className="flex -space-x-2 mr-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="w-8 h-8 rounded-full border-2 border-bg-dark bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-500">
+                    {String.fromCharCode(65 + i)}
+                  </div>
+                ))}
+             </div>
+             <button 
+                onClick={handleRefresh}
+                disabled={isSyncing}
+                className="group flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-zinc-300 bg-zinc-900 border border-white/5 rounded-lg hover:bg-zinc-800 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${isSyncing ? 'animate-spin text-emerald-400' : 'group-hover:rotate-180'}`} />
+                {isSyncing ? t('common.actions.syncing') : t('common.actions.sync')}
+              </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: 'Pipeline Total', value: stats.total, color: 'text-zinc-400', icon: Database, bg: 'bg-zinc-400/5' },
+            { label: 'Active Tasks', value: stats.processing, color: 'text-amber-400', icon: Loader2, bg: 'bg-amber-400/5', pulse: stats.processing > 0 },
+            { label: 'Successfully Ingested', value: stats.completed, color: 'text-emerald-400', icon: CheckCircle2, bg: 'bg-emerald-400/5' },
+            { label: 'Critical Errors', value: stats.failed, color: 'text-rose-400', icon: AlertCircle, bg: 'bg-rose-400/5' }
+          ].map((stat, i) => (
+            <motion.div 
+              key={i} 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className={`relative overflow-hidden flex flex-col p-5 rounded-2xl border border-white/5 bg-zinc-900/40 backdrop-blur-sm ${stat.bg}`}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <stat.icon className={`w-4 h-4 ${stat.color} ${stat.pulse ? 'animate-spin' : ''}`} />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600">Metric</span>
+              </div>
+              <span className="text-3xl font-mono font-black text-white mb-1 leading-none">{stat.value}</span>
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${stat.color} opacity-80`}>{stat.label}</span>
+              {stat.pulse && <div className="absolute top-0 right-0 w-1 h-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)]" />}
+            </motion.div>
+          ))}
         </div>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {!isJobsLoaded ? (
-            <div className="text-zinc-500 text-sm">{t('activity.loading')}</div>
-          ) : jobs.length === 0 ? (
-            <div className="text-zinc-500 text-sm col-span-2 py-12 text-center bg-panel-bg border border-border-subtle rounded-xl">
-              {t('activity.none')}
+        {!isJobsLoaded && jobs.length === 0 ? (
+          <div className="flex items-center justify-center py-20">
+            <RefreshCw className="w-10 h-10 text-emerald-500 animate-spin opacity-20" />
+          </div>
+        ) : enrichedJobs.length === 0 ? (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-32 text-center bg-zinc-900/20 border border-dashed border-white/5 rounded-3xl"
+          >
+            <div className="w-20 h-20 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center mb-6 shadow-2xl">
+              <ActivityIcon className="w-10 h-10 text-zinc-800" />
             </div>
-          ) : (
-            paginatedJobs.map(task => <TaskCard key={task.id} task={task} />)
-          )}
-        </div>
+            <h3 className="text-zinc-200 font-bold text-xl mb-2">{t('activity.none')}</h3>
+            <p className="text-zinc-500 text-sm max-w-sm mx-auto leading-relaxed">{t('activity.none_desc') || 'The ingestion pipeline is currently dormant. Initialize a data source to begin monitoring.'}</p>
+          </motion.div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-10 mt-6">
+            {paginatedJobs.map(task => <TaskCard key={task.id} task={task} />)}
+          </div>
+        )}
       </div>
 
       {/* Pagination Footer */}
-      {isJobsLoaded && jobs.length > pageSize && (
-        <div className="mt-8 pt-6 border-t border-border-subtle flex items-center justify-between bg-bg-dark">
-          <span className="text-xs text-zinc-500">
-            {t('activity.pagination', { 
-              start: (page - 1) * pageSize + 1, 
-              end: Math.min(page * pageSize, jobs.length), 
-              total: jobs.length 
-            })}
-          </span>
+      {isJobsLoaded && enrichedJobs.length > pageSize && (
+        <div className="mt-auto pt-8 border-t border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <button 
-              onClick={() => handlePageChange(page - 1)}
-              disabled={page === 1}
-              className="p-1.5 rounded-md border border-border-subtle bg-zinc-900/50 hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-xs font-medium text-zinc-400 px-3">
-              {t('activity.page', { current: page, total: totalPages })}
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">
+              Live Monitor Active
             </span>
-            <button 
-              onClick={() => handlePageChange(page + 1)}
-              disabled={page === totalPages}
-              className="p-1.5 rounded-md border border-border-subtle bg-zinc-900/50 hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <span className="text-[11px] text-zinc-500 font-medium">
+              Showing <span className="text-zinc-200 font-bold">{(page - 1) * pageSize + 1}</span> - <span className="text-zinc-200 font-bold">{Math.min(page * pageSize, enrichedJobs.length)}</span> of <span className="text-zinc-200 font-bold">{enrichedJobs.length}</span>
+            </span>
+            <div className="flex items-center gap-1.5 p-1 bg-zinc-950 rounded-xl border border-white/5">
+              <button 
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page === 1}
+                className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-white disabled:opacity-20 transition-all"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <div className="text-[11px] font-black px-3 text-zinc-400">
+                {page} <span className="mx-1 text-zinc-700">/</span> {totalPages}
+              </div>
+              <button 
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page === totalPages}
+                className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-white disabled:opacity-20 transition-all"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -86,7 +192,7 @@ function ActivityMonitorView() {
 }
 
 function ContentSourcesView() {
-  const { setCurrentView, setSelectedSourceIdForDb, sources = [], isSourcesLoaded, refreshSources, selectedSubjects, addToast } = useAppContext();
+  const { setCurrentView, setSelectedSourceIdForDb, sources = [], isSourcesLoaded, refreshSources, refreshSubjects, selectedSubjects, addToast } = useAppContext();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [appliedSearchQuery, setAppliedSearchQuery] = useState('');

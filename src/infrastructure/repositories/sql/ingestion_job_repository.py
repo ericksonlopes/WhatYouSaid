@@ -3,6 +3,8 @@ from typing import Optional, List
 from typing import cast
 from uuid import UUID
 
+from sqlalchemy.orm import joinedload
+
 from src.config.logger import Logger
 from src.infrastructure.repositories.sql.connector import Connector
 from src.infrastructure.repositories.sql.models.ingestion_job import IngestionJobModel
@@ -144,7 +146,12 @@ class IngestionJobSQLRepository:
             try:
                 extra = {"job_id": job_id}
                 logger.debug("Fetching ingestion job by ID", context=extra)
-                result = session.get(IngestionJobModel, job_id)
+                result = (
+                    session.query(IngestionJobModel)
+                    .options(joinedload(IngestionJobModel.content_source))
+                    .filter(IngestionJobModel.id == job_id)
+                    .first()
+                )
                 logger.debug("Fetch successful", context={**extra, "result": result})
                 return result
             except Exception as e:
@@ -160,6 +167,7 @@ class IngestionJobSQLRepository:
                 logger.debug("Listing recent ingestion jobs", context={"limit": limit})
                 result = (
                     session.query(IngestionJobModel)
+                    .options(joinedload(IngestionJobModel.content_source))
                     .order_by(IngestionJobModel.created_at.desc())
                     .limit(limit)
                     .all()
@@ -186,6 +194,7 @@ class IngestionJobSQLRepository:
                 )
                 result = (
                     session.query(IngestionJobModel)
+                    .options(joinedload(IngestionJobModel.content_source))
                     .join(
                         ContentSourceModel,
                         IngestionJobModel.content_source_id == ContentSourceModel.id,
