@@ -4,7 +4,8 @@ import {
   Search, Sparkles, Lock, FileText, PlayCircle, ExternalLink, 
   SlidersHorizontal, Database, TextSearch, Network, ListOrdered, 
   ChevronDown, X, Copy, Check, Languages, Cpu, Hash, Calendar, 
-  Info, Clock, ArrowUpDown, Youtube, BookOpen, Globe, Filter, Newspaper, Loader2
+  Info, Clock, ArrowUpDown, Youtube, BookOpen, Globe, Filter, Newspaper, Loader2,
+  Layers
 } from 'lucide-react';
 import { useAppContext } from '../store/AppContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -39,7 +40,7 @@ const getIcon = (type: string) => {
 };
 
 export function SearchView() {
-  const { selectedSubjects, sources } = useAppContext();
+  const { subjects, selectedSubjects, sources } = useAppContext();
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -72,21 +73,27 @@ export function SearchView() {
       const subjectId = selectedSubjects.length > 0 ? selectedSubjects[0].id : undefined;
       const data = await api.search(currentQuery, topK, subjectId, currentMode, currentUseRerank);
 
-      const mappedResults: SearchResult[] = data.results.map((res: any) => ({
-        id: res.id,
-        source: sourceMap.get(res.external_source) || res.external_source || t('common.status.unknown'),
-        text: res.content || '',
-        score: res.score || 0,
-        index: res.index,
-        timestamp: res.extra?.timestamp || '',
-        type: res.source_type?.toLowerCase() === 'youtube' ? 'video' : 'article',
-        context: res.extra?.subject_name || t('sidebar.contexts.none'),
-        tokensCount: res.tokens_count,
-        language: res.language,
-        embeddingModel: res.embedding_model,
-        createdAt: res.created_at,
-        sourceType: res.source_type
-      }));
+      const mappedResults: SearchResult[] = data.results.map((res: any) => {
+        // Resolve subject name from local subjects list if extra.subject_name is missing
+        const subject = subjects.find(s => s.id === res.subject_id);
+        const subjectName = res.extra?.subject_name || subject?.name || t('sidebar.contexts.none');
+
+        return {
+          id: res.id,
+          source: sourceMap.get(res.external_source) || res.external_source || t('common.status.unknown'),
+          text: res.content || '',
+          score: res.score || 0,
+          index: res.index,
+          timestamp: res.extra?.timestamp || '',
+          type: res.source_type?.toLowerCase() === 'youtube' ? 'video' : 'article',
+          context: subjectName,
+          tokensCount: res.tokens_count,
+          language: res.language,
+          embeddingModel: res.embedding_model,
+          createdAt: res.created_at,
+          sourceType: res.source_type
+        };
+      });
 
       setResults(mappedResults);
     } catch (err) {
@@ -395,6 +402,11 @@ export function SearchView() {
                             {result.language}
                           </span>
                         )}
+                        {/* Knowledge Context Badge */}
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-zinc-800/80 border border-zinc-700/50">
+                          <Layers className="w-3 h-3 text-emerald-500/70" />
+                          <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">{result.context}</span>
+                        </div>
                         {result.tokensCount && (
                           <span className="text-[10px] text-zinc-500 flex items-center gap-1">
                             <Hash className="w-3 h-3" />
@@ -533,9 +545,15 @@ export function SearchView() {
                     }
                   </span>
                 </div>
+
+                {/* Knowledge Context Badge in Modal */}
+                <div className="flex items-center gap-2 flex-shrink-0 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-lg">
+                  <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-[11px] font-black text-emerald-400 uppercase tracking-widest">{selectedResult.context}</span>
+                </div>
                 
                 {selectedResult.timestamp && (
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-500/80 font-mono bg-emerald-500/10 px-2 py-0.5 rounded flex-shrink-0 border border-emerald-500/20">
+                  <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-mono bg-zinc-800/50 px-2.5 py-1 rounded-md flex-shrink-0 border border-zinc-700/50">
                     <Clock className="w-3.5 h-3.5" />
                     {selectedResult.timestamp}
                   </div>
@@ -563,12 +581,19 @@ export function SearchView() {
                   <span className="w-1 h-3 bg-emerald-500 rounded-full" />
                   {t('search.results.metadata')}
                 </h4>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                   <div className="flex flex-col gap-1">
                     <span className="text-[10px] text-zinc-600">{t('search.results.type')}</span>
                     <span className="text-xs text-zinc-300 flex items-center gap-1.5 capitalize">
                       {React.createElement(getIcon(selectedResult.sourceType || ''), { className: "w-3.5 h-3.5 text-zinc-500" })}
                       {selectedResult.sourceType?.toLowerCase() || 'Unknown'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-zinc-600">{t('search.results.knowledge_context')}</span>
+                    <span className="text-xs text-zinc-300 flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-emerald-500/70" />
+                      {selectedResult.context}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">

@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Brain, Briefcase, ChefHat, Cpu, Landmark, Lightbulb, Activity, Hash } from 'lucide-react';
+import {
+  X, Brain, Briefcase, ChefHat, Cpu, Landmark, Lightbulb, Activity, Hash,
+  Database, Book, Globe, Zap, Shield, Search, Code, MessageSquare, Layout,
+  Layers, HardDrive, Cloud, Lock, User, Users, Target, Award, GraduationCap,
+  Music, Video, Image, FileText, Mail, Terminal, Bug
+} from 'lucide-react';
 import { useAppContext } from '../store/AppContext';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -18,6 +23,31 @@ const ICONS = [
   { name: 'Lightbulb', icon: Lightbulb },
   { name: 'Activity', icon: Activity },
   { name: 'Hash', icon: Hash },
+  { name: 'Database', icon: Database },
+  { name: 'Book', icon: Book },
+  { name: 'Globe', icon: Globe },
+  { name: 'Zap', icon: Zap },
+  { name: 'Shield', icon: Shield },
+  { name: 'Search', icon: Search },
+  { name: 'Code', icon: Code },
+  { name: 'MessageSquare', icon: MessageSquare },
+  { name: 'Layout', icon: Layout },
+  { name: 'Layers', icon: Layers },
+  { name: 'HardDrive', icon: HardDrive },
+  { name: 'Cloud', icon: Cloud },
+  { name: 'Lock', icon: Lock },
+  { name: 'User', icon: User },
+  { name: 'Users', icon: Users },
+  { name: 'Target', icon: Target },
+  { name: 'Award', icon: Award },
+  { name: 'GraduationCap', icon: GraduationCap },
+  { name: 'Music', icon: Music },
+  { name: 'Video', icon: Video },
+  { name: 'Image', icon: Image },
+  { name: 'FileText', icon: FileText },
+  { name: 'Mail', icon: Mail },
+  { name: 'Terminal', icon: Terminal },
+  { name: 'Bug', icon: Bug },
 ];
 
 export function AddSubjectModal({ isOpen, onClose }: AddSubjectModalProps) {
@@ -60,18 +90,18 @@ export function AddSubjectModal({ isOpen, onClose }: AddSubjectModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2 }}
-            className="w-full max-w-md bg-[#18181b] border border-border-subtle rounded-2xl shadow-2xl overflow-hidden flex flex-col relative z-10"
+            className="w-full max-w-sm bg-[#18181b] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col relative z-10"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-5 border-b border-border-subtle bg-black/20">
+            <div className="flex items-center justify-between p-5 border-b border-white/5 bg-black/20">
               <div>
                 <h2 className="text-lg font-semibold text-zinc-100">{t('sidebar.contexts.new')}</h2>
-                <p className="text-xs text-zinc-500 mt-1">Create a new context to organize your data</p>
+                <p className="text-[10px] text-zinc-500 mt-1 uppercase tracking-widest font-bold">Create a new context to organize your data</p>
               </div>
               <button 
                 onClick={onClose}
-                className="p-2 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-panel-hover transition-colors"
+                className="p-2 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-white/5 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -80,8 +110,8 @@ export function AddSubjectModal({ isOpen, onClose }: AddSubjectModalProps) {
             {/* Form */}
             <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5">
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Name <span className="text-emerald-500">*</span>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-2">
+                  {t('knowledge_contexts.name_label')} <span className="text-emerald-500">*</span>
                 </label>
                 <input 
                   type="text" 
@@ -89,61 +119,61 @@ export function AddSubjectModal({ isOpen, onClose }: AddSubjectModalProps) {
                   autoFocus
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g., Personal Finance, Huberman Lab..." 
-                  className="w-full bg-black/40 border border-border-subtle rounded-xl px-4 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-zinc-600"
+                  placeholder={t('knowledge_contexts.placeholder_name')} 
+                  className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-emerald-500/50 transition-all placeholder:text-zinc-700 font-bold"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Description <span className="text-zinc-500 font-normal">(Optional)</span>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-2">
+                  {t('knowledge_contexts.description_label')} <span className="text-zinc-700 font-normal">(Optional)</span>
                 </label>
                 <textarea 
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What kind of knowledge will live here?" 
+                  placeholder={t('knowledge_contexts.placeholder_description')} 
                   rows={2}
-                  className="w-full bg-black/40 border border-border-subtle rounded-xl px-4 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-zinc-600 resize-none"
+                  className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-emerald-500/50 transition-all placeholder:text-zinc-700 resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-3">
-                  Icon
+                <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-600 mb-3">
+                  {t('knowledge_contexts.icon_label')}
                 </label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-6 gap-2 max-h-[160px] overflow-y-auto custom-scrollbar p-1">
                   {ICONS.map(({ name: iconName, icon: Icon }) => (
                     <button
                       key={iconName}
                       type="button"
                       onClick={() => setSelectedIcon(iconName)}
-                      className={`group flex items-center justify-center p-3 rounded-xl border transition-all ${
+                      className={`group flex items-center justify-center p-2.5 rounded-xl border transition-all ${
                         selectedIcon === iconName
                           ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400'
-                          : 'bg-black/40 border-border-subtle text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
+                          : 'bg-black/40 border-white/5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200'
                       }`}
                     >
-                      <Icon className={`w-5 h-5 transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6 ${selectedIcon === iconName ? 'scale-110 -rotate-6' : ''}`} />
+                      <Icon className={`w-4 h-4 transition-transform duration-200 group-hover:scale-110 ${selectedIcon === iconName ? 'scale-110' : ''}`} />
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Footer Actions */}
-              <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-border-subtle">
+              <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-white/5">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-100 transition-colors"
+                  className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-zinc-300 transition-colors"
                 >
                   {t('common.actions.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={!name.trim()}
-                  className="px-5 py-2 text-sm font-medium text-black bg-emerald-500 rounded-xl hover:bg-emerald-400 transition-all shadow-[0_0_15px_rgba(16,185,129,0.15)] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                  className="px-6 py-2 text-sm font-black text-black bg-emerald-500 rounded-xl hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none uppercase tracking-wider"
                 >
-                  Create Context
+                  {t('common.actions.save')}
                 </button>
               </div>
             </form>

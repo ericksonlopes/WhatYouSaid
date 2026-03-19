@@ -86,19 +86,20 @@
     },
     "results": {
       "title": "Search Results",
-      "total": "results found",
+      "total": "Results Found",
       "none": "No results found for your query.",
       "score": "Score",
       "source": "Source",
       "id": "ID",
-      "match": "MATCH",
-      "hybrid_label": "HYBRID",
+      "match": "match",
+      "hybrid_label": "hybrid score",
       "metadata": "System Metadata",
       "type": "Source Type",
       "model": "Embedding Model",
-      "tokens": "Tokens Count",
-      "date": "Ingested At",
-      "chunk_id": "Chunk ID"
+      "tokens": "Token Count",
+      "date": "Ingested On",
+      "chunk_id": "Chunk ID",
+      "knowledge_context": "Knowledge Context"
     }
   },
   "sources": {

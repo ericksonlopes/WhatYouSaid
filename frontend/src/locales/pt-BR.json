@@ -86,19 +86,20 @@
     },
     "results": {
       "title": "Resultados da Busca",
-      "total": "resultados encontrados",
+      "total": "Resultados Encontrados",
       "none": "Nenhum resultado encontrado para sua busca.",
       "score": "Score",
       "source": "Fonte",
       "id": "ID",
-      "match": "CORRESPONDÊNCIA",
-      "hybrid_label": "HÍBRIDO",
+      "match": "match",
+      "hybrid_label": "pontuação híbrida",
       "metadata": "Metadados do Sistema",
       "type": "Tipo de Fonte",
       "model": "Modelo de Embedding",
       "tokens": "Contagem de Tokens",
       "date": "Ingerido em",
-      "chunk_id": "ID do Chunk"
+      "chunk_id": "ID do Chunk",
+      "knowledge_context": "Base de Conhecimento"
     }
   },
   "sources": {
