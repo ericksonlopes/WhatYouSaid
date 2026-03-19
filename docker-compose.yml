@@ -10,14 +10,15 @@ services:
     env_file:
       - .env
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
     environment:
-      - APP__ENV=production
-      - APP__LIST_LOG_LEVELS=INFO,DEBUG,WARNING,ERROR,CRITICAL
-      - MODEL_EMBEDDING__NAME=${MODEL_EMBEDDING__NAME:-BAAI/bge-m3}
+      - APP__ENV=${APP__ENV:-production}
+      - APP__LIST_LOG_LEVELS=${APP__LIST_LOG_LEVELS:-INFO,WARNING,ERROR,CRITICAL}
+      - MODEL_EMBEDDING__NAME=${MODEL_EMBEDDING__NAME:-paraphrase-multilingual-MiniLM-L12-v2}
       - VECTOR__STORE_TYPE=${VECTOR__STORE_TYPE:-faiss}
       - VECTOR__COLLECTION_NAME_CHUNKS=${VECTOR__COLLECTION_NAME_CHUNKS:-chunks}
       - VECTOR__WEAVIATE_HOST=${VECTOR__WEAVIATE_HOST:-weaviate}
