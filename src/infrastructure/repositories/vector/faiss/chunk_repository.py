@@ -377,6 +377,9 @@ class ChunkFAISSRepository(IVectorRepository):
                     model = mapper.document_to_model(doc)
                     chunks.append(model)
 
+            # Sort by index if present
+            chunks.sort(key=lambda x: x.index if x.index is not None else float('inf'))
+
             return chunks
 
         except Exception as e:

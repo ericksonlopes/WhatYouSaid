@@ -29,6 +29,7 @@ class ChunkIndexSQLRepository:
                         content_source_id=ch.get("content_source_id"),
                         job_id=ch.get("job_id"),
                         chunk_id=ch.get("chunk_id"),
+                        index=ch.get("index"),
                         content=content_val,
                         chars=ch.get("chars", content_size),
                         tokens_count=ch.get("tokens_count"),
@@ -77,7 +78,7 @@ class ChunkIndexSQLRepository:
                 session.query(ChunkIndexModel)
                 .options(joinedload(ChunkIndexModel.content_source))
                 .filter_by(content_source_id=content_source_id)
-                .order_by(ChunkIndexModel.created_at.asc())
+                .order_by(ChunkIndexModel.index.asc(), ChunkIndexModel.created_at.asc())
             )
             if offset is not None:
                 query = query.offset(offset)

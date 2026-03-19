@@ -20,6 +20,9 @@ class ChunkModel(BaseModel):
     subject_id: Optional[UUID] = Field(
         description="Optional subject or category for the chunk"
     )
+    index: Optional[int] = Field(
+        default=None, description="Original sequence number of the chunk within the source"
+    )
 
     content: Optional[str] = Field(description="Text content of the chunk")
     tokens_count: Optional[int] = Field(

@@ -31,6 +31,9 @@ class ChunkEntity(BaseModel):
     chunk_id: Optional[str] = Field(
         default=None, description="External reference ID for the chunk"
     )
+    index: Optional[int] = Field(
+        default=None, description="Original sequence number of the chunk within the source"
+    )
     content: Optional[str] = Field(default=None)
     tokens_count: Optional[int] = Field(default=None)
     extra: Dict[str, Any] = Field(default_factory=dict)

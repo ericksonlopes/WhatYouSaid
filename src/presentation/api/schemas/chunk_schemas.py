@@ -8,6 +8,7 @@ class ChunkResponse(BaseModel):
     id: UUID
     content_source_id: UUID
     chunk_id: Optional[str] = None
+    index: Optional[int] = None
     content: Optional[str] = None
     tokens_count: Optional[int] = None
     created_at: datetime

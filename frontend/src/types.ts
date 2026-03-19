@@ -52,6 +52,7 @@ export type Citation = {
   id: string;
   sourceId: string;
   title: string;
+  index?: number;
   timestamp?: string;
   textSnippet: string;
   relevanceScore: number;
@@ -69,4 +70,14 @@ export type ModelInfo = {
   name: string;
   dimensions: number;
   max_seq_length: number;
+};
+
+export type Chunk = {
+  id: string;
+  content_source_id: string;
+  chunk_id?: string;
+  index?: number;
+  content: string;
+  tokens_count?: number;
+  created_at: string;
 };

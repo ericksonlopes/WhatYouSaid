@@ -617,7 +617,7 @@ class IngestYoutubeUseCase:
         job_id: UUID,
     ) -> List[ChunkEntity]:
         list_chunks: List[ChunkEntity] = []
-        for doc in docs:
+        for i, doc in enumerate(docs):
             chunk_entity = ChunkEntity(
                 id=uuid.uuid4(),
                 job_id=job_id,
@@ -625,6 +625,7 @@ class IngestYoutubeUseCase:
                 source_type=SourceType(source.source_type),
                 external_source=source.external_source,
                 subject_id=subject.id,
+                index=i,
                 content=doc.page_content,
                 tokens_count=doc.metadata.get("token_count"),
                 extra={**doc.metadata, "vector_store_type": self.vector_store_type},

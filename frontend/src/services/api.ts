@@ -1,4 +1,4 @@
-import { Subject, IngestionTask, ContentSource, ChatMessage } from '../types';
+import { Subject, IngestionTask, ContentSource, ChatMessage, Chunk } from '../types';
 
 const API_BASE_URL = '/rest';
 
@@ -103,7 +103,7 @@ export const api = {
     return response.json();
   },
 
-  async fetchChunks(sourceId?: string, limit: number = 100, offset: number = 0, query?: string): Promise<any[]> {
+  async fetchChunks(sourceId?: string, limit: number = 100, offset: number = 0, query?: string): Promise<Chunk[]> {
     const url = new URL(`${API_BASE_URL}/chunks`, window.location.origin);
     if (sourceId) url.searchParams.append('source_id', sourceId);
     if (query) url.searchParams.append('q', query);

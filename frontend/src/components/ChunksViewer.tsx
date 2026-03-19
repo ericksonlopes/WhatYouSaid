@@ -23,6 +23,7 @@ import {useAppContext} from '../store/AppContext';
 import { useTranslation } from 'react-i18next';
 import {AnimatePresence, motion} from 'motion/react';
 import { api } from '../services/api';
+import { Chunk } from '../types';
 
 const getIcon = (type: string) => {
   switch (type.toLowerCase()) {
@@ -47,12 +48,12 @@ export function ChunksViewer() {
     goBack,
     previousView
   } = useAppContext();
-  const [chunks, setChunks] = useState<any[]>([]);
+  const [chunks, setChunks] = useState<Chunk[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedChunk, setSelectedChunk] = useState<any>(null);
+  const [selectedChunk, setSelectedChunk] = useState<Chunk | null>(null);
   const [editContent, setEditContent] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const pageSize = 10;
@@ -111,7 +112,7 @@ export function ChunksViewer() {
     }
   };
 
-  const handleEdit = (chunk: any) => {
+  const handleEdit = (chunk: Chunk) => {
     setSelectedChunk(chunk);
     setEditContent(chunk.content);
     setIsModalOpen(true);
@@ -213,7 +214,7 @@ export function ChunksViewer() {
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-400 font-bold font-mono">
-                          #{(page - 1) * pageSize + index + 1}
+                          #{chunk.index !== undefined ? chunk.index + 1 : (page - 1) * pageSize + index + 1}
                         </span>
                         <span className="px-2 py-0.5 rounded bg-zinc-800/50 border border-zinc-700/50 text-[10px] text-zinc-400 whitespace-nowrap">
                           {chunk.content.length} chars

@@ -72,6 +72,7 @@ def _build_entity_kwargs(
             cs_meta.get("external_source") or getattr(model, "chunk_id", None),
         ),
         "subject_id": cast(Optional[UUID], cs_meta.get("subject_id")),
+        "index": cast(Optional[int], getattr(model, "index", None)),
         "content": cast(Optional[str], getattr(model, "content", None)),
         "tokens_count": cast(Optional[int], getattr(model, "tokens_count", None)),
         "chunk_id": cast(Optional[str], getattr(model, "chunk_id", None)),

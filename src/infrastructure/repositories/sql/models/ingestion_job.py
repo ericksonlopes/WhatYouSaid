@@ -37,6 +37,7 @@ class IngestionJobModel(Base):
     total_steps = Column(Integer, nullable=True)
     chunks_count = Column(Integer, nullable=True)
     ingestion_type = Column(Text, nullable=True)
+    source_title = Column(Text, nullable=True)
 
     embedding_model = Column(Text, nullable=True)
     vector_store_type = Column(Text, nullable=True)

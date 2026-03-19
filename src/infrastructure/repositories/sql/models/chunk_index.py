@@ -35,6 +35,7 @@ class ChunkIndexModel(Base):
         nullable=False,
     )
     chunk_id = Column(Text, nullable=False)
+    index = Column(Integer, nullable=True)
     content = Column(Text, nullable=True)
     chars = Column(Integer, nullable=False, server_default=text("0"))
     tokens_count = Column(Integer, nullable=True)
