@@ -661,6 +661,47 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
                                                         <div
                                                             className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                                             
+                                                            {/* File Format Selection */}
+                                                            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                                                                {[
+                                                                    {id: 'pdf', icon: FileText, ext: '.pdf'},
+                                                                    {id: 'docx', icon: FileText, ext: '.docx,.doc'},
+                                                                    {id: 'pptx', icon: Presentation, ext: '.pptx,.ppt'},
+                                                                    {id: 'xlsx', icon: FileSpreadsheet, ext: '.xlsx,.xls'},
+                                                                    {id: 'markdown', icon: FileTerminal, ext: '.md,.markdown'},
+                                                                    {id: 'csv', icon: FileSpreadsheet, ext: '.csv'},
+                                                                    {id: 'html', icon: Globe, ext: '.html,.htm'},
+                                                                    {id: 'image', icon: FileImage, ext: '.jpg,.jpeg,.png'},
+                                                                    {id: 'txt', icon: FileText, ext: '.txt'},
+                                                                    {id: 'other', icon: FileUp, ext: '*/*'},
+                                                                ].map((format) => {
+                                                                    const Icon = format.icon;
+                                                                    return (
+                                                                        <button
+                                                                            key={format.id}
+                                                                            type="button"
+                                                                            onClick={() => setSelectedFileFormat(format.id as ContentType)}
+                                                                            title={t(`ingestion.sources.${format.id}`)}
+                                                                            className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${
+                                                                                selectedFileFormat === format.id 
+                                                                                ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' 
+                                                                                : 'bg-black/20 border-zinc-800 text-zinc-500 hover:border-zinc-700'
+                                                                            }`}
+                                                                        >
+                                                                            <Icon className="w-5 h-5"/>
+                                                                            <span className="text-[9px] font-bold uppercase">
+                                                                                {format.id === 'markdown' ? 'MD' : 
+                                                                                 format.id === 'other' ? t('ingestion.sources.other') : 
+                                                                                 format.id === 'docx' ? 'Word' :
+                                                                                 format.id === 'xlsx' ? 'Excel' :
+                                                                                 format.id === 'pptx' ? 'PPT' :
+                                                                                 format.id}
+                                                                            </span>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+
                                                             {/* Toggle between Upload and URL */}
                                                             <div className="flex p-0.5 bg-black/40 rounded-xl border border-zinc-800/50 w-full mb-4">
                                                                 <button
