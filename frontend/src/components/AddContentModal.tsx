@@ -262,6 +262,7 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
     const [activeStrategy, setActiveStrategy] = useState<string>('balanced');
     const [activeTab, setActiveTab] = useState<'source' | 'settings'>('source');
     const [youtubeDataType, setYoutubeDataType] = useState<'video' | 'playlist'>('video');
+    const [fileInputMode, setFileInputMode] = useState<'upload' | 'url'>('upload');
 
     const strategyProps = {
         tokensPerChunk,
@@ -298,6 +299,40 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
             return;
         } 
         
+        if (contentType === 'pdf' && fileInputMode === 'url' && inputValue.trim()) {
+            // URL ingestion for files
+            setUploadStatus('chunking');
+            setProgress(30);
+
+            try {
+                if (typeof (api as any).ingestFileByUrl !== 'function') {
+                    console.error('API Error: ingestFileByUrl is missing', api);
+                    throw new Error('Internal Error: ingestFileByUrl is missing from API service');
+                }
+                
+                await (api as any).ingestFileByUrl({
+                    file_url: inputValue,
+                    subject_id: targetSubject.id,
+                    tokens_per_chunk: tokensPerChunk,
+                    tokens_overlap: tokensOverlap,
+                    language: 'pt'
+                });
+                setProgress(100);
+                setUploadStatus('done');
+                addToast(t('ingestion.messages.success'), 'success');
+                setTimeout(() => {
+                    setInputValue('');
+                    setUploadStatus('idle');
+                    setProgress(0);
+                    onClose();
+                }, 500);
+            } catch (err: any) {
+                setUploadStatus('idle');
+                addToast(t('ingestion.messages.error') + ': ' + (err.message || err), 'error');
+            }
+            return;
+        }
+
         if (selectedFile) {
             // Real file ingestion
             setUploadStatus('chunking');
@@ -372,7 +407,9 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
 
     const isSubmitDisabled = !selectedSource?.enabled || 
         (contentType === 'youtube' && !inputValue.trim()) || 
-        (contentType !== 'youtube' && !selectedFile) || 
+        (contentType === 'pdf' && fileInputMode === 'upload' && !selectedFile) || 
+        (contentType === 'pdf' && fileInputMode === 'url' && !inputValue.trim()) ||
+        (contentType !== 'youtube' && contentType !== 'pdf' && !selectedFile) ||
         uploadStatus !== 'idle';
 
     return (
@@ -624,114 +661,129 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
                                                         <div
                                                             className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                                             
-                                                            {/* File Format Selection */}
-                                                            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-                                                                {[
-                                                                    {id: 'pdf', icon: FileText, ext: '.pdf'},
-                                                                    {id: 'docx', icon: FileText, ext: '.docx,.doc'},
-                                                                    {id: 'pptx', icon: Presentation, ext: '.pptx,.ppt'},
-                                                                    {id: 'xlsx', icon: FileSpreadsheet, ext: '.xlsx,.xls'},
-                                                                    {id: 'markdown', icon: FileTerminal, ext: '.md,.markdown'},
-                                                                    {id: 'csv', icon: FileSpreadsheet, ext: '.csv'},
-                                                                    {id: 'html', icon: Globe, ext: '.html,.htm'},
-                                                                    {id: 'image', icon: FileImage, ext: '.jpg,.jpeg,.png'},
-                                                                    {id: 'txt', icon: FileText, ext: '.txt'},
-                                                                    {id: 'other', icon: FileUp, ext: '*/*'},
-                                                                ].map((format) => {
-                                                                    const Icon = format.icon;
-                                                                    return (
-                                                                        <button
-                                                                            key={format.id}
-                                                                            type="button"
-                                                                            onClick={() => setSelectedFileFormat(format.id as ContentType)}
-                                                                            title={t(`ingestion.sources.${format.id}`)}
-                                                                            className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${
-                                                                                selectedFileFormat === format.id 
-                                                                                ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' 
-                                                                                : 'bg-black/20 border-zinc-800 text-zinc-500 hover:border-zinc-700'
-                                                                            }`}
-                                                                        >
-                                                                            <Icon className="w-5 h-5"/>
-                                                                            <span className="text-[9px] font-bold uppercase">
-                                                                                {format.id === 'markdown' ? 'MD' : 
-                                                                                 format.id === 'other' ? t('ingestion.sources.other') : 
-                                                                                 format.id === 'docx' ? 'Word' :
-                                                                                 format.id === 'xlsx' ? 'Excel' :
-                                                                                 format.id === 'pptx' ? 'PPT' :
-                                                                                 format.id}
-                                                                            </span>
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </div>
-
-                                                            {!selectedFile ? (
-                                                                <div
-                                                                    onDragOver={handleDragOver}
-                                                                    onDragLeave={handleDragLeave}
-                                                                    onDrop={handleDrop}
-                                                                    className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-colors ${
-                                                                        isDragging ? 'border-emerald-500 bg-emerald-500/5' : 'border-zinc-700 hover:border-zinc-500 bg-black/20'
+                                                            {/* Toggle between Upload and URL */}
+                                                            <div className="flex p-0.5 bg-black/40 rounded-xl border border-zinc-800/50 w-full mb-4">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setFileInputMode('upload')}
+                                                                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-[11px] font-bold rounded-lg transition-all ${
+                                                                        fileInputMode === 'upload' ? 'bg-zinc-800 text-emerald-400 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'
                                                                     }`}
                                                                 >
-                                                                    <UploadCloud
-                                                                        className={`w-10 h-10 mb-3 ${isDragging ? 'text-emerald-400' : 'text-zinc-500'}`}/>
-                                                                    <p className="text-sm font-medium text-zinc-300 mb-1">
-                                                                        {t('common.actions.upload')} {t(`ingestion.sources.${selectedFileFormat}`)}
-                                                                    </p>
-                                                                    <p className="text-xs text-zinc-500 mb-4">{t('ingestion.options.types.file_support')}</p>
-                                                                    <label
-                                                                        className="cursor-pointer px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-medium rounded-lg transition-colors border border-zinc-700">
-                                                                        {t('common.actions.addData')}
-                                                                        <input type="file" className="hidden"
-                                                                               accept={
-                                                                                   selectedFileFormat === 'pdf' ? '.pdf' :
-                                                                                   selectedFileFormat === 'docx' ? '.docx,.doc' :
-                                                                                   selectedFileFormat === 'pptx' ? '.pptx,.ppt' :
-                                                                                   selectedFileFormat === 'xlsx' ? '.xlsx,.xls' :
-                                                                                   selectedFileFormat === 'markdown' ? '.md,.markdown' :
-                                                                                   selectedFileFormat === 'csv' ? '.csv' :
-                                                                                   selectedFileFormat === 'html' ? '.html,.htm' :
-                                                                                   selectedFileFormat === 'image' ? '.jpg,.jpeg,.png,.webp' : 
-                                                                                   selectedFileFormat === 'txt' ? '.txt' : '*/*'
-                                                                               }
-                                                                               onChange={handleFileChange}/>
-                                                                    </label>
-                                                                </div>
-                                                            ) : (
-                                                                <div
-                                                                    className="bg-black/40 border border-zinc-800 rounded-xl p-4 animate-in fade-in zoom-in-95 duration-200">
-                                                                    <div className="flex items-center justify-between mb-4">
-                                                                        <div className="flex items-center gap-3">
-                                                                            <div className="p-2 bg-emerald-500/10 rounded-lg">
-                                                                                <FileText className="w-5 h-5 text-emerald-400"/>
-                                                                            </div>
-                                                                            <div>
-                                                                                <p className="text-sm font-medium text-zinc-200">{selectedFile.name}</p>
-                                                                                <p className="text-xs text-zinc-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                                                                            </div>
-                                                                        </div>
-                                                                        {uploadStatus === 'idle' && (
-                                                                            <button type="button"
-                                                                                    onClick={() => setSelectedFile(null)}
-                                                                                    className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors">
-                                                                                <X className="w-4 h-4"/>
-                                                                            </button>
-                                                                        )}
-                                                                    </div>
+                                                                    <FileUp className="w-3.5 h-3.5"/>
+                                                                    {t('common.actions.upload')}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setFileInputMode('url')}
+                                                                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-[11px] font-bold rounded-lg transition-all ${
+                                                                        fileInputMode === 'url' ? 'bg-zinc-800 text-emerald-400 shadow-sm' : 'text-zinc-500 hover:text-zinc-300'
+                                                                    }`}
+                                                                >
+                                                                    <Globe className="w-3.5 h-3.5"/>
+                                                                    URL
+                                                                </button>
+                                                            </div>
 
-                                                                    {uploadStatus !== 'idle' && (
-                                                                        <div className="space-y-2">
-                                                                            <div
-                                                                                className="flex justify-between text-xs font-medium">
+                                                            {fileInputMode === 'upload' ? (
+                                                                <>
+                                                                    {!selectedFile ? (
+                                                                        <div
+                                                                            onDragOver={handleDragOver}
+                                                                            onDragLeave={handleDragLeave}
+                                                                            onDrop={handleDrop}
+                                                                            className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-colors ${
+                                                                                isDragging ? 'border-emerald-500 bg-emerald-500/5' : 'border-zinc-700 hover:border-zinc-500 bg-black/20'
+                                                                            }`}
+                                                                        >
+                                                                            <UploadCloud
+                                                                                className={`w-10 h-10 mb-3 ${isDragging ? 'text-emerald-400' : 'text-zinc-500'}`}/>
+                                                                            <p className="text-sm font-medium text-zinc-300 mb-1">
+                                                                                {t('common.actions.upload')} {t(`ingestion.sources.${selectedFileFormat}`)}
+                                                                            </p>
+                                                                            <p className="text-xs text-zinc-500 mb-4">{t('ingestion.options.types.file_support')}</p>
+                                                                            <label
+                                                                                className="cursor-pointer px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-sm font-medium rounded-lg transition-colors border border-zinc-700">
+                                                                                {t('common.actions.addData')}
+                                                                                <input type="file" className="hidden"
+                                                                                       accept={
+                                                                                           selectedFileFormat === 'pdf' ? '.pdf' :
+                                                                                           selectedFileFormat === 'docx' ? '.docx,.doc' :
+                                                                                           selectedFileFormat === 'pptx' ? '.pptx,.ppt' :
+                                                                                           selectedFileFormat === 'xlsx' ? '.xlsx,.xls' :
+                                                                                           selectedFileFormat === 'markdown' ? '.md,.markdown' :
+                                                                                           selectedFileFormat === 'csv' ? '.csv' :
+                                                                                           selectedFileFormat === 'html' ? '.html,.htm' :
+                                                                                           selectedFileFormat === 'image' ? '.jpg,.jpeg,.png,.webp' : 
+                                                                                           selectedFileFormat === 'txt' ? '.txt' : '*/*'
+                                                                                       }
+                                                                                       onChange={handleFileChange}/>
+                                                                            </label>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div
+                                                                            className="bg-black/40 border border-zinc-800 rounded-xl p-4 animate-in fade-in zoom-in-95 duration-200">
+                                                                            <div className="flex items-center justify-between mb-4">
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <div className="p-2 bg-emerald-500/10 rounded-lg">
+                                                                                        <FileText className="w-5 h-5 text-emerald-400"/>
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <p className="text-sm font-medium text-zinc-200">{selectedFile.name}</p>
+                                                                                        <p className="text-xs text-zinc-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                                                    </div>
+                                                                                </div>
+                                                                                {uploadStatus === 'idle' && (
+                                                                                    <button type="button"
+                                                                                            onClick={() => setSelectedFile(null)}
+                                                                                            className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors">
+                                                                                        <X className="w-4 h-4"/>
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {uploadStatus !== 'idle' && (
+                                                                                <div className="space-y-2">
+                                                                                    <div
+                                                                                        className="flex justify-between text-xs font-medium">
                                           <span className={uploadStatus === 'chunking' ? 'text-emerald-400' : 'text-zinc-400'}>
                                             {uploadStatus === 'chunking' ? t('common.actions.syncing') : uploadStatus === 'vectorizing' ? t('common.actions.syncing') : t('common.status.done')}
                                           </span>
-                                                                                <span
-                                                                                    className="text-zinc-400">{progress}%</span>
+                                                                                        <span
+                                                                                            className="text-zinc-400">{progress}%</span>
+                                                                                    </div>
+                                                                                    <div
+                                                                                        className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                                                                        <div
+                                                                                            className="h-full bg-emerald-500 transition-all duration-300 ease-out"
+                                                                                            style={{width: `${progress}%`}}
+                                                                                        />
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            ) : (
+                                                                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                                                    <label className="text-sm font-medium text-zinc-300">
+                                                                        URL do Arquivo
+                                                                    </label>
+                                                                    <input
+                                                                        type="url"
+                                                                        required
+                                                                        value={inputValue}
+                                                                        onChange={(e) => setInputValue(e.target.value)}
+                                                                        placeholder="https://exemplo.com/arquivo.pdf"
+                                                                        className="w-full bg-black/40 border border-border-subtle rounded-xl px-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-zinc-600 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]"
+                                                                    />
+                                                                    {uploadStatus !== 'idle' && (
+                                                                        <div className="space-y-2 bg-black/40 border border-zinc-800 rounded-xl p-4">
+                                                                            <div className="flex justify-between text-xs font-medium">
+                                                                                <span className="text-emerald-400">{t('common.actions.syncing')}</span>
+                                                                                <span className="text-zinc-400">{progress}%</span>
                                                                             </div>
-                                                                            <div
-                                                                                className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                                                            <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                                                                                 <div
                                                                                     className="h-full bg-emerald-500 transition-all duration-300 ease-out"
                                                                                     style={{width: `${progress}%`}}

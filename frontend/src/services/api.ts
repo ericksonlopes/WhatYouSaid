@@ -19,6 +19,24 @@ async function handleResponseError(response: Response, defaultMessage: string) {
 }
 
 export const api = {
+  async ingestFileByUrl(data: {
+    file_url: string;
+    subject_id?: string;
+    subject_name?: string;
+    title?: string;
+    language?: string;
+    tokens_per_chunk?: number;
+    tokens_overlap?: number;
+  }): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/ingest/file-url`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    await handleResponseError(response, 'File URL ingestion failed');
+    return response.json();
+  },
+
   async fetchSubjects(): Promise<Subject[]> {
     const response = await fetch(`${API_BASE_URL}/subjects`);
     await handleResponseError(response, 'Failed to fetch subjects');
@@ -154,6 +172,7 @@ export const api = {
     await handleResponseError(response, 'File ingestion failed');
     return response.json();
   },
+
 
   async fetchChunks(sourceId?: string, limit: number = 100, offset: number = 0, query?: string): Promise<Chunk[]> {
     const url = new URL(`${API_BASE_URL}/chunks`, window.location.origin);

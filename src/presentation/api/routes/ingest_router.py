@@ -14,6 +14,7 @@ from src.presentation.api.dependencies import (
 from src.presentation.api.schemas.ingest_schemas import (
     IngestResponse,
     YoutubeIngestRequest,
+    FileUrlIngestRequest,
 )
 
 import os
@@ -163,4 +164,101 @@ async def ingest_file(
     return {
         "message": "File upload successful, ingestion started in background.",
         "file_name": file.filename,
+    }
+
+
+@router.post(
+    "/file-url",
+    response_model=Dict,
+    responses={
+        400: {"description": "Validation error"},
+        500: {"description": "Internal server error"},
+    },
+)
+async def ingest_file_url(
+    request: Annotated[FileUrlIngestRequest, Body()],
+    background_tasks: BackgroundTasks,
+    use_case: Annotated[FileIngestionUseCase, Depends(get_file_ingestion_use_case)],
+):
+    """
+    Ingest a file from a URL.
+    """
+    import httpx
+
+    logger.info(
+        "API request to ingest file from URL",
+        context={"file_url": request.file_url, "subject_id": request.subject_id},
+    )
+
+    # Validate IDs
+    s_id = None
+    if request.subject_id:
+        try:
+            s_id = UUID(request.subject_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid subject_id format")
+
+    # Determine filename from URL
+    filename = request.file_url.split("/")[-1]
+    if not filename or "." not in filename:
+        # Fallback filename if URL doesn't look like a file
+        filename = "downloaded_file"
+
+    # Save to a temporary location
+    temp_dir = tempfile.mkdtemp()
+    temp_path = os.path.join(temp_dir, filename)
+
+    try:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            response = await client.get(request.file_url)
+            response.raise_for_status()
+
+            # Optional: Check content type to verify if it's a file
+            content_type = response.headers.get("Content-Type", "")
+            logger.info(f"Downloaded file from URL. Content-Type: {content_type}")
+
+            # If filename doesn't have extension, try to guess from Content-Type
+            if "." not in filename:
+                import mimetypes
+
+                ext = mimetypes.guess_extension(content_type.split(";")[0])
+                if ext:
+                    filename += ext
+                    temp_path += ext
+
+            with open(temp_path, "wb") as buffer:
+                buffer.write(response.content)
+
+    except Exception as e:
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        logger.error(f"Error downloading file from URL: {str(e)}")
+        raise HTTPException(
+            status_code=400, detail=f"Failed to download file from URL: {str(e)}"
+        )
+
+    cmd = IngestFileCommand(
+        file_path=temp_path,
+        file_name=filename,
+        subject_id=s_id,
+        subject_name=request.subject_name,
+        title=request.title or filename,
+        language=request.language,
+        tokens_per_chunk=request.tokens_per_chunk,
+        tokens_overlap=request.tokens_overlap,
+    )
+
+    # Execute ingestion in background
+    def run_ingestion_and_cleanup(command: IngestFileCommand, dir_to_remove: str):
+        try:
+            use_case.execute(command)
+        finally:
+            if os.path.exists(dir_to_remove):
+                shutil.rmtree(dir_to_remove)
+
+    background_tasks.add_task(run_ingestion_and_cleanup, cmd, temp_dir)
+
+    return {
+        "message": "File URL ingestion started in background.",
+        "file_name": filename,
     }

@@ -28,3 +28,13 @@ class IngestResponse(BaseModel):
     created_chunks: Optional[int] = None
     vector_ids: List[str] = []
     video_results: List[Dict] = []
+
+
+class FileUrlIngestRequest(BaseModel):
+    file_url: str
+    subject_id: Optional[str] = None
+    subject_name: Optional[str] = None
+    title: Optional[str] = None
+    language: str = "pt"
+    tokens_per_chunk: int = 512
+    tokens_overlap: int = 50
