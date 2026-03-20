@@ -661,47 +661,6 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
                                                         <div
                                                             className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                                             
-                                                            {/* File Format Selection */}
-                                                            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-                                                                {[
-                                                                    {id: 'pdf', icon: FileText, ext: '.pdf'},
-                                                                    {id: 'docx', icon: FileText, ext: '.docx,.doc'},
-                                                                    {id: 'pptx', icon: Presentation, ext: '.pptx,.ppt'},
-                                                                    {id: 'xlsx', icon: FileSpreadsheet, ext: '.xlsx,.xls'},
-                                                                    {id: 'markdown', icon: FileTerminal, ext: '.md,.markdown'},
-                                                                    {id: 'csv', icon: FileSpreadsheet, ext: '.csv'},
-                                                                    {id: 'html', icon: Globe, ext: '.html,.htm'},
-                                                                    {id: 'image', icon: FileImage, ext: '.jpg,.jpeg,.png'},
-                                                                    {id: 'txt', icon: FileText, ext: '.txt'},
-                                                                    {id: 'other', icon: FileUp, ext: '*/*'},
-                                                                ].map((format) => {
-                                                                    const Icon = format.icon;
-                                                                    return (
-                                                                        <button
-                                                                            key={format.id}
-                                                                            type="button"
-                                                                            onClick={() => setSelectedFileFormat(format.id as ContentType)}
-                                                                            title={t(`ingestion.sources.${format.id}`)}
-                                                                            className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${
-                                                                                selectedFileFormat === format.id 
-                                                                                ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' 
-                                                                                : 'bg-black/20 border-zinc-800 text-zinc-500 hover:border-zinc-700'
-                                                                            }`}
-                                                                        >
-                                                                            <Icon className="w-5 h-5"/>
-                                                                            <span className="text-[9px] font-bold uppercase">
-                                                                                {format.id === 'markdown' ? 'MD' : 
-                                                                                 format.id === 'other' ? t('ingestion.sources.other') : 
-                                                                                 format.id === 'docx' ? 'Word' :
-                                                                                 format.id === 'xlsx' ? 'Excel' :
-                                                                                 format.id === 'pptx' ? 'PPT' :
-                                                                                 format.id}
-                                                                            </span>
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </div>
-
                                                             {/* Toggle between Upload and URL */}
                                                             <div className="flex p-0.5 bg-black/40 rounded-xl border border-zinc-800/50 w-full mb-4">
                                                                 <button
@@ -727,7 +686,54 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
                                                             </div>
 
                                                             {fileInputMode === 'upload' ? (
-                                                                <>
+                                                                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                                                    {/* File Format Selection (Filter) */}
+                                                                    <div className="space-y-2">
+                                                                        <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+                                                                            <Search className="w-3 h-3"/>
+                                                                            Filtro por formato (Localize mais rápido)
+                                                                        </label>
+                                                                        <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
+                                                                            {[
+                                                                                {id: 'pdf', icon: FileText},
+                                                                                {id: 'docx', icon: FileText},
+                                                                                {id: 'pptx', icon: Presentation},
+                                                                                {id: 'xlsx', icon: FileSpreadsheet},
+                                                                                {id: 'markdown', icon: FileTerminal},
+                                                                                {id: 'csv', icon: FileSpreadsheet},
+                                                                                {id: 'html', icon: Globe},
+                                                                                {id: 'image', icon: FileImage},
+                                                                                {id: 'txt', icon: FileText},
+                                                                                {id: 'other', icon: FileUp},
+                                                                            ].map((format) => {
+                                                                                const Icon = format.icon;
+                                                                                return (
+                                                                                    <button
+                                                                                        key={format.id}
+                                                                                        type="button"
+                                                                                        onClick={() => setSelectedFileFormat(format.id as ContentType)}
+                                                                                        title={t(`ingestion.sources.${format.id}`)}
+                                                                                        className={`p-1.5 rounded-lg border flex flex-col items-center justify-center gap-0.5 transition-all ${
+                                                                                            selectedFileFormat === format.id 
+                                                                                            ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' 
+                                                                                            : 'bg-black/20 border-zinc-800 text-zinc-500 hover:border-zinc-700'
+                                                                                        }`}
+                                                                                    >
+                                                                                        <Icon className="w-4 h-4"/>
+                                                                                        <span className="text-[8px] font-bold uppercase truncate w-full text-center px-0.5">
+                                                                                            {format.id === 'markdown' ? 'MD' : 
+                                                                                             format.id === 'other' ? '...' : 
+                                                                                             format.id === 'docx' ? 'DOC' :
+                                                                                             format.id === 'xlsx' ? 'XLS' :
+                                                                                             format.id === 'pptx' ? 'PPT' :
+                                                                                             format.id.substring(0, 3)}
+                                                                                        </span>
+                                                                                    </button>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    </div>
+
                                                                     {!selectedFile ? (
                                                                         <div
                                                                             onDragOver={handleDragOver}
@@ -804,7 +810,7 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
                                                                             )}
                                                                         </div>
                                                                     )}
-                                                                </>
+                                                                </div>
                                                             ) : (
                                                                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                                                     <label className="text-sm font-medium text-zinc-300">
@@ -835,7 +841,16 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                    ) : null
+                                                    ) : (
+                                                        <div
+                                                            className="flex flex-col items-center justify-center text-center p-6 border border-dashed border-zinc-800 rounded-xl bg-black/20 animate-in fade-in duration-300">
+                                                            <Lock className="w-8 h-8 text-zinc-600 mb-3"/>
+                                                            <h4 className="text-sm font-medium text-zinc-300">{t('ingestion.coming_soon.title')}</h4>
+                                                            <p className="text-xs text-zinc-500 mt-2 max-w-[250px]">
+                                                                {t('ingestion.coming_soon.description', { name: selectedSource?.name })}
+                                                            </p>
+                                                        </div>
+                                                    )
                                                 ) : (
                                                     <div
                                                         className="flex flex-col items-center justify-center text-center p-6 border border-dashed border-zinc-800 rounded-xl bg-black/20 animate-in fade-in duration-300">
