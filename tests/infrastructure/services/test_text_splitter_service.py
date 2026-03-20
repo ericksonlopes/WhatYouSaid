@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
+from langchain_core.documents import Document
 from src.infrastructure.services.text_splitter_service import TextSplitterService
 
 
