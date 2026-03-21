@@ -25,6 +25,7 @@ async def lifespan(app: FastAPI):
         from src.config.settings import Settings
         from src.infrastructure.services.model_loader_service import ModelLoaderService
         from src.infrastructure.services.re_rank_service import ReRankService
+        from src.infrastructure.services.task_queue_service import TaskQueueService
 
         logger.info("Initializing Settings...")
         _settings = Settings()
@@ -42,6 +43,10 @@ async def lifespan(app: FastAPI):
         logger.info(f"Loading Re-rank Model: {_settings.model_rerank.name}...")
         app.state.rerank_service = ReRankService(model_name=_settings.model_rerank.name)
         logger.info("Re-rank model pre-loaded successfully.")
+ 
+        # Initialize In-memory Task Queue
+        app.state.task_queue = TaskQueueService(num_workers=4)
+        app.state.task_queue.start()
 
     except Exception as e:
         logger.error(f"Error pre-loading models: {e}")
@@ -49,8 +54,12 @@ async def lifespan(app: FastAPI):
             app.state.model_loader = None
         if not hasattr(app.state, "rerank_service"):
             app.state.rerank_service = None
+        if not hasattr(app.state, "task_queue"):
+            app.state.task_queue = None
 
     yield
+    if hasattr(app.state, "task_queue") and app.state.task_queue:
+        app.state.task_queue.stop()
     logger.info("Shutting down WhatYouSaid API...")
 
 

@@ -290,10 +290,11 @@ export function SourcesTable({
               ) : (
                 sources.map((source, index) => {
                   const Icon = getIcon(source.type);
-                  const isProcessing = !['done', 'finished', 'active', 'ingested'].includes(source.processingStatus.toLowerCase()) && 
+                  const isProcessing = !['done', 'finished', 'active', 'ingested', 'cancelled'].includes(source.processingStatus.toLowerCase()) && 
                                      !['failed', 'error'].includes(source.processingStatus.toLowerCase());
                   const isFailed = ['failed', 'error'].includes(source.processingStatus.toLowerCase());
                   const isDone = ['done', 'finished', 'active', 'ingested'].includes(source.processingStatus.toLowerCase());
+                  const isCancelled = source.processingStatus.toLowerCase() === 'cancelled';
 
                   return (
                     <motion.tr
@@ -308,6 +309,7 @@ export function SourcesTable({
                         <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all duration-300 ${
                           isDone ? 'bg-emerald-500/10 text-emerald-400/80 group-hover:text-emerald-400' :
                           isFailed ? 'bg-rose-500/10 text-rose-400/80 group-hover:text-rose-400' :
+                          isCancelled ? 'bg-zinc-500/10 text-zinc-500 group-hover:text-zinc-400' :
                           'bg-amber-500/10 text-amber-400/80 group-hover:text-amber-400'
                         }`}>
                            <Icon className="w-4.5 h-4.5 transition-transform duration-300 group-hover:scale-110" />
@@ -339,6 +341,7 @@ export function SourcesTable({
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all duration-300 ${
                             isDone ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/10 shadow-[0_4px_12px_rgba(16,185,129,0.1)]' :
                             isFailed ? 'bg-rose-500/10 text-rose-400 border-rose-500/10' :
+                            isCancelled ? 'bg-zinc-500/10 text-zinc-500 border-zinc-500/10' :
                             'bg-amber-500/10 text-amber-400 border-amber-500/10 animate-pulse animate-glow'
                           }`}>
                             {source.processingStatus.toUpperCase()}

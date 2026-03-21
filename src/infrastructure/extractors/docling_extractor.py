@@ -1,4 +1,5 @@
 import os
+import threading
 from typing import List
 
 from docling.datamodel.base_models import InputFormat
@@ -14,6 +15,8 @@ logger = Logger()
 
 class DoclingExtractor:
     """Extracts text and metadata from various file types using IBM's Docling with structural chunking."""
+
+    _lock = threading.Lock()
 
     def _get_pipeline_options(self, do_ocr: bool = False) -> PdfPipelineOptions:
         """Helper to create PdfPipelineOptions with consistent settings."""
@@ -72,8 +75,9 @@ class DoclingExtractor:
 
         try:
             # 1. Convert the document using the appropriate converter
-            converter = self._get_ocr_converter() if do_ocr else self.converter
-            result = converter.convert(file_path)
+            with self._lock:
+                converter = self._get_ocr_converter() if do_ocr else self.converter
+                result = converter.convert(file_path)
 
             # 2. Extract global metadata
             from docling_core.types.doc import PictureItem
@@ -127,14 +131,30 @@ class DoclingExtractor:
                 "image_count": image_count,
                 "is_structural_chunk": False,
                 # Flattened docling stats
-                "num_pages": len(result.document.pages) if hasattr(result.document, "pages") else 0,
-                "num_pictures": len(result.document.pictures) if hasattr(result.document, "pictures") else 0,
-                "num_tables": len(result.document.tables) if hasattr(result.document, "tables") else 0,
-                "num_groups": len(result.document.groups) if hasattr(result.document, "groups") else 0,
-                "texts_count": len(result.document.texts) if hasattr(result.document, "texts") else 0,
-                "key_value_items_count": len(result.document.key_value_items) if hasattr(result.document, "key_value_items") else 0,
-                "form_items_count": len(result.document.form_items) if hasattr(result.document, "form_items") else 0,
-                "field_items_count": len(result.document.field_items) if hasattr(result.document, "field_items") else 0,
+                "num_pages": len(result.document.pages)
+                if hasattr(result.document, "pages")
+                else 0,
+                "num_pictures": len(result.document.pictures)
+                if hasattr(result.document, "pictures")
+                else 0,
+                "num_tables": len(result.document.tables)
+                if hasattr(result.document, "tables")
+                else 0,
+                "num_groups": len(result.document.groups)
+                if hasattr(result.document, "groups")
+                else 0,
+                "texts_count": len(result.document.texts)
+                if hasattr(result.document, "texts")
+                else 0,
+                "key_value_items_count": len(result.document.key_value_items)
+                if hasattr(result.document, "key_value_items")
+                else 0,
+                "form_items_count": len(result.document.form_items)
+                if hasattr(result.document, "form_items")
+                else 0,
+                "field_items_count": len(result.document.field_items)
+                if hasattr(result.document, "field_items")
+                else 0,
             }
 
             if doc_meta:

@@ -1,15 +1,18 @@
 from typing import Annotated, Dict, Optional
 
-from fastapi import APIRouter, Body, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Body, Depends, HTTPException
+
 
 from src.application.dtos.commands.ingest_youtube_command import IngestYoutubeCommand
 from src.application.dtos.commands.ingest_file_command import IngestFileCommand
 from src.application.use_cases.youtube_ingestion_use_case import YoutubeIngestionUseCase
 from src.application.use_cases.file_ingestion_use_case import FileIngestionUseCase
 from src.config.logger import Logger
+from src.infrastructure.services.task_queue_service import TaskQueueService
 from src.presentation.api.dependencies import (
     get_ingest_youtube_use_case,
     get_file_ingestion_use_case,
+    get_task_queue_service,
 )
 from src.presentation.api.schemas.ingest_schemas import (
     IngestResponse,
@@ -38,7 +41,7 @@ router = APIRouter()
 def ingest_youtube(
     request: Annotated[YoutubeIngestRequest, Body()],
     use_case: Annotated[YoutubeIngestionUseCase, Depends(get_ingest_youtube_use_case)],
-    background_tasks: BackgroundTasks,
+    task_queue: Annotated[TaskQueueService, Depends(get_task_queue_service)],
 ):
     """
     Ingest data from YouTube videos or playlists into the vector store.
@@ -64,10 +67,10 @@ def ingest_youtube(
 
     # If it's a reprocess request, we always run it in background
     if request.reprocess:
-        logger.info("Running reprocessing in background")
-        background_tasks.add_task(use_case.execute, cmd)
+        logger.info("Running reprocessing in background via queue")
+        task_queue.enqueue(use_case.execute, cmd)
         return IngestResponse(
-            skipped=False, reason="Reprocessing started in background."
+            skipped=False, reason="Reprocessing started in background queue."
         )
 
     try:
@@ -100,8 +103,8 @@ def ingest_youtube(
     },
 )
 async def ingest_file(
-    background_tasks: BackgroundTasks,
     use_case: Annotated[FileIngestionUseCase, Depends(get_file_ingestion_use_case)],
+    task_queue: Annotated[TaskQueueService, Depends(get_task_queue_service)],
     file: Annotated[UploadFile, File(...)],
     subject_id: Annotated[Optional[str], Form()] = None,
     subject_name: Annotated[Optional[str], Form()] = None,
@@ -161,7 +164,7 @@ async def ingest_file(
                 os.remove(command.file_path)
                 os.rmdir(os.path.dirname(command.file_path))
 
-    background_tasks.add_task(run_ingestion_and_cleanup, cmd)
+    task_queue.enqueue(run_ingestion_and_cleanup, cmd)
 
     return {
         "message": "File upload successful, ingestion started in background.",
@@ -179,8 +182,8 @@ async def ingest_file(
 )
 async def ingest_file_url(
     request: Annotated[FileUrlIngestRequest, Body()],
-    background_tasks: BackgroundTasks,
     use_case: Annotated[FileIngestionUseCase, Depends(get_file_ingestion_use_case)],
+    task_queue: Annotated[TaskQueueService, Depends(get_task_queue_service)],
 ):
     """
     Ingest a file from a URL.
@@ -259,7 +262,7 @@ async def ingest_file_url(
             if os.path.exists(dir_to_remove):
                 shutil.rmtree(dir_to_remove)
 
-    background_tasks.add_task(run_ingestion_and_cleanup, cmd, temp_dir)
+    task_queue.enqueue(run_ingestion_and_cleanup, cmd, temp_dir)
 
     return {
         "message": "File URL ingestion started in background.",

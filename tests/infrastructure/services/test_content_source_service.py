@@ -102,4 +102,5 @@ class TestContentSourceService:
             chunks=100,
             total_tokens=None,
             max_tokens_per_chunk=None,
+            source_metadata=None,
         )

@@ -1,6 +1,7 @@
 import re
 import uuid
 import concurrent.futures
+import threading
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs, urlparse
@@ -17,6 +18,12 @@ from src.domain.entities.enums.content_source_status_enum import ContentSourceSt
 from src.domain.entities.enums.ingestion_job_status_enum import IngestionJobStatus
 from src.domain.entities.enums.source_type_enum_entity import SourceType
 from src.infrastructure.extractors.youtube_extractor import YoutubeExtractor
+from src.domain.exception.youtube_exceptions import (
+    YoutubeVideoPrivateException,
+    YoutubeVideoUnplayableException,
+    YoutubeTranscriptNotFoundException,
+    YoutubeTranscriptsDisabledException,
+)
 from src.infrastructure.services.chunk_index_service import ChunkIndexService
 from src.infrastructure.services.content_source_service import ContentSourceService
 from src.infrastructure.services.embedding_service import EmbeddingService
@@ -38,6 +45,8 @@ class YoutubeIngestionUseCase:
 
     Agora suporta ingestão de múltiplos vídeos (video_urls) e diferenciação por data_type (VIDEO/PLAYLIST).
     """
+
+    _lock = threading.Lock()
 
     def __init__(
         self,
@@ -173,13 +182,32 @@ class YoutubeIngestionUseCase:
             # 2. Update the parent Tracking Job
             if ingestion:
                 if any_failed:
-                    # Collect error messages from failed videos
-                    errors = [r["error"] for r in result.video_results if "error" in r]
-                    error_summary = (
-                        f"Ingestion failed for {len(errors)} items: "
-                        + "; ".join(errors)[:200]
-                    )
-                    self._fail_job(ingestion, error_summary)
+                    # Collect error messages from failed videos (excluding cancelled ones)
+                    errors = [
+                        r["error"]
+                        for r in result.video_results
+                        if "error" in r and not r.get("cancelled", False)
+                    ]
+                    if errors:
+                        error_summary = (
+                            f"Ingestion failed for {len(errors)} items: "
+                            + "; ".join(errors)[:200]
+                        )
+                        self._fail_job(ingestion, error_summary)
+                    else:
+                        # Only cancelled items
+                        cancelled_msgs = [
+                            r["error"]
+                            for r in result.video_results
+                            if r.get("cancelled", False)
+                        ]
+                        summary = f"Partial ingestion: {len(cancelled_msgs)} items skipped (private/unplayable)."
+                        self._finish_job(ingestion, chunks_count=result.created_chunks)
+                        # Maybe update status message?
+                        self.ingestion_service.update_job(
+                            job_id=ingestion.id,
+                            status_message=summary
+                        )
                 else:
                     self._finish_job(ingestion, chunks_count=result.created_chunks)
 
@@ -197,7 +225,13 @@ class YoutubeIngestionUseCase:
 
             # 4. Update the parent Source
             if source:
-                if any_failed:
+                # We fail the source only if there are real errors (not just cancellations)
+                real_errors = [
+                    r["error"]
+                    for r in result.video_results
+                    if "error" in r and not r.get("cancelled", False)
+                ]
+                if real_errors:
                     self._fail_ingestion(source)
                 elif cmd.data_type != YoutubeDataType.PLAYLIST:
                     # For single videos, only finish if not already marked failed or done
@@ -378,7 +412,11 @@ class YoutubeIngestionUseCase:
                     context={"video_id": video_id, "title": extracted_title},
                 )
                 source = self._create_content_source(
-                    subject, cmd, video_id, title=extracted_title, source_metadata=metadata.model_dump()
+                    subject,
+                    cmd,
+                    video_id,
+                    title=extracted_title,
+                    source_metadata=metadata.model_dump(),
                 )
 
             # Update Job with source info and status
@@ -393,7 +431,8 @@ class YoutubeIngestionUseCase:
             )
 
             # 4. Extract and split transcript (CRITICAL STEP)
-            docs = self._extract_and_split(cmd, video_id, yt_extractor=yt_extractor)
+            with self._lock:
+                docs = self._extract_and_split(cmd, video_id, yt_extractor=yt_extractor)
 
             if not docs:
                 raise ValueError(
@@ -427,7 +466,8 @@ class YoutubeIngestionUseCase:
                 current_step=3,
                 total_steps=4,
             )
-            created_ids = self._index_chunks(chunks)
+            with self._lock:
+                created_ids = self._index_chunks(chunks)
 
             self.ingestion_service.update_job(
                 job_id=ingestion.id,
@@ -440,7 +480,13 @@ class YoutubeIngestionUseCase:
                 c.tokens_count for c in chunks if c.tokens_count is not None
             )
             max_tokens = cmd.tokens_per_chunk
-            self._finish_ingestion(source, len(chunks), total_tokens, max_tokens, source_metadata=metadata.model_dump())
+            self._finish_ingestion(
+                source,
+                len(chunks),
+                total_tokens,
+                max_tokens,
+                source_metadata=metadata.model_dump(),
+            )
 
             return {
                 "video_url": video_url,
@@ -450,6 +496,46 @@ class YoutubeIngestionUseCase:
                 "created_chunks": len(chunks),
                 "vector_ids": created_ids,
                 "source_id": source.id,
+            }
+
+        except (
+            YoutubeVideoPrivateException,
+            YoutubeVideoUnplayableException,
+            YoutubeTranscriptNotFoundException,
+            YoutubeTranscriptsDisabledException,
+        ) as e:
+            error_msg = str(e)
+            logger.warning(
+                f"Known limitation for video {video_id}: {error_msg}",
+                context={"video_url": video_url},
+            )
+
+            if ingestion:
+                try:
+                    self.ingestion_service.update_job(
+                        job_id=ingestion.id,
+                        status=IngestionJobStatus.CANCELLED,
+                        status_message=error_msg,
+                    )
+                except Exception as ej:
+                    logger.error(f"Failed to mark job as CANCELLED: {ej}")
+            
+            if source:
+                try:
+                    self.cs_service.update_processing_status(
+                        content_source_id=source.id,
+                        status=ContentSourceStatus.CANCELLED
+                    )
+                except Exception as ef:
+                    logger.error(f"Failed to mark source as CANCELLED: {ef}")
+
+            return {
+                "video_url": video_url,
+                "video_id": video_id,
+                "job_id": ingestion.id if ingestion else None,
+                "skipped": False,
+                "cancelled": True,
+                "error": error_msg,
             }
 
         except Exception as e:

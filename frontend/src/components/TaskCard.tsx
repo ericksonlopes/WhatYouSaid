@@ -90,6 +90,7 @@ export function TaskCard({ task }: TaskCardProps) {
   const isDuplicate = task.errorMessage?.includes('Duplicate') || task.statusMessage?.includes('Duplicate');
   const isProcessing = ['processing', 'started'].includes(task.status);
   const isCompleted = ['done', 'finished'].includes(task.status);
+  const isCancelled = task.status === 'cancelled';
   const SourceIcon = getSourceIcon(task.ingestionType);
 
   const handleReprocess = async (e?: React.MouseEvent) => {
@@ -240,6 +241,18 @@ export function TaskCard({ task }: TaskCardProps) {
                 }`}>
                   <AlertCircle className="w-3 h-3" />
                   {isDuplicate && task.contentSourceId ? t('common.actions.go_to_source') : t('common.actions.view_details')}
+                </div>
+              </div>
+            </div>
+          ) : isCancelled ? (
+            <div className="p-3 rounded-xl border border-zinc-500/10 bg-zinc-500/[0.02] group-hover:border-zinc-500/30 transition-colors">
+              <p className="text-[11px] leading-relaxed line-clamp-2 italic font-serif text-zinc-400/80">
+                "{task.statusMessage || t('common.status.cancelled')}"
+              </p>
+              <div className="mt-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[9px] text-zinc-500/60 font-bold uppercase tracking-tighter">
+                  <Clock className="w-3 h-3" />
+                  {formatRelativeTime(task.createdAt, t)}
                 </div>
               </div>
             </div>

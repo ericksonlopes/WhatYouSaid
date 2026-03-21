@@ -12,6 +12,15 @@ class DummyDoc:
         self.metadata = metadata or {}
 
 
+class MockMetadata:
+    def __init__(self, title="Title", full_title="Full Title"):
+        self.title = title
+        self.full_title = full_title
+
+    def model_dump(self):
+        return {"title": self.title, "full_title": self.full_title}
+
+
 def make_ks_service():
     class KS:
         def get_by_name(self, name: str):
@@ -53,6 +62,7 @@ def make_cs_service(existing: bool = False):
             language,
             status,
             processing_status=None,
+            **kwargs,
         ):
             # ensure source_type is a value the use case can handle
             val = (
@@ -232,7 +242,7 @@ def test_ingest_multi_video_one_fails_others_continue(monkeypatch):
 
     assert len(result.video_results) == 2
     assert "error" in result.video_results[0]
-    assert result.video_results[1]["video_id"] == "valid_id_work1"
+    assert result.video_results[1].get("video_id") == "valid_id_work1"
     assert result.created_chunks == 1
 
 
@@ -258,6 +268,9 @@ def test_ingest_playlist(monkeypatch):
     monkeypatch.setattr(
         use_case, "_extract_and_split", lambda *args, **kwargs: [DummyDoc("content")]
     )
+    monkeypatch.setattr(
+        YoutubeExtractor, "extract_metadata", lambda *args, **kwargs: MockMetadata()
+    )
 
     cmd = IngestYoutubeCommand(
         video_url="https://youtube.com/playlist?list=PL123",
@@ -267,6 +280,7 @@ def test_ingest_playlist(monkeypatch):
     result = use_case.execute(cmd)
 
     assert len(result.video_results) == 2
+    # Result.created_chunks should be 2 because we have 2 videos with 1 chunk each
     assert result.created_chunks == 2
 
 
@@ -366,8 +380,15 @@ def test_ingest_fails_no_transcript(monkeypatch):
         ks, cs, isvc, model_loader, None, chunk_svc, vec_svc, "weaviate"
     )
 
+    from src.infrastructure.extractors.youtube_extractor import YoutubeExtractor
+
     monkeypatch.setattr(use_case, "_extract_video_id_from_url", lambda url: "vid")
     monkeypatch.setattr(use_case, "_extract_and_split", lambda *args, **kwargs: [])
+    monkeypatch.setattr(
+        YoutubeExtractor,
+        "extract_metadata",
+        lambda *args, **kwargs: MockMetadata(),
+    )
 
     cmd = IngestYoutubeCommand(video_url="vid", subject_name="s")
     with pytest.raises(ValueError, match="No transcript chunks generated"):
@@ -610,9 +631,7 @@ def test_process_single_video_reprocess(monkeypatch):
     with patch(
         "src.application.use_cases.youtube_ingestion_use_case.YoutubeExtractor"
     ) as mock_yt:
-        mock_yt.return_value.extract_metadata.return_value = SimpleNamespace(
-            full_title="Title", title="Title"
-        )
+        mock_yt.return_value.extract_metadata.return_value = MockMetadata()
 
         cmd = IngestYoutubeCommand(video_url="vid", subject_name="s", reprocess=True)
         result = use_case._process_single_video(
@@ -661,9 +680,7 @@ def test_process_single_video_rollback_on_fail(monkeypatch):
     with patch(
         "src.application.use_cases.youtube_ingestion_use_case.YoutubeExtractor"
     ) as mock_yt:
-        mock_yt.return_value.extract_metadata.return_value = SimpleNamespace(
-            full_title="Title", title="Title"
-        )
+        mock_yt.return_value.extract_metadata.return_value = MockMetadata()
 
         cmd = IngestYoutubeCommand(video_url="vid", subject_name="s")
         with pytest.raises(Exception, match="Vec index fail"):

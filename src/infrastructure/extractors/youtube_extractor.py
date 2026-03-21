@@ -11,6 +11,12 @@ from src.domain.interfaces.extractors.youtube_extractor_interface import (
     IYoutubeExtractor,
 )
 from src.infrastructure.extractors.models.youtube_metadata_dto import YoutubeMetadataDTO
+from src.domain.exception.youtube_exceptions import (
+    YoutubeTranscriptNotFoundException,
+    YoutubeTranscriptsDisabledException,
+    YoutubeVideoPrivateException,
+    YoutubeVideoUnplayableException,
+)
 
 logger = Logger()
 
@@ -42,7 +48,13 @@ class YoutubeExtractor(IYoutubeExtractor):
                 return metadata
 
         except Exception as e:
-            logger.error(f"Error extracting metadata for video {self.video_id}: {e}")
+            error_msg = str(e)
+            if "This video is private" in error_msg:
+                raise YoutubeVideoPrivateException(self.video_id)
+            if "unplayable" in error_msg.lower():
+                raise YoutubeVideoUnplayableException(self.video_id, reason=error_msg)
+            
+            logger.error("Error extracting metadata for video", context={"video_id": self.video_id, "error": error_msg})
             return YoutubeMetadataDTO(video_id=self.video_id)
 
     @staticmethod
@@ -124,14 +136,20 @@ class YoutubeExtractor(IYoutubeExtractor):
         except NoTranscriptFound:
             msg = f"No transcript found for video {self.video_id}. Please ensure it has subtitles available."
             logger.error(msg, context={"video_id": self.video_id})
-            raise ValueError(msg)
+            raise YoutubeTranscriptNotFoundException(self.video_id, self.language)
 
         except TranscriptsDisabled:
             msg = f"Transcripts are disabled for video {self.video_id}."
             logger.warning(msg, context={"video_id": self.video_id})
-            raise ValueError(msg)
+            raise YoutubeTranscriptsDisabledException(self.video_id)
 
         except Exception as error:
-            msg = f"Unexpected error while fetching transcript for video {self.video_id}: {str(error)}"
+            error_msg = str(error)
+            if "This video is private" in error_msg:
+                raise YoutubeVideoPrivateException(self.video_id)
+            if "unplayable" in error_msg.lower():
+                raise YoutubeVideoUnplayableException(self.video_id, reason=error_msg)
+                
+            msg = f"Unexpected error while fetching transcript for video {self.video_id}: {error_msg}"
             logger.error(msg, context={"video_id": self.video_id})
             raise ValueError(msg)

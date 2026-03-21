@@ -34,6 +34,7 @@ from src.infrastructure.services.knowledge_subject_service import (
 )
 from src.infrastructure.services.model_loader_service import ModelLoaderService
 from src.infrastructure.services.re_rank_service import ReRankService
+from src.infrastructure.services.task_queue_service import TaskQueueService
 from src.infrastructure.services.youtube_vector_service import YouTubeVectorService
 
 
@@ -152,6 +153,10 @@ def get_job_service(
 
 def get_rerank_service(request: Request) -> ReRankService:
     return request.app.state.rerank_service
+ 
+ 
+def get_task_queue_service(request: Request) -> TaskQueueService:
+    return request.app.state.task_queue
 
 
 def get_chunk_vector_service(
