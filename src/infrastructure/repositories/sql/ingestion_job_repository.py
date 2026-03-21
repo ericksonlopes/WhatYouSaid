@@ -220,7 +220,8 @@ class IngestionJobSQLRepository:
                         # Exclude Duplicates from Failed
                         query = query.filter(
                             IngestionJobModel.status.in_(["failed", "error"]),
-                            ~IngestionJobModel.error_message.ilike("%Duplicate%"),
+                            (IngestionJobModel.error_message.is_(None))
+                            | (~IngestionJobModel.error_message.ilike("%Duplicate%")),
                         )
                     elif status == "cancelled":
                         # Include Duplicates in Cancelled
@@ -270,7 +271,8 @@ class IngestionJobSQLRepository:
                         # Exclude Duplicates from Failed
                         query = query.filter(
                             IngestionJobModel.status.in_(["failed", "error"]),
-                            ~IngestionJobModel.error_message.ilike("%Duplicate%"),
+                            (IngestionJobModel.error_message.is_(None))
+                            | (~IngestionJobModel.error_message.ilike("%Duplicate%")),
                         )
                     elif status == "cancelled":
                         # Include Duplicates in Cancelled
@@ -317,9 +319,13 @@ class IngestionJobSQLRepository:
 
                 # Treat "Duplicate" errors as CANCELLED
                 duplicate_filter = IngestionJobModel.error_message.ilike("%Duplicate%")
+                not_duplicate_filter = (IngestionJobModel.error_message.is_(None)) | (
+                    ~duplicate_filter
+                )
 
                 failed = base_query.filter(
-                    IngestionJobModel.status.in_(["failed", "error"]), ~duplicate_filter
+                    IngestionJobModel.status.in_(["failed", "error"]),
+                    not_duplicate_filter,
                 ).count()
 
                 cancelled = base_query.filter(

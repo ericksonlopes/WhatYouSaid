@@ -1,7 +1,7 @@
-import os
 import pytest
 from unittest.mock import patch, MagicMock
 from src.infrastructure.extractors.plain_text_extractor import PlainTextExtractor
+
 
 class TestPlainTextExtractor:
     @pytest.fixture
@@ -29,7 +29,7 @@ class TestPlainTextExtractor:
     def test_extract_from_url_success(self, mock_client_cls, extractor):
         mock_client = MagicMock()
         mock_client_cls.return_value.__enter__.return_value = mock_client
-        
+
         mock_response = MagicMock()
         mock_response.text = "URL content"
         mock_response.raise_for_status.return_value = None

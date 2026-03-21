@@ -13,6 +13,7 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def mock_app_state():
     app.state.task_queue = MagicMock()
+    app.state.event_bus = MagicMock()
     yield
     # No need to cleanup state in simple tests, but could if needed
 
@@ -75,3 +76,25 @@ def test_ingest_youtube_exception(mock_use_case):
 
     assert response.status_code == 500
     assert response.json()["detail"] == "Internal error"
+
+
+def test_ingest_youtube_reprocess():
+    # Use real dependency override for task_queue if needed,
+    # but mock_app_state fixture already sets app.state.task_queue
+    from src.presentation.api.dependencies import get_task_queue_service
+
+    mock_queue = MagicMock()
+    app.dependency_overrides[get_task_queue_service] = lambda: mock_queue
+
+    try:
+        response = client.post(
+            "/rest/ingest/youtube",
+            json={"video_url": "https://youtube.com/watch?v=123", "reprocess": True},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["skipped"] is False
+        assert "Reprocessing started" in response.json()["reason"]
+        assert mock_queue.enqueue.called
+    finally:
+        app.dependency_overrides.pop(get_task_queue_service, None)

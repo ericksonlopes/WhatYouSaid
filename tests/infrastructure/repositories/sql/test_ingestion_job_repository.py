@@ -145,3 +145,82 @@ class TestIngestionJobSQLRepository:
         with patch("sqlalchemy.orm.Session.commit", side_effect=Exception("DB error")):
             with pytest.raises(Exception, match="DB error"):
                 self.repo.update_job(job_id, "finished")
+
+    def test_list_jobs_filtering_and_search(self):
+        # Create various jobs
+        self.repo.create_job(None, status="started", source_title="alpha")
+        self.repo.create_job(None, status="processing", source_title="beta")
+        self.repo.create_job(None, status="finished", source_title="gamma")
+        self.repo.create_job(None, status="failed", source_title="delta")
+        jid_dup = self.repo.create_job(None, status="failed", source_title="epsilon")
+        self.repo.update_job(
+            jid_dup, status="failed", error_message="Duplicate content detected"
+        )
+        self.repo.create_job(None, status="cancelled", source_title="zeta")
+
+        # Test status filters
+        assert len(self.repo.list_jobs(status="processing")) == 2  # started, processing
+        assert len(self.repo.list_jobs(status="completed")) == 1  # finished
+        assert (
+            len(self.repo.list_jobs(status="failed")) == 1
+        )  # delta (epsilon is duplicate)
+        assert (
+            len(self.repo.list_jobs(status="cancelled")) == 2
+        )  # zeta, epsilon (duplicate)
+        assert len(self.repo.list_jobs(status="started")) == 1
+
+        # Test search
+        assert len(self.repo.list_jobs(search="alpha")) == 1
+        assert len(self.repo.list_jobs(search="beta")) == 1
+        assert len(self.repo.list_jobs(search="nonexistent")) == 0
+
+        # Test pagination
+        assert len(self.repo.list_jobs(limit=2)) == 2
+        assert len(self.repo.list_jobs(limit=2, offset=4)) == 2
+
+    def test_count_jobs(self):
+        self.repo.create_job(None, status="finished", source_title="One")
+        self.repo.create_job(None, status="failed", source_title="Two")
+
+        assert self.repo.count_jobs() == 2
+        assert self.repo.count_jobs(status="completed") == 1
+        assert self.repo.count_jobs(search="One") == 1
+
+    def test_get_status_counts(self):
+        self.repo.create_job(None, status="started")  # processing
+        self.repo.create_job(None, status="finished")  # completed
+        self.repo.create_job(None, status="failed")  # failed
+        jid = self.repo.create_job(None, status="failed")
+        self.repo.update_job(
+            jid, status="failed", error_message="Duplicate"
+        )  # cancelled
+        self.repo.create_job(None, status="cancelled")  # cancelled
+
+        counts = self.repo.get_status_counts()
+        assert counts["total"] == 5
+        assert counts["processing"] == 1
+        assert counts["completed"] == 1
+        assert counts["failed"] == 1
+        assert counts["cancelled"] == 2
+
+    def test_get_status_counts_with_search(self):
+        self.repo.create_job(None, status="finished", source_title="Match")
+        self.repo.create_job(None, status="finished", source_title="Other")
+
+        counts = self.repo.get_status_counts(search="Match")
+        assert counts["total"] == 1
+        assert counts["completed"] == 1
+
+    def test_count_jobs_error(self):
+        from unittest.mock import patch
+
+        with patch("sqlalchemy.orm.Query.count", side_effect=Exception("DB error")):
+            with pytest.raises(Exception, match="DB error"):
+                self.repo.count_jobs()
+
+    def test_get_status_counts_error(self):
+        from unittest.mock import patch
+
+        with patch("sqlalchemy.orm.Query.count", side_effect=Exception("DB error")):
+            with pytest.raises(Exception, match="DB error"):
+                self.repo.get_status_counts()

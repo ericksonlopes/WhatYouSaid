@@ -59,3 +59,27 @@ class TestIngestRouterFile:
         assert (
             response.status_code == 422
         )  # FastAPI validation error for missing required File
+
+    def test_ingest_file_url_success(self, client):
+        data = {
+            "file_url": "https://example.com/document.pdf",
+            "subject_name": "Test Subject",
+            "title": "Remote PDF",
+        }
+
+        response = client.post("/rest/ingest/file-url", json=data)
+
+        assert response.status_code == 200
+        assert "File URL ingestion started in background" in response.json()["message"]
+        assert response.json()["file_name"] == "document.pdf"
+        assert app.state.task_queue.enqueue.called
+
+    def test_ingest_file_url_invalid_uuid(self, client):
+        data = {
+            "file_url": "https://example.com/document.pdf",
+            "subject_id": "invalid-uuid",
+        }
+
+        response = client.post("/rest/ingest/file-url", json=data)
+        assert response.status_code == 400
+        assert "Invalid subject_id format" in response.json()["detail"]

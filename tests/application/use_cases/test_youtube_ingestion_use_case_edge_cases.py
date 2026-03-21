@@ -239,3 +239,207 @@ class TestYoutubeIngestionUseCaseEdgeCases:
         assert chunks[0].content == "content1"
         assert chunks[0].tokens_count == 10
         assert chunks[0].embedding_model == "test-model"
+
+    def test_execute_batch_failure_summary(self, use_case, mock_services):
+        from src.domain.entities.enums.ingestion_job_status_enum import (
+            IngestionJobStatus,
+        )
+
+        job_id = uuid.uuid4()
+        cmd = IngestYoutubeCommand(
+            video_urls=[
+                "https://www.youtube.com/watch?v=v1",
+                "https://www.youtube.com/watch?v=v2",
+            ],
+            subject_id=str(uuid.uuid4()),
+            ingestion_job_id=str(job_id),
+        )
+        mock_services["ks_service"].get_subject_by_id.return_value = MagicMock(
+            id=uuid.uuid4()
+        )
+        mock_services["ingestion_service"].get_by_id.return_value = MagicMock(id=job_id)
+
+        # Mocking extraction to return valid IDs
+        with patch.object(use_case, "_extract_video_id_from_url") as mock_ext:
+            mock_ext.side_effect = ["v1", "v2"]
+            with patch.object(use_case, "_process_single_video") as mock_process:
+                mock_process.side_effect = [
+                    {"video_id": "v1", "created_chunks": 5},
+                    {"video_id": "v2", "error": "Fatal error", "cancelled": False},
+                ]
+                use_case.execute(cmd)
+
+                # Verify update_job was called with summary
+                assert mock_services["ingestion_service"].update_job.called
+                found_failure = False
+                for call in mock_services[
+                    "ingestion_service"
+                ].update_job.call_args_list:
+                    status = call.kwargs.get("status")
+                    # Handle both enum and string if necessary
+                    status_val = status.value if hasattr(status, "value") else status
+                    if (
+                        status_val == IngestionJobStatus.FAILED.value
+                        and "Ingestion failed for 1 items"
+                        in call.kwargs.get("error_message", "")
+                    ):
+                        found_failure = True
+                        break
+                assert found_failure
+
+    def test_execute_batch_only_cancelled(self, use_case, mock_services):
+        from src.domain.entities.enums.ingestion_job_status_enum import (
+            IngestionJobStatus,
+        )
+
+        job_id = uuid.uuid4()
+        cmd = IngestYoutubeCommand(
+            video_urls=[
+                "https://www.youtube.com/watch?v=v1",
+                "https://www.youtube.com/watch?v=v2",
+            ],
+            subject_id=str(uuid.uuid4()),
+            ingestion_job_id=str(job_id),
+        )
+        mock_services["ks_service"].get_subject_by_id.return_value = MagicMock(
+            id=uuid.uuid4()
+        )
+        mock_services["ingestion_service"].get_by_id.return_value = MagicMock(id=job_id)
+
+        with patch.object(
+            use_case, "_extract_video_id_from_url", side_effect=["v1", "v2"]
+        ):
+            with patch.object(use_case, "_process_single_video") as mock_process:
+                mock_process.side_effect = [
+                    {"video_id": "v1", "error": "Private", "cancelled": True},
+                    {"video_id": "v2", "error": "Private", "cancelled": True},
+                ]
+                use_case.execute(cmd)
+
+                # Verify update_job called with FINISHED status but partial message
+                update_calls = mock_services[
+                    "ingestion_service"
+                ].update_job.call_args_list
+                finished_call = None
+                for c in update_calls:
+                    status = c.kwargs.get("status")
+                    status_val = status.value if hasattr(status, "value") else status
+                    if status_val == IngestionJobStatus.FINISHED.value:
+                        finished_call = c
+                        break
+
+                assert finished_call is not None
+                assert "Partial ingestion" in finished_call.kwargs["status_message"]
+
+    def test_process_single_video_reprocess_cleanup(self, use_case, mock_services):
+        video_id = "v1"
+        source = MagicMock(id=uuid.uuid4())
+        mock_services["cs_service"].get_by_source_info.return_value = source
+
+        cmd = IngestYoutubeCommand(
+            video_url="https://www.youtube.com/watch?v=v1",
+            subject_id=str(uuid.uuid4()),
+            reprocess=True,
+        )
+        subject = MagicMock(id=uuid.uuid4())
+
+        with patch(
+            "src.application.use_cases.youtube_ingestion_use_case.YoutubeExtractor"
+        ) as mock_ext_cls:
+            mock_ext = mock_ext_cls.return_value
+            mock_ext.extract_metadata.return_value = MagicMock(
+                full_title="Title", title="Title"
+            )
+
+            # Make it fail after cleanup to check if cleanup was called
+            with patch.object(
+                use_case, "_extract_and_split", side_effect=Exception("Stop here")
+            ):
+                with pytest.raises(Exception, match="Stop here"):
+                    use_case._process_single_video(
+                        "https://www.youtube.com/watch?v=v1", video_id, subject, cmd
+                    )
+
+                assert mock_services["chunk_service"].delete_by_content_source.called
+                assert mock_services["vector_service"].delete_by_video_id.called
+
+    def test_known_exceptions_handling(self, use_case, mock_services):
+        from src.domain.exception.youtube_exceptions import YoutubeVideoPrivateException
+        from src.domain.entities.enums.content_source_status_enum import (
+            ContentSourceStatus,
+        )
+
+        video_id = "v1"
+        # Ensure source exists so status update is called
+        source = MagicMock(id=uuid.uuid4())
+        mock_services["cs_service"].get_by_source_info.return_value = source
+
+        cmd = IngestYoutubeCommand(
+            video_url="https://www.youtube.com/watch?v=v1", subject_id=str(uuid.uuid4())
+        )
+        subject = MagicMock(id=uuid.uuid4())
+
+        with patch(
+            "src.application.use_cases.youtube_ingestion_use_case.YoutubeExtractor"
+        ) as mock_ext_cls:
+            mock_ext = mock_ext_cls.return_value
+            mock_ext.extract_metadata.side_effect = YoutubeVideoPrivateException(
+                "Private video"
+            )
+
+            result = use_case._process_single_video(
+                "https://www.youtube.com/watch?v=v1", video_id, subject, cmd
+            )
+
+            assert result["cancelled"] is True
+            # Verify source marked as CANCELLED using the Enum
+            mock_services["cs_service"].update_processing_status.assert_called_with(
+                content_source_id=source.id, status=ContentSourceStatus.CANCELLED
+            )
+
+    def test_rollback_on_generic_error(self, use_case, mock_services):
+        video_id = "v1"
+        mock_services["cs_service"].get_by_source_info.return_value = None
+
+        # Source must have string attributes for ChunkEntity validation
+        source = MagicMock(id=uuid.uuid4())
+        source.source_type = "youtube"
+        source.external_source = "vid1"
+        mock_services["cs_service"].create_source.return_value = source
+
+        # Job must have a real ID
+        job = MagicMock(id=uuid.uuid4())
+        mock_services["ingestion_service"].create_job.return_value = job
+        # Embedding model must be a string
+        mock_services["model_loader_service"].model_name = "test-model"
+
+        cmd = IngestYoutubeCommand(
+            video_url="https://www.youtube.com/watch?v=v1", subject_id=str(uuid.uuid4())
+        )
+        subject = MagicMock(id=uuid.uuid4())
+        subject.id = uuid.uuid4()
+
+        with patch(
+            "src.application.use_cases.youtube_ingestion_use_case.YoutubeExtractor"
+        ) as mock_ext_cls:
+            mock_ext = mock_ext_cls.return_value
+            mock_ext.extract_metadata.return_value = MagicMock(full_title="Title")
+
+            # Use a real Document with real strings
+            from langchain_core.documents import Document
+
+            doc = Document(page_content="content", metadata={"token_count": 5})
+
+            with patch.object(use_case, "_extract_and_split", return_value=[doc]):
+                # Fail at indexing
+                with patch.object(
+                    use_case, "_index_chunks", side_effect=Exception("Indexing failed")
+                ):
+                    with pytest.raises(Exception, match="Indexing failed"):
+                        use_case._process_single_video(
+                            "https://www.youtube.com/watch?v=v1", video_id, subject, cmd
+                        )
+
+                    # Check rollback calls
+                    assert mock_services["chunk_service"].delete_by_job_id.called
+                    assert mock_services["vector_service"].delete_by_job_id.called
