@@ -55,7 +55,7 @@ const getSubjectIcon = (iconName?: string) => {
 
 export function KnowledgeAdminView() {
   const { t } = useTranslation();
-  const { subjects, updateSubject, deleteSubject, setIsAddModalOpen } = useAppContext();
+  const { subjects, updateSubject, deleteSubject, setIsAddSubjectModalOpen } = useAppContext();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Subject>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -117,7 +117,7 @@ export function KnowledgeAdminView() {
         </div>
 
         <button
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={() => setIsAddSubjectModalOpen(true)}
           className="group flex items-center gap-2 px-4 py-2 text-sm font-bold text-black bg-emerald-500 rounded-xl hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] active:scale-95"
         >
           <Plus className="w-5 h-5 transition-transform duration-300 group-hover:rotate-90" />

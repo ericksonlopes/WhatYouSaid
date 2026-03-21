@@ -50,10 +50,9 @@ const getSubjectIcon = (iconName?: string) => {
 };
 
 export function Sidebar() {
-  const { subjects, selectedSubjects, toggleSubjectSelection, selectOnlySubject, currentView, setCurrentView } = useAppContext();
+  const { subjects, selectedSubjects, toggleSubjectSelection, selectOnlySubject, currentView, setCurrentView, setIsAddSubjectModalOpen } = useAppContext();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
-  const [isAddSubjectModalOpen, setIsAddSubjectModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   const navGroups = [
@@ -248,10 +247,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      <AddSubjectModal
-        isOpen={isAddSubjectModalOpen}
-        onClose={() => setIsAddSubjectModalOpen(false)}
-      />
+
 
       <SettingsModal
         isOpen={isSettingsModalOpen}

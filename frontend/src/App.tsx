@@ -22,6 +22,7 @@ import {AddContentModal} from './components/AddContentModal';
 import {ToastContainer} from './components/ToastContainer';
 import {SearchView} from './components/SearchView';
 import {ChunksViewer} from './components/ChunksViewer';
+import {AddSubjectModal} from './components/AddSubjectModal';
 import {KnowledgeAdminView} from './components/KnowledgeAdminView';
 import {ErrorBoundary} from './components/ErrorBoundary';
 import {ContentSource} from './types';
@@ -470,7 +471,7 @@ function ContentSourcesView() {
 
 // --- Main Layout ---
 function MainContent() {
-  const { currentView, selectedSubjects, isAddModalOpen, setIsAddModalOpen, addToast } = useAppContext();
+  const { currentView, selectedSubjects, isAddModalOpen, setIsAddModalOpen, isAddSubjectModalOpen, setIsAddSubjectModalOpen, addToast } = useAppContext();
   const { t } = useTranslation();
 
   return (
@@ -490,7 +491,13 @@ function MainContent() {
         
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => {
+              if (currentView === 'knowledge_contexts') {
+                setIsAddSubjectModalOpen(true);
+              } else {
+                setIsAddModalOpen(true);
+              }
+            }}
             className="group flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-black bg-emerald-500 rounded-lg hover:bg-emerald-400 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.2)]"
           >
             <Plus className="w-4 h-4 transition-transform duration-300 group-hover:rotate-90" />
@@ -534,6 +541,10 @@ function MainContent() {
       <AddContentModal 
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)} 
+      />
+      <AddSubjectModal 
+        isOpen={isAddSubjectModalOpen} 
+        onClose={() => setIsAddSubjectModalOpen(false)} 
       />
       <ToastContainer />
     </div>

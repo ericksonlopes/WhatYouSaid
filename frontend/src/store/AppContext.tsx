@@ -48,6 +48,8 @@ interface AppState {
   refreshModelInfo: () => Promise<void>;
   isAddModalOpen: boolean;
   setIsAddModalOpen: (isOpen: boolean) => void;
+  isAddSubjectModalOpen: boolean;
+  setIsAddSubjectModalOpen: (isOpen: boolean) => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -74,6 +76,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAddSubjectModalOpen, setIsAddSubjectModalOpen] = useState(false);
   
   // Activity Monitor state
   const [jobPage, setJobPage] = useState(1);
@@ -372,6 +375,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refreshModelInfo,
         isAddModalOpen,
         setIsAddModalOpen,
+        isAddSubjectModalOpen,
+        setIsAddSubjectModalOpen,
       }}
     >
       {children}
