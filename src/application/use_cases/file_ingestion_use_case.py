@@ -14,6 +14,7 @@ from src.domain.entities.enums.content_source_status_enum import ContentSourceSt
 from src.domain.entities.enums.ingestion_job_status_enum import IngestionJobStatus
 from src.domain.entities.enums.source_type_enum_entity import SourceType
 from src.infrastructure.extractors.docling_extractor import DoclingExtractor
+from src.infrastructure.extractors.plain_text_extractor import PlainTextExtractor
 from src.infrastructure.services.chunk_index_service import ChunkIndexService
 from src.infrastructure.services.content_source_service import ContentSourceService
 from src.infrastructure.services.embedding_service import EmbeddingService
@@ -54,6 +55,7 @@ class FileIngestionUseCase:
         self.vector_store_type = vector_store_type
         self.event_bus = event_bus
         self.extractor = DoclingExtractor()
+        self.plain_text_extractor = PlainTextExtractor()
 
     def execute(self, cmd: IngestFileCommand) -> Dict[str, Any]:
         self.event_bus.publish(
@@ -112,7 +114,25 @@ class FileIngestionUseCase:
                 },
             )
 
-            docs = self.extractor.extract(cmd.file_path, do_ocr=cmd.do_ocr)
+            source_path = cmd.file_url or cmd.file_path
+            if not source_path:
+                raise ValueError(
+                    "Neither file_path nor file_url provided for ingestion"
+                )
+
+            try:
+                docs = self.extractor.extract(source_path, do_ocr=cmd.do_ocr)
+            except Exception as e:
+                error_str = str(e).lower()
+                if "format not allowed" in error_str or "unsupported" in error_str:
+                    logger.info(
+                        f"Docling does not support format, falling back to PlainTextExtractor for {cmd.file_name}"
+                    )
+                    docs = self.plain_text_extractor.extract(source_path)
+                else:
+                    # For other errors, re-raise
+                    raise e
+
             if not docs:
                 raise ValueError(f"No content extracted from file {cmd.file_name}")
 
@@ -292,16 +312,23 @@ class FileIngestionUseCase:
         except Exception as e:
             logger.error(f"Error in FileIngestionUseCase: {e}")
             if ingestion:
+                error_msg = str(e).lower()
+                status = IngestionJobStatus.FAILED
+
+                # Treat 404 or Not Found as Cancelled (as requested by user)
+                if "404" in error_msg or "not found" in error_msg:
+                    status = IngestionJobStatus.CANCELLED
+
                 self.ingestion_service.update_job(
                     job_id=ingestion.id,
-                    status=IngestionJobStatus.FAILED,
+                    status=status,
                     error_message=str(e),
                 )
                 self.event_bus.publish(
                     "ingestion_status",
                     {
                         "job_id": str(ingestion.id),
-                        "status": "failed",
+                        "status": status.value,
                         "error": str(e),
                     },
                 )
@@ -311,7 +338,11 @@ class FileIngestionUseCase:
                 )
             raise e
         finally:
-            if cmd.delete_after_ingestion and os.path.exists(cmd.file_path):
+            if (
+                cmd.delete_after_ingestion
+                and cmd.file_path
+                and os.path.exists(cmd.file_path)
+            ):
                 try:
                     # If it's in a temp dir we created, delete the whole dir
                     # Assumption: it's in a subfolder of tempfile.gettempdir()

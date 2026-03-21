@@ -1,5 +1,5 @@
-import pytest
 from src.application.service_registry import ServiceRegistry, registry
+
 
 class TestServiceRegistry:
     def test_singleton(self):

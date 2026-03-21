@@ -5,8 +5,9 @@ from uuid import UUID
 
 @dataclass
 class IngestFileCommand:
-    file_path: str
     file_name: str
+    file_path: Optional[str] = None
+    file_url: Optional[str] = None
 
     # Subject can be provided by id or name
     subject_id: Optional[UUID] = None

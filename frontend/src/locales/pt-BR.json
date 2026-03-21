@@ -409,6 +409,15 @@
       "error": "Falha ao atualizar fragmento."
     }
   },
+  "error_modal": {
+    "title": "Detalhes da Ingestão",
+    "original_task": "Tarefa de Origem",
+    "full_error": "Mensagem Técnica de Causa",
+    "no_message": "Nenhuma mensagem de erro detalhada disponível.",
+    "copy": "Copiar Erro",
+    "copied": "Copiado!",
+    "support_hint": "Este erro pode ser causado por links quebrados, falta de permissão ou formatos não suportados pelo motor de extração."
+  },
   "chat": {
     "locked": {
       "title": "O Chat RAG está chegando!",

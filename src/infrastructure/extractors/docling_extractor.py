@@ -31,11 +31,12 @@ class DoclingExtractor:
         return pipeline_options
 
     def __init__(self):
-        # Default converter (no OCR)
-        pipeline_options = self._get_pipeline_options(do_ocr=False)
+        # By not specifying format_options, Docling enables all supported formats (PDF, DOCX, etc.)
+        # However, we still want to pass our PDF pipeline options specifically.
+        pdf_options = self._get_pipeline_options(do_ocr=False)
         self.converter = DocumentConverter(
             format_options={
-                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
+                InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options),
             }
         )
         # Lazy-loaded OCR converter
@@ -43,10 +44,10 @@ class DoclingExtractor:
 
     def _get_ocr_converter(self) -> DocumentConverter:
         if self._ocr_converter is None:
-            pipeline_options = self._get_pipeline_options(do_ocr=True)
+            pdf_options = self._get_pipeline_options(do_ocr=True)
             self._ocr_converter = DocumentConverter(
                 format_options={
-                    InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
+                    InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options),
                 }
             )
         return self._ocr_converter
@@ -70,7 +71,8 @@ class DoclingExtractor:
             },
         )
 
-        if not os.path.exists(file_path):
+        is_url = file_path.startswith(("http://", "https://"))
+        if not is_url and not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
 
         try:

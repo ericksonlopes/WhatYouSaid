@@ -43,13 +43,13 @@ export function ErrorDetailModal({ isOpen, onClose, task, onReprocess, isReproce
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-5 border-b border-border-subtle bg-rose-500/5">
+            <div className={`flex items-center justify-between p-5 border-b border-border-subtle ${task.status === 'cancelled' ? 'bg-zinc-500/5' : 'bg-rose-500/5'}`}>
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400">
+                <div className={`p-2 rounded-lg border ${task.status === 'cancelled' ? 'bg-zinc-500/10 border-zinc-500/20 text-zinc-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'}`}>
                   <AlertCircle className="w-5 h-5" />
                 </div>
                 <div>
-                   <h2 className="text-lg font-semibold text-zinc-100 italic">{t('error_modal.title')}</h2>
+                   <h2 className="text-lg font-semibold text-zinc-100 italic">{task.status === 'cancelled' ? t('common.status.cancelled') : t('error_modal.title')}</h2>
                   <div className="flex items-center gap-3 mt-0.5 text-xs text-zinc-500 font-medium">
                     <span className="flex items-center gap-1"><Hash className="w-3 h-3" /> {task.id.substring(0, 8)}</span>
                     <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(task.createdAt).toLocaleString()}</span>
@@ -75,7 +75,7 @@ export function ErrorDetailModal({ isOpen, onClose, task, onReprocess, isReproce
 
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-rose-400/80 uppercase tracking-widest">{t('error_modal.full_error')}</h3>
+                  <h3 className={`text-xs font-bold uppercase tracking-widest ${task.status === 'cancelled' ? 'text-zinc-400/80' : 'text-rose-400/80'}`}>{t('error_modal.full_error')}</h3>
                   <button
                     onClick={handleCopy}
                     className="flex items-center gap-1.5 px-2 py-1 rounded md hover:bg-zinc-800 text-zinc-500 hover:text-emerald-400 transition-all text-[10px] font-bold uppercase tracking-wider border border-transparent hover:border-zinc-700"
@@ -95,8 +95,8 @@ export function ErrorDetailModal({ isOpen, onClose, task, onReprocess, isReproce
                 </div>
                 
                 <div className="mt-1 relative group">
-                  <div className="absolute -inset-0.5 bg-gradient-to-b from-rose-500/10 to-transparent rounded-xl opacity-50 blur-sm pointer-events-none"></div>
-                  <pre className="relative w-full bg-black/60 border border-rose-500/20 rounded-xl p-5 text-zinc-400 text-sm font-mono overflow-x-auto custom-scrollbar leading-relaxed selection:bg-rose-500/30">
+                  <div className={`absolute -inset-0.5 rounded-xl opacity-50 blur-sm pointer-events-none ${task.status === 'cancelled' ? 'bg-gradient-to-b from-zinc-500/20 to-transparent' : 'bg-gradient-to-b from-rose-500/20 to-transparent'}`}></div>
+                  <pre className={`relative w-full bg-black/80 border rounded-xl p-6 text-zinc-300 text-xs font-mono overflow-auto custom-scrollbar leading-relaxed selection:bg-rose-500/30 min-h-[350px] max-h-[600px] shadow-2xl whitespace-pre-wrap break-words ${task.status === 'cancelled' ? 'border-zinc-500/30' : 'border-rose-500/30'}`}>
                     {task.errorMessage || t('error_modal.no_message')}
                   </pre>
                 </div>

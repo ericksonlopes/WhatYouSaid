@@ -5,9 +5,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from src.infrastructure.services.redis_task_queue_service import RedisTaskQueueService
 
+
 # Dummy functions for pickling tests (must be module-level)
 def dummy_func(a, b):
     return a + b
+
 
 def task_func(val):
     # This is a bit tricky since we can't easily capture results in a global
@@ -15,14 +17,18 @@ def task_func(val):
     global _test_results
     _test_results.append(val)
 
+
 def failing_func():
     raise ValueError("Expected error")
+
 
 def success_func():
     global _test_results
     _test_results.append("ok")
 
+
 _test_results = []
+
 
 @pytest.mark.Dependencies
 class TestRedisTaskQueueService:
@@ -46,7 +52,7 @@ class TestRedisTaskQueueService:
         assert mock_redis.lpush.called
         args, _ = mock_redis.lpush.call_args
         assert args[0] == "test_queue"
-        
+
         # Verify pickled data
         pushed_data = pickle.loads(args[1])
         assert pushed_data["task_title"] == "Test Task"
@@ -100,16 +106,22 @@ class TestRedisTaskQueueService:
         }
         data_blob = pickle.dumps(task_data)
 
-        success_blob = pickle.dumps({
-            "func": pickle.dumps(success_func),
-            "args": pickle.dumps(()),
-            "kwargs": pickle.dumps({}),
-        })
+        success_blob = pickle.dumps(
+            {
+                "func": pickle.dumps(success_func),
+                "args": pickle.dumps(()),
+                "kwargs": pickle.dumps({}),
+            }
+        )
 
-        mock_redis.brpop.side_effect = [("test_queue", data_blob), ("test_queue", success_blob), None]
+        mock_redis.brpop.side_effect = [
+            ("test_queue", data_blob),
+            ("test_queue", success_blob),
+            None,
+        ]
 
         svc.start()
-        
+
         timeout = 2.0
         start = time.time()
         while not _test_results and (time.time() - start < timeout):

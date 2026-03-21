@@ -59,6 +59,7 @@ export function KnowledgeAdminView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Subject>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [filterQuery, setFilterQuery] = useState('');
 
   const handleEdit = (subject: Subject) => {
@@ -83,8 +84,14 @@ export function KnowledgeAdminView() {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteSubject(id);
-    setDeletingId(null);
+    if (isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await deleteSubject(id);
+      setDeletingId(null);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const filteredSubjects = subjects.filter(s => 
@@ -295,14 +302,17 @@ export function KnowledgeAdminView() {
               <div className="flex items-center justify-center gap-4">
                 <button
                   onClick={() => setDeletingId(null)}
-                  className="flex-1 px-4 py-3 text-sm font-bold text-zinc-400 hover:text-white transition-colors"
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-3 text-sm font-bold text-zinc-400 hover:text-white transition-colors disabled:opacity-50"
                 >
                   {t('common.actions.cancel')}
                 </button>
                 <button
                   onClick={() => handleDelete(deletingId)}
-                  className="flex-1 px-4 py-3 text-sm font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-500 transition-all shadow-lg shadow-rose-600/20"
+                  disabled={isDeleting}
+                  className={`flex-1 px-4 py-3 text-sm font-bold text-white bg-rose-600 rounded-xl hover:bg-rose-500 transition-all shadow-lg shadow-rose-600/20 disabled:opacity-50 inline-flex items-center justify-center gap-2`}
                 >
+                  {isDeleting ? <Zap className="w-4 h-4 animate-pulse" /> : null}
                   {t('common.actions.delete')}
                 </button>
               </div>

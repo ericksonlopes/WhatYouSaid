@@ -410,6 +410,15 @@
       "error": "Failed to update chunk."
     }
   },
+  "error_modal": {
+    "title": "Ingestion Details",
+    "original_task": "Original Task",
+    "full_error": "Technical Error Message",
+    "no_message": "No detailed error message available.",
+    "copy": "Copy Error",
+    "copied": "Copied!",
+    "support_hint": "This error may be caused by broken links, lack of permission, or formats not supported by the extraction engine."
+  },
   "chat": {
     "locked": {
       "title": "RAG Chat is coming!",

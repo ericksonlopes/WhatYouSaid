@@ -347,7 +347,9 @@ class TestFileIngestionUseCase:
     ):
         use_case = FileIngestionUseCase(**use_case_deps)
         # Force it to be OTHER first so refinement triggers
-        monkeypatch.setattr(use_case, "_determine_source_type", lambda x: SourceType.OTHER)
+        monkeypatch.setattr(
+            use_case, "_determine_source_type", lambda x: SourceType.OTHER
+        )
 
         subject_id = uuid4()
         job_id = uuid4()
@@ -383,4 +385,3 @@ class TestFileIngestionUseCase:
         # Verify create_job was called with 'other' (initial type)
         args, kwargs = use_case_deps["ingestion_service"].create_job.call_args
         assert kwargs["ingestion_type"] == "other"
-

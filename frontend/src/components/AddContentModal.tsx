@@ -233,7 +233,7 @@ function ProcessingStrategy({
 
 export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
     const { t } = useTranslation();
-    const {subjects, selectedSubjects, modelInfo, addToast} = useAppContext();
+    const {subjects, selectedSubjects, modelInfo, addToast, setCurrentView} = useAppContext();
     const {startIngestion} = useIngestion();
     
     const SOURCES: SourceOption[] = [
@@ -298,6 +298,7 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
         if (contentType === 'youtube') {
             startIngestion(inputValue, contentType, targetSubject, tokensPerChunk, tokensOverlap, youtubeDataType);
             setInputValue('');
+            setCurrentView('activity');
             onClose();
             return;
         } 
@@ -323,6 +324,7 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
                 });
                 setProgress(100);
                 setUploadStatus('done');
+                setCurrentView('activity');
                 addToast(t('ingestion.messages.success'), 'success');
                 setTimeout(() => {
                     setInputValue('');
@@ -367,6 +369,7 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
                 clearInterval(interval);
                 setProgress(100);
                 setUploadStatus('done');
+                setCurrentView('activity');
                 addToast(t('ingestion.messages.success'), 'success');
                 setTimeout(() => {
                     setSelectedFile(null);

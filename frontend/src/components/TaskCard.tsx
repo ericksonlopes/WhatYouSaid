@@ -120,11 +120,11 @@ export function TaskCard({ task }: TaskCardProps) {
     }
   };
 
-  const handleClick = () => {
+    const handleClick = () => {
     if (isDuplicate && task.contentSourceId) {
       setSelectedSourceIdForDb(task.contentSourceId);
       setCurrentView('database');
-    } else if (isFailed) {
+    } else if (isFailed || isCancelled) {
       setIsErrorModalOpen(true);
     } else if (isCompleted && task.contentSourceId) {
       setSelectedSourceIdForDb(task.contentSourceId);
@@ -150,7 +150,7 @@ export function TaskCard({ task }: TaskCardProps) {
         whileHover={{ y: -2 }}
         onClick={handleClick}
         className={`group relative flex flex-col bg-zinc-900/40 backdrop-blur-md border ${config.border} rounded-2xl p-4 transition-all duration-300 ${
-          isFailed || (isCompleted && task.contentSourceId) || (isDuplicate && task.contentSourceId) ? 'cursor-pointer hover:bg-zinc-800/60' : ''
+          isFailed || isCancelled || (isCompleted && task.contentSourceId) || (isDuplicate && task.contentSourceId) ? 'cursor-pointer hover:bg-zinc-800/60' : ''
         }`}
       >
         {/* Top Section: Icon & Identity */}
@@ -245,14 +245,18 @@ export function TaskCard({ task }: TaskCardProps) {
               </div>
             </div>
           ) : isCancelled ? (
-            <div className="p-3 rounded-xl border border-zinc-500/10 bg-zinc-500/[0.02] group-hover:border-zinc-500/30 transition-colors">
+            <div className={`p-3 rounded-xl border transition-colors bg-zinc-500/[0.02] border-zinc-500/10 group-hover:border-zinc-500/30`}>
               <p className="text-[11px] leading-relaxed line-clamp-2 italic font-serif text-zinc-400/80">
-                "{task.statusMessage || t('common.status.cancelled')}"
+                "{getLocalizedError(task.errorMessage) || task.statusMessage || t('common.status.cancelled')}"
               </p>
               <div className="mt-2.5 flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-[9px] text-zinc-500/60 font-bold uppercase tracking-tighter">
                   <Clock className="w-3 h-3" />
                   {formatRelativeTime(task.createdAt, t)}
+                </div>
+                <div className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-zinc-500/60">
+                  <AlertCircle className="w-3 h-3" />
+                  {t('common.actions.view_details')}
                 </div>
               </div>
             </div>
