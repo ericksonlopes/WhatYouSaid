@@ -34,8 +34,14 @@ class TestYoutubeExtractor:
                 extractor = YoutubeExtractor(video_id)
                 result = extractor.extract_transcript()
                 assert result == dummy_transcript
+                # Updated to match the new multi-language fallback logic
+                expected_languages = [extractor.language]
+                for lang in ["pt", "pt-BR", "ptbr"]:
+                    if lang not in expected_languages:
+                        expected_languages.append(lang)
+
                 mock_fetch.assert_called_once_with(
-                    video_id=video_id, languages=[extractor.language]
+                    video_id=video_id, languages=expected_languages
                 )
 
     def test_extract_transcript_no_transcript_found(self):

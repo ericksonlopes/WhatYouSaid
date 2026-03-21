@@ -44,6 +44,7 @@ class IngestionJobService:
         model = self._repo.get_by_id(job_id)
         entity = IngestionJobMapper.model_to_entity(model)
         assert entity is not None
+
         return entity
 
     def update_job(
@@ -73,6 +74,9 @@ class IngestionJobService:
             ingestion_type=ingestion_type,
         )
 
+        # Notification logic removed (WebSocket decommissioned)
+        pass
+
     def link_job_to_source(
         self,
         job_id: UUID,
@@ -98,14 +102,38 @@ class IngestionJobService:
         models = self._repo.list_by_content_source(content_source_id)
         return IngestionJobMapper.model_list_to_entities(models)
 
-    def list_recent_jobs(self, limit: int = 50) -> List[IngestionJobEntity]:
+    def list_recent_jobs(
+        self, limit: int = 50, offset: int = 0
+    ) -> List[IngestionJobEntity]:
         """List recent ingestion jobs, ordered by creation date."""
-        models = self._repo.list_recent_jobs(limit=limit)
+        models = self._repo.list_recent_jobs(limit=limit, offset=offset)
         return IngestionJobMapper.model_list_to_entities(models)
 
+    def list_jobs(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        status: Optional[str] = None,
+        search: Optional[str] = None,
+    ) -> dict:
+        """List jobs with pagination and filters. Returns {'jobs': [...], 'total': int, 'stats': {...}}"""
+        models = self._repo.list_jobs(
+            limit=limit, offset=offset, status=status, search=search
+        )
+        total = self._repo.count_jobs(status=status, search=search)
+        stats = self._repo.get_status_counts(search=search)
+
+        return {
+            "jobs": IngestionJobMapper.model_list_to_entities(models),
+            "total": total,
+            "stats": stats,
+        }
+
     def list_recent_jobs_by_subject(
-        self, subject_id: UUID, limit: int = 50
+        self, subject_id: UUID, limit: int = 50, offset: int = 0
     ) -> List[IngestionJobEntity]:
         """List recent ingestion jobs for a specific subject."""
-        models = self._repo.list_recent_jobs_by_subject(subject_id, limit=limit)
+        models = self._repo.list_recent_jobs_by_subject(
+            subject_id, limit=limit, offset=offset
+        )
         return IngestionJobMapper.model_list_to_entities(models)

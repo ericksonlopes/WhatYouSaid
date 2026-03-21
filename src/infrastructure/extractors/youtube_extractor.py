@@ -116,30 +116,54 @@ class YoutubeExtractor(IYoutubeExtractor):
             return []
 
     def extract_transcript(self) -> FetchedTranscript:
-        """Fetches the transcript for a given video."""
+        """Fetches the transcript for a given video with fallback support."""
+        # Define preferred languages: requested first, then common Portuguese variants
+        preferred_languages = [self.language]
+        for lang in ["pt", "pt-BR", "ptbr"]:
+            if lang not in preferred_languages:
+                preferred_languages.append(lang)
+
         logger.info(
             "Starting transcript fetch.",
-            context={"video_id": self.video_id, "language": self.language},
+            context={"video_id": self.video_id, "preference": preferred_languages},
         )
 
         try:
+            # First attempt: Try preferred languages in order
             transcript = YouTubeTranscriptApi().fetch(
-                video_id=self.video_id, languages=[self.language]
+                video_id=self.video_id, languages=preferred_languages
             )
             logger.debug(
-                "Transcript fetched successfully.",
+                "Transcript fetched successfully (preferred).",
                 context={
                     "video_id": self.video_id,
-                    "language": self.language,
-                    "transcript_length": len(transcript),
+                    "language": preferred_languages,
                 },
             )
             return transcript
 
         except NoTranscriptFound:
-            msg = f"No transcript found for video {self.video_id}. Please ensure it has subtitles available."
-            logger.error(msg, context={"video_id": self.video_id})
-            raise YoutubeTranscriptNotFoundException(self.video_id, self.language)
+            # Second attempt: Fallback to ANY available transcript
+            try:
+                transcript_list = YouTubeTranscriptApi().list(self.video_id)
+                # Pick the first one available (this will prefer manual over generated usually)
+                fallback_transcript = next(iter(transcript_list))
+
+                logger.warning(
+                    f"Preferred languages {preferred_languages} not found. "
+                    f"Falling back to available language: '{fallback_transcript.language_code}'",
+                    context={
+                        "video_id": self.video_id,
+                        "fallback_lang": fallback_transcript.language_code,
+                    },
+                )
+
+                return fallback_transcript.fetch()
+            except Exception as e:
+                # If even listing fails or no transcripts at all exist
+                msg = f"No transcript available for video {self.video_id} in ANY language."
+                logger.error(msg, context={"video_id": self.video_id, "error": str(e)})
+                raise YoutubeTranscriptNotFoundException(self.video_id, self.language)
 
         except TranscriptsDisabled:
             msg = f"Transcripts are disabled for video {self.video_id}."

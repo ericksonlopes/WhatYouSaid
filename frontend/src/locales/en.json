@@ -191,6 +191,7 @@
       "active": "Active Tasks",
       "completed": "Successfully Ingested",
       "failed": "Critical Errors",
+      "cancelled": "Cancelled Tasks",
       "metric": "Metric"
     },
     "status": {

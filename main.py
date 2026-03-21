@@ -8,6 +8,7 @@ from src.presentation.api.routes import (
     chunk_router,
     ingest_router,
     job_router,
+    notification_router,
     search_router,
     settings_router,
     source_router,
@@ -45,8 +46,10 @@ async def lifespan(app: FastAPI):
         logger.info("Re-rank model pre-loaded successfully.")
 
         # Initialize In-memory Task Queue
+        logger.info("Initializing TaskQueueService...")
         app.state.task_queue = TaskQueueService(num_workers=4)
         app.state.task_queue.start()
+        logger.info("TaskQueueService started.")
 
     except Exception as e:
         logger.error(f"Error pre-loading models: {e}")
@@ -86,6 +89,7 @@ app.include_router(ingest_router.router, prefix="/rest/ingest", tags=["Ingestion
 app.include_router(subject_router.router, prefix="/rest/subjects", tags=["Subjects"])
 app.include_router(source_router.router, prefix="/rest/sources", tags=["Sources"])
 app.include_router(job_router.router, prefix="/rest/jobs", tags=["Jobs"])
+app.include_router(notification_router.router, tags=["Notifications"])
 app.include_router(settings_router.router, prefix="/rest/settings", tags=["Settings"])
 app.include_router(chunk_router.router, prefix="/rest/chunks", tags=["Chunks"])
 

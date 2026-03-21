@@ -300,7 +300,7 @@ class YoutubeIngestionUseCase:
                 context={"source_id": str(existing.id), "external_source": video_id},
             )
 
-            # Create a FAILED ingestion job to record the duplicate attempt
+            # Create a CANCELLED ingestion job to record the duplicate attempt
             failed_job_id = None
             try:
                 failed_job = self.ingestion_service.create_job(
@@ -313,17 +313,17 @@ class YoutubeIngestionUseCase:
                 )
                 self.ingestion_service.update_job(
                     job_id=failed_job.id,
-                    status=IngestionJobStatus.FAILED,
+                    status=IngestionJobStatus.CANCELLED,
                     error_message="Duplicate: this content has already been ingested.",
                     status_message=f"Skipped: {video_id} already exists",
                 )
                 failed_job_id = str(failed_job.id)
                 logger.info(
-                    "Created FAILED job for duplicate attempt",
+                    "Created CANCELLED job for duplicate attempt",
                     context={"job_id": failed_job_id, "video_id": video_id},
                 )
             except Exception as ej:
-                logger.error(f"Failed to create FAILED job for duplicate: {ej}")
+                logger.error(f"Failed to create CANCELLED job for duplicate: {ej}")
 
             return {
                 "video_url": video_url,
@@ -474,6 +474,7 @@ class YoutubeIngestionUseCase:
                 status=IngestionJobStatus.FINISHED,
                 status_message="Ingestion complete!",
                 current_step=4,
+                total_steps=4,
                 chunks_count=len(chunks),
             )
             total_tokens = sum(

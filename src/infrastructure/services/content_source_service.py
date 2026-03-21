@@ -64,6 +64,9 @@ class ContentSourceService:
         model = self._repo.get_by_id(created_id)
         entity = ContentSourceMapper.model_to_entity(model)
         assert entity is not None
+
+        # Notification removed (WebSocket decommissioned)
+
         return entity
 
     def get_by_source_info(
@@ -144,6 +147,8 @@ class ContentSourceService:
             max_tokens_per_chunk=max_tokens_per_chunk,
             source_metadata=source_metadata,
         )
+
+        # Notification removed (WebSocket decommissioned)
 
     def update_title(self, content_source_id: UUID, title: str) -> None:
         """Update the title of a content source."""

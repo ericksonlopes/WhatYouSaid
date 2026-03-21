@@ -87,3 +87,11 @@ export type Chunk = {
   tokens_count?: number;
   created_at: string;
 };
+
+export type PaginatedResponse<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  stats?: Record<string, number>;
+};

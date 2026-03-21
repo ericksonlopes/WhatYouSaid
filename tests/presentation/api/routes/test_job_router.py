@@ -36,20 +36,26 @@ class TestJobRouter:
             created_at=datetime.now(timezone.utc),
         )
 
-        mock_job_service.list_recent_jobs.return_value = [mock_job]
+        mock_job_service.list_jobs.return_value = {
+            "jobs": [mock_job],
+            "total": 1,
+            "stats": {"total": 1, "processing": 0, "completed": 1, "failed": 0},
+        }
 
         response = client.get("/rest/jobs")
 
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 1
-        assert data[0]["id"] == str(mock_job.id)
-        assert data[0]["status"] == "finished"
-        assert data[0]["source_title"] == "Test Title"
+        assert "items" in data
+        assert len(data["items"]) == 1
+        assert data["items"][0]["id"] == str(mock_job.id)
+        assert data["items"][0]["status"] == "finished"
+        assert data["items"][0]["source_title"] == "Test Title"
+        assert data["total"] == 1
 
     def test_get_jobs_error(self, mock_job_service):
         client = TestClient(app)
-        mock_job_service.list_recent_jobs.side_effect = Exception("DB error")
+        mock_job_service.list_jobs.side_effect = Exception("DB error")
 
         response = client.get("/rest/jobs")
 

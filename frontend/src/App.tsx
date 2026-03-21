@@ -1,7 +1,19 @@
-import React, {useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import {ChevronLeft, ChevronRight, Plus, RefreshCw, Search, Database, Activity as ActivityIcon, Loader2, CheckCircle2, AlertCircle} from 'lucide-react';
-import { motion } from 'motion/react';
+import {
+  Activity as ActivityIcon,
+  AlertCircle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Database,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Search,
+  XCircle
+} from 'lucide-react';
+import {motion} from 'motion/react';
 import {AppProvider, useAppContext} from './store/AppContext';
 import {Sidebar} from './components/Sidebar';
 import {TaskCard} from './components/TaskCard';
@@ -15,26 +27,44 @@ import {ErrorBoundary} from './components/ErrorBoundary';
 import {ContentSource} from './types';
 
 function ActivityMonitorView() {
-  const { jobs = [], refreshJobs, isJobsLoaded, sources = [], subjects = [], addToast } = useAppContext();
+  const {
+    jobs = [],
+    totalJobs = 0,
+    jobStats = {total: 0, processing: 0, completed: 0, failed: 0},
+    refreshJobs,
+    isJobsLoaded,
+    sources = [],
+    subjects = [],
+    addToast,
+    jobPage: page,
+    setJobPage: setPage,
+    jobPageSize: pageSize,
+    setJobPageSize: setPageSize,
+    jobStatusFilter: statusFilter,
+    setJobStatusFilter: setStatusFilter,
+    jobSearchQuery: searchQuery,
+    setJobSearchQuery: setSearchQuery
+  } = useAppContext();
   const { t } = useTranslation();
-  const [page, setPage] = useState(1);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [pageSize, setPageSize] = useState(12);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'processing' | 'completed' | 'failed'>('all');
 
-  const handleRefresh = async () => {
+  const handleRefresh = useCallback(async () => {
     if (isSyncing) return;
     setIsSyncing(true);
     try {
-      await refreshJobs?.();
+      await refreshJobs?.({page, pageSize, status: statusFilter, search: searchQuery});
       addToast(t('notifications.sync.success'), 'success');
     } catch (err) {
       addToast(t('notifications.sync.error'), 'error');
     } finally {
       setIsSyncing(false);
     }
-  };
+  }, [isSyncing, refreshJobs, page, pageSize, statusFilter, searchQuery, addToast, t]);
+
+  // Trigger refresh on page, pageSize, status, or search changes
+  useEffect(() => {
+    refreshJobs?.({page, pageSize, status: statusFilter, search: searchQuery});
+  }, [page, pageSize, statusFilter, searchQuery, refreshJobs]);
 
   const enrichedJobs = React.useMemo(() => {
     return jobs.map(job => {
@@ -56,41 +86,16 @@ function ActivityMonitorView() {
     });
   }, [jobs, sources, subjects]);
 
-  const filteredJobs = React.useMemo(() => {
-    let result = enrichedJobs;
+  // With server-side pagination, enrichedJobs is already filtered and paginated
+  const totalPages = Math.ceil(totalJobs / pageSize);
 
-    // Filter by status
-    if (statusFilter !== 'all') {
-      if (statusFilter === 'processing') {
-        result = result.filter(j => ['processing', 'started'].includes(j.status));
-      } else if (statusFilter === 'completed') {
-        result = result.filter(j => ['done', 'finished'].includes(j.status));
-      } else if (statusFilter === 'failed') {
-        result = result.filter(j => ['failed', 'error', 'cancelled'].includes(j.status));
-      }
-    }
-
-    // Filter by search query
-    if (!searchQuery.trim()) return result;
-    const query = searchQuery.toLowerCase().trim();
-    return result.filter(job => 
-      (job.title?.toLowerCase().includes(query) ?? false) || 
-      (job.statusMessage?.toLowerCase().includes(query) ?? false) ||
-      (job.status?.toLowerCase().includes(query) ?? false)
-    );
-  }, [enrichedJobs, searchQuery, statusFilter]);
-
-  const totalPages = Math.ceil(filteredJobs.length / pageSize);
-  const paginatedJobs = filteredJobs.slice((page - 1) * pageSize, page * pageSize);
-
-  const stats = React.useMemo(() => {
-    return {
-      total: enrichedJobs.length,
-      processing: enrichedJobs.filter(j => ['processing', 'started'].includes(j.status)).length,
-      completed: enrichedJobs.filter(j => ['done', 'finished'].includes(j.status)).length,
-      failed: enrichedJobs.filter(j => ['failed', 'error', 'cancelled'].includes(j.status)).length
-    };
-  }, [enrichedJobs]);
+  const stats = React.useMemo(() => ({
+    total: jobStats.total,
+    processing: jobStats.processing,
+    completed: jobStats.completed,
+    failed: jobStats.failed,
+    cancelled: jobStats.cancelled || 0,
+  }), [jobStats]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -98,11 +103,34 @@ function ActivityMonitorView() {
     }
   };
 
-  const statConfig: { label: string, value: number, color: string, icon: any, bg: string, pulse?: boolean, status: 'all' | 'processing' | 'completed' | 'failed' }[] = [
+  const statConfig: {
+    label: string,
+    value: number,
+    color: string,
+    icon: any,
+    bg: string,
+    pulse?: boolean,
+    status: string
+  }[] = [
     { label: t('activity.stats.total'), value: stats.total, color: 'text-zinc-400', icon: Database, bg: 'bg-zinc-400/5', status: 'all' },
     { label: t('activity.stats.active'), value: stats.processing, color: 'text-amber-400', icon: Loader2, bg: 'bg-amber-400/5', pulse: stats.processing > 0, status: 'processing' },
     { label: t('activity.stats.completed'), value: stats.completed, color: 'text-emerald-400', icon: CheckCircle2, bg: 'bg-emerald-400/5', status: 'completed' },
-    { label: t('activity.stats.failed'), value: stats.failed, color: 'text-rose-400', icon: AlertCircle, bg: 'bg-rose-400/5', status: 'failed' }
+    {
+      label: t('activity.stats.failed'),
+      value: stats.failed,
+      color: 'text-rose-400',
+      icon: AlertCircle,
+      bg: 'bg-rose-400/5',
+      status: 'failed'
+    },
+    {
+      label: t('activity.stats.cancelled'),
+      value: stats.cancelled,
+      color: 'text-zinc-500',
+      icon: XCircle,
+      bg: 'bg-zinc-500/5',
+      status: 'cancelled'
+    }
   ];
 
   return (
@@ -147,7 +175,7 @@ function ActivityMonitorView() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {statConfig.map((stat, i) => {
             const isActive = statusFilter === stat.status;
             return (
@@ -185,7 +213,7 @@ function ActivityMonitorView() {
           <div className="flex items-center justify-center py-20">
             <RefreshCw className="w-10 h-10 text-emerald-500 animate-spin opacity-20" />
           </div>
-        ) : filteredJobs.length === 0 ? (
+        ) : enrichedJobs.length === 0 ? (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -199,7 +227,7 @@ function ActivityMonitorView() {
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-10 mt-6">
-            {paginatedJobs.map((task) => (
+            {enrichedJobs.map((task) => (
               <TaskCard key={task.id} task={task} />
             ))}
           </div>
@@ -243,29 +271,49 @@ function ActivityMonitorView() {
           <div className="flex items-center gap-4">
             <span className="text-[11px] text-zinc-500 font-medium">
               {t('activity.pagination', { 
-                start: (page - 1) * pageSize + 1, 
-                end: Math.min(page * pageSize, filteredJobs.length), 
-                total: filteredJobs.length 
+                start: (page - 1) * pageSize + 1,
+                end: Math.min(page * pageSize, totalJobs),
+                total: totalJobs 
               })}
             </span>
-            <div className="flex items-center gap-1.5 p-1 bg-zinc-950 rounded-xl border border-white/5">
-              <button 
-                onClick={() => handlePageChange(page - 1)}
-                disabled={page === 1}
-                className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-white disabled:opacity-20 transition-all"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <div className="text-[11px] font-black px-3 text-zinc-400">
-                {page} <span className="mx-1 text-zinc-700">/</span> {totalPages}
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-2 py-1 bg-zinc-950 rounded-xl border border-white/5">
+                <span
+                    className="text-[10px] uppercase tracking-wider font-bold text-zinc-600 pl-1">{t('common.pagination.page_size') || 'Size'}:</span>
+                <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="bg-transparent text-[11px] font-black text-emerald-500 focus:outline-none cursor-pointer pr-1"
+                >
+                  {[12, 24, 48, 96].map(size => (
+                      <option key={size} value={size} className="bg-zinc-900 text-white font-sans">{size}</option>
+                  ))}
+                </select>
               </div>
-              <button 
-                onClick={() => handlePageChange(page + 1)}
-                disabled={page === totalPages}
-                className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-white disabled:opacity-20 transition-all"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+
+              <div className="flex items-center gap-1.5 p-1 bg-zinc-950 rounded-xl border border-white/5">
+                <button
+                    onClick={() => handlePageChange(page - 1)}
+                    disabled={page === 1}
+                    className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-white disabled:opacity-20 transition-all"
+                >
+                  <ChevronLeft className="w-4 h-4"/>
+                </button>
+                <div className="text-[11px] font-black px-3 text-zinc-400">
+                  {page} <span className="mx-1 text-zinc-700">/</span> {totalPages}
+                </div>
+                <button
+                    onClick={() => handlePageChange(page + 1)}
+                    disabled={page === totalPages}
+                    className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-white disabled:opacity-20 transition-all"
+                >
+                  <ChevronRight className="w-4 h-4"/>
+                </button>
+              </div>
             </div>
           </div>
         </div>

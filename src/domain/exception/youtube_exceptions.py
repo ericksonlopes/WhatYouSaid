@@ -28,10 +28,21 @@ class YoutubeVideoUnplayableException(YoutubeException):
 class YoutubeTranscriptNotFoundException(YoutubeException):
     """Raised when no transcript is found for a YouTube video."""
 
-    def __init__(self, video_id: str, language: Optional[str] = None):
+    def __init__(
+        self,
+        video_id: str,
+        language: Optional[str] = None,
+        available_languages: Optional[list[str]] = None,
+    ):
         lang_str = f" in language '{language}'" if language else ""
-        message = f"Transcript not found for video {video_id}{lang_str}."
+        avail_str = (
+            f" Available languages: {', '.join(available_languages)}."
+            if available_languages
+            else ""
+        )
+        message = f"Transcript not found for video {video_id}{lang_str}.{avail_str}"
         super().__init__(message, video_id=video_id)
+        self.available_languages = available_languages
 
 
 class YoutubeTranscriptsDisabledException(YoutubeException):

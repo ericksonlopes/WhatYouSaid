@@ -179,26 +179,166 @@ class IngestionJobSQLRepository:
                 )
                 raise
 
-    def list_recent_jobs(self, limit: int = 50) -> List[IngestionJobModel]:
+    def list_recent_jobs(
+        self, limit: int = 50, offset: int = 0
+    ) -> List[IngestionJobModel]:
+        """Backward compatible list_recent_jobs with offset support."""
+        return self.list_jobs(limit=limit, offset=offset)
+
+    def list_jobs(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        status: Optional[str] = None,
+        search: Optional[str] = None,
+    ) -> List[IngestionJobModel]:
         with Connector() as session:
             try:
-                logger.debug("Listing recent ingestion jobs", context={"limit": limit})
+                logger.debug(
+                    "Listing ingestion jobs with pagination/filters",
+                    context={
+                        "limit": limit,
+                        "offset": offset,
+                        "status": status,
+                        "search": search,
+                    },
+                )
+                query = session.query(IngestionJobModel).options(
+                    joinedload(IngestionJobModel.content_source)
+                )
+
+                if status:
+                    if status == "processing":
+                        query = query.filter(
+                            IngestionJobModel.status.in_(["processing", "started"])
+                        )
+                    elif status == "completed":
+                        query = query.filter(
+                            IngestionJobModel.status.in_(["done", "finished"])
+                        )
+                    elif status == "failed":
+                        # Exclude Duplicates from Failed
+                        query = query.filter(
+                            IngestionJobModel.status.in_(["failed", "error"]),
+                            ~IngestionJobModel.error_message.ilike("%Duplicate%"),
+                        )
+                    elif status == "cancelled":
+                        # Include Duplicates in Cancelled
+                        query = query.filter(
+                            (IngestionJobModel.status == "cancelled")
+                            | (IngestionJobModel.error_message.ilike("%Duplicate%"))
+                        )
+                    else:
+                        query = query.filter(IngestionJobModel.status == status)
+
+                if search:
+                    search_term = f"%{search}%"
+                    query = query.filter(
+                        (IngestionJobModel.source_title.ilike(search_term))
+                        | (IngestionJobModel.status_message.ilike(search_term))
+                        | (IngestionJobModel.external_source.ilike(search_term))
+                    )
+
                 result = (
-                    session.query(IngestionJobModel)
-                    .options(joinedload(IngestionJobModel.content_source))
-                    .order_by(IngestionJobModel.created_at.desc())
+                    query.order_by(IngestionJobModel.created_at.desc())
                     .limit(limit)
+                    .offset(offset)
                     .all()
                 )
                 return result
             except Exception as e:
-                logger.error(
-                    "Error listing recent ingestion jobs", context={"error": str(e)}
-                )
+                logger.error("Error listing ingestion jobs", context={"error": str(e)})
+                raise
+
+    def count_jobs(
+        self, status: Optional[str] = None, search: Optional[str] = None
+    ) -> int:
+        with Connector() as session:
+            try:
+                query = session.query(IngestionJobModel)
+
+                if status:
+                    if status == "processing":
+                        query = query.filter(
+                            IngestionJobModel.status.in_(["processing", "started"])
+                        )
+                    elif status == "completed":
+                        query = query.filter(
+                            IngestionJobModel.status.in_(["done", "finished"])
+                        )
+                    elif status == "failed":
+                        # Exclude Duplicates from Failed
+                        query = query.filter(
+                            IngestionJobModel.status.in_(["failed", "error"]),
+                            ~IngestionJobModel.error_message.ilike("%Duplicate%"),
+                        )
+                    elif status == "cancelled":
+                        # Include Duplicates in Cancelled
+                        query = query.filter(
+                            (IngestionJobModel.status == "cancelled")
+                            | (IngestionJobModel.error_message.ilike("%Duplicate%"))
+                        )
+                    else:
+                        query = query.filter(IngestionJobModel.status == status)
+
+                if search:
+                    search_term = f"%{search}%"
+                    query = query.filter(
+                        (IngestionJobModel.source_title.ilike(search_term))
+                        | (IngestionJobModel.status_message.ilike(search_term))
+                        | (IngestionJobModel.external_source.ilike(search_term))
+                    )
+
+                return query.count()
+            except Exception as e:
+                logger.error("Error counting ingestion jobs", context={"error": str(e)})
+                raise
+
+    def get_status_counts(self, search: Optional[str] = None) -> dict:
+        with Connector() as session:
+            try:
+                # We reuse the search logic if provided
+                base_query = session.query(IngestionJobModel)
+                if search:
+                    search_term = f"%{search}%"
+                    base_query = base_query.filter(
+                        (IngestionJobModel.source_title.ilike(search_term))
+                        | (IngestionJobModel.status_message.ilike(search_term))
+                        | (IngestionJobModel.external_source.ilike(search_term))
+                    )
+
+                total = base_query.count()
+                processing = base_query.filter(
+                    IngestionJobModel.status.in_(["processing", "started"])
+                ).count()
+                completed = base_query.filter(
+                    IngestionJobModel.status.in_(["done", "finished"])
+                ).count()
+
+                # Treat "Duplicate" errors as CANCELLED
+                duplicate_filter = IngestionJobModel.error_message.ilike("%Duplicate%")
+
+                failed = base_query.filter(
+                    IngestionJobModel.status.in_(["failed", "error"]), ~duplicate_filter
+                ).count()
+
+                cancelled = base_query.filter(
+                    (IngestionJobModel.status == "cancelled") | duplicate_filter
+                ).count()
+
+                return {
+                    "total": total,
+                    "processing": processing,
+                    "completed": completed,
+                    "failed": failed,
+                    "cancelled": cancelled,
+                }
+            except Exception as e:
+                logger.error("Error getting status counts", context={"error": str(e)})
                 raise
 
     def list_recent_jobs_by_subject(
-        self, subject_id: UUID, limit: int = 50
+        self, subject_id: UUID, limit: int = 50, offset: int = 0
     ) -> List[IngestionJobModel]:
         from src.infrastructure.repositories.sql.models.content_source import (
             ContentSourceModel,

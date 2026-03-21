@@ -1,4 +1,4 @@
-import { Subject, IngestionTask, ContentSource, ChatMessage, Chunk } from '../types';
+import { Subject, IngestionTask, ContentSource, ChatMessage, Chunk, PaginatedResponse } from '../types';
 
 const API_BASE_URL = '/rest';
 
@@ -113,27 +113,39 @@ export const api = {
     return response.json();
   },
 
-  async fetchJobs(): Promise<IngestionTask[]> {
-    const response = await fetch(`${API_BASE_URL}/jobs`);
+  async fetchJobs(params?: { page?: number; pageSize?: number; status?: string; search?: string }): Promise<PaginatedResponse<IngestionTask>> {
+    const url = new URL(`${API_BASE_URL}/jobs`, window.location.origin);
+    if (params?.page) url.searchParams.append('page', params.page.toString());
+    if (params?.pageSize) url.searchParams.append('page_size', params.pageSize.toString());
+    if (params?.status && params.status !== 'all') url.searchParams.append('status', params.status);
+    if (params?.search) url.searchParams.append('search', params.search);
+
+    const response = await fetch(url.toString());
     await handleResponseError(response, 'Failed to fetch jobs');
     const data = await response.json();
-    return data.map((j: any) => ({
-      id: j.id,
-      title: j.source_title || j.status_message || `Job ${j.id.substring(0, 8)}`,
-      status: j.status.toLowerCase() as any, // backend uses uppercase
-      progress: j.total_steps ? Math.round((j.current_step / j.total_steps) * 100) : 0,
-      currentStep: j.current_step,
-      totalSteps: j.total_steps,
-      statusMessage: j.status_message,
-      contentSourceId: j.content_source_id || undefined,
-      chunksCount: j.chunks_count || undefined,
-      subjectId: j.subject_id || '',
-      createdAt: j.created_at,
-      finishedAt: j.finished_at,
-      ingestionType: j.ingestion_type || undefined,
-      errorMessage: j.error_message || undefined,
-      externalSource: j.external_source || undefined,
-    }));
+    return {
+      items: data.items.map((j: any) => ({
+        id: j.id,
+        title: j.source_title || j.status_message || `Job ${j.id.substring(0, 8)}`,
+        status: j.status.toLowerCase() as any, // backend uses uppercase
+        progress: j.total_steps ? Math.round((j.current_step / j.total_steps) * 100) : 0,
+        currentStep: j.current_step,
+        totalSteps: j.total_steps,
+        statusMessage: j.status_message,
+        contentSourceId: j.content_source_id || undefined,
+        chunksCount: j.chunks_count || undefined,
+        subjectId: j.subject_id || '',
+        createdAt: j.created_at,
+        finishedAt: j.finished_at,
+        ingestionType: j.ingestion_type || undefined,
+        errorMessage: j.error_message || undefined,
+        externalSource: j.external_source || undefined,
+      })),
+      total: data.total,
+      page: data.page,
+      page_size: data.page_size,
+      stats: data.stats
+    };
   },
 
   async search(query: string, topK: number, subjectId?: string, searchMode?: string, reRank: boolean = true): Promise<any> {

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
@@ -21,3 +21,11 @@ class JobResponse(BaseModel):
     finished_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedJobsResponse(BaseModel):
+    items: List[JobResponse]
+    total: int
+    page: int
+    page_size: int
+    stats: Optional[dict] = None

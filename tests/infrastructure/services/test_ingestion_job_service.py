@@ -66,6 +66,7 @@ class TestIngestionJobService:
 
     def test_update_job(self, service, mock_repo):
         jid = uuid4()
+
         service.update_job(
             job_id=jid,
             status=IngestionJobStatus.PROCESSING,
@@ -111,13 +112,15 @@ class TestIngestionJobService:
 
     def test_list_recent_jobs(self, service, mock_repo):
         mock_repo.list_recent_jobs.return_value = [self.create_mock_model()]
-        result = service.list_recent_jobs(limit=5)
+        result = service.list_recent_jobs(limit=5, offset=0)
         assert len(result) == 1
-        mock_repo.list_recent_jobs.assert_called_once_with(limit=5)
+        mock_repo.list_recent_jobs.assert_called_once_with(limit=5, offset=0)
 
     def test_list_recent_jobs_by_subject(self, service, mock_repo):
         sid = uuid4()
         mock_repo.list_recent_jobs_by_subject.return_value = [self.create_mock_model()]
-        result = service.list_recent_jobs_by_subject(sid, limit=5)
+        result = service.list_recent_jobs_by_subject(sid, limit=5, offset=0)
         assert len(result) == 1
-        mock_repo.list_recent_jobs_by_subject.assert_called_once_with(sid, limit=5)
+        mock_repo.list_recent_jobs_by_subject.assert_called_once_with(
+            sid, limit=5, offset=0
+        )

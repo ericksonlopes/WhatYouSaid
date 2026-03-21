@@ -35,6 +35,7 @@ router = APIRouter()
     response_model=IngestResponse,
     responses={
         400: {"description": "Validation error or invalid request"},
+        409: {"description": "Validation error"},
         500: {"description": "Internal server error during ingestion"},
     },
 )
@@ -68,7 +69,14 @@ def ingest_youtube(
     # If it's a reprocess request, we always run it in background
     if request.reprocess:
         logger.info("Running reprocessing in background via queue")
-        task_queue.enqueue(use_case.execute, cmd)
+        task_queue.enqueue(
+            use_case.execute,
+            cmd,
+            task_title=request.title or request.video_url or "YouTube Ingestion",
+            metadata={"job_id": str(request.ingestion_job_id)}
+            if request.ingestion_job_id
+            else {},
+        )
         return IngestResponse(
             skipped=False, reason="Reprocessing started in background queue."
         )
@@ -164,7 +172,12 @@ async def ingest_file(
                 os.remove(command.file_path)
                 os.rmdir(os.path.dirname(command.file_path))
 
-    task_queue.enqueue(run_ingestion_and_cleanup, cmd)
+    task_queue.enqueue(
+        run_ingestion_and_cleanup,
+        cmd,
+        task_title=filename,
+        metadata={"filename": filename},
+    )
 
     return {
         "message": "File upload successful, ingestion started in background.",
@@ -262,7 +275,13 @@ async def ingest_file_url(
             if os.path.exists(dir_to_remove):
                 shutil.rmtree(dir_to_remove)
 
-    task_queue.enqueue(run_ingestion_and_cleanup, cmd, temp_dir)
+    task_queue.enqueue(
+        run_ingestion_and_cleanup,
+        cmd,
+        temp_dir,
+        task_title=filename,
+        metadata={"filename": filename, "url": request.file_url},
+    )
 
     return {
         "message": "File URL ingestion started in background.",

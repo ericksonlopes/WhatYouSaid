@@ -191,6 +191,7 @@
       "active": "Tarefas Ativas",
       "completed": "Ingerido com Sucesso",
       "failed": "Erros Críticos",
+      "cancelled": "Tarefas Canceladas",
       "metric": "Métrica"
     },
     "status": {

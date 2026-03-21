@@ -1,7 +1,7 @@
 import queue
 import threading
 import time
-from typing import Callable
+from typing import Callable, Dict, Optional
 
 from src.config.logger import Logger
 
@@ -24,21 +24,24 @@ class TaskQueueService:
     def start(self):
         """Starts the background worker threads."""
         if self._workers:
-            logger.warning("TaskQueueService already started.")
+            logger.warning("TaskQueueService already started.", context="start")
             return
 
         self._should_stop = False
         for i in range(self._num_workers):
             t = threading.Thread(
-                target=self._worker_loop, name=f"TaskQueueWorker-{i}", daemon=True
+                target=self._worker_loop, name="TaskQueueWorker-" + str(i), daemon=True
             )
             t.start()
             self._workers.append(t)
-        logger.info(f"TaskQueueService started with {self._num_workers} workers.")
+        logger.info(
+            "TaskQueueService started",
+            context={"num_workers": self._num_workers, "where": "start"},
+        )
 
     def stop(self):
         """Signals workers to stop and waits for them to finish."""
-        logger.info("Stopping TaskQueueService...")
+        logger.info("Stopping TaskQueueService...", context="stop")
         self._should_stop = True
 
         # Add 'None' poison pills to wake up workers from block
@@ -49,13 +52,25 @@ class TaskQueueService:
             t.join(timeout=5.0)
 
         self._workers = []
-        logger.info("TaskQueueService stopped.")
+        logger.info("TaskQueueService stopped", context={"where": "stop"})
 
-    def enqueue(self, func: Callable, *args, **kwargs):
+    def enqueue(
+        self,
+        func: Callable,
+        *args,
+        task_title: Optional[str] = None,
+        metadata: Optional[Dict] = None,
+        **kwargs,
+    ):
         """Adds a task to the queue."""
-        self._queue.put((func, args, kwargs))
+        self._queue.put((func, task_title, metadata, args, kwargs))
         logger.debug(
-            f"Task enqueued: {func.__name__}. Queue size: {self._queue.qsize()}"
+            "Task enqueued",
+            context={
+                "task_title": task_title or func.__name__,
+                "queue_size": self._queue.qsize(),
+                "where": "enqueue",
+            },
         )
 
     def _worker_loop(self):
@@ -67,25 +82,48 @@ class TaskQueueService:
                     self._queue.task_done()
                     break
 
-                func, args, kwargs = item
+                func, task_title, metadata, args, kwargs = item
+                display_title = task_title or func.__name__
 
-                logger.info(f"Worker processing task: {func.__name__}")
+                logger.info(
+                    "Worker processing task",
+                    context={"task": display_title, "where": "worker_loop"},
+                )
                 start_time = time.time()
+
+                # Notification removed (WebSocket decommissioned)
 
                 try:
                     func(*args, **kwargs)
                     duration = time.time() - start_time
-                    logger.info(f"Task {func.__name__} completed in {duration:.2f}s")
+                    logger.info(
+                        "Task completed",
+                        context={
+                            "task": display_title,
+                            "duration": round(duration, 2),
+                            "where": "worker_loop",
+                        },
+                    )
+                    # Notification removed (WebSocket decommissioned)
+
                 except Exception as e:
                     logger.error(
-                        f"Error executing task {func.__name__}: {e}",
-                        context={"error": str(e)},
+                        "Error executing task",
+                        context={
+                            "task": display_title,
+                            "error": str(e),
+                            "where": "worker_loop",
+                        },
                     )
+                    # Notification removed (WebSocket decommissioned)
                 finally:
                     self._queue.task_done()
 
             except queue.Empty:
                 continue
             except Exception as e:
-                logger.error(f"Unexpected error in TaskQueue worker loop: {e}")
+                logger.error(
+                    "Unexpected error in TaskQueue worker loop",
+                    context={"error": str(e), "where": "worker_loop"},
+                )
                 time.sleep(1.0)  # Avoid tight loop on repeated errors

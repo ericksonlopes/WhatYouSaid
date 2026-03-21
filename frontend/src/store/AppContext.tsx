@@ -26,8 +26,18 @@ interface AppState {
   sources: ContentSource[];
   sourceTypes: string[];
   jobs: IngestionTask[];
+  totalJobs: number;
+  jobStats: Record<string, number>;
   isJobsLoaded: boolean;
-  refreshJobs: () => Promise<void>;
+  refreshJobs: (params?: { page?: number; pageSize?: number; status?: string; search?: string }) => Promise<void>;
+  jobPage: number;
+  setJobPage: (page: number) => void;
+  jobPageSize: number;
+  setJobPageSize: (size: number) => void;
+  jobStatusFilter: string;
+  setJobStatusFilter: (status: any) => void;
+  jobSearchQuery: string;
+  setJobSearchQuery: (query: string) => void;
   addOptimisticJob: (title: string) => void;
   toasts: Toast[];
   addToast: (message: string, type?: ToastType) => void;
@@ -50,6 +60,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [sourceTypes, setSourceTypes] = useState<string[]>([]);
   const [isSourcesLoaded, setIsSourcesLoaded] = useState(false);
   const [jobs, setJobs] = useState<IngestionTask[]>([]);
+  const [totalJobs, setTotalJobs] = useState(0);
+  const [jobStats, setJobStats] = useState<Record<string, number>>({ total: 0, processing: 0, completed: 0, failed: 0 });
   const [isJobsLoaded, setIsJobsLoaded] = useState(false);
   const [currentView, setCurrentView] = useState<ViewState>(() => {
     const saved = localStorage.getItem('currentView') as ViewState;
@@ -62,10 +74,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  
+  // Activity Monitor state
+  const [jobPage, setJobPage] = useState(1);
+  const [jobPageSize, setJobPageSize] = useState(12);
+  const [jobStatusFilter, setJobStatusFilter] = useState<string>('all');
+  const [jobSearchQuery, setJobSearchQuery] = useState('');
 
-  // Tracks which jobs have already triggered a notification to avoid duplicates
-  const notifiedJobIds = React.useRef<Set<string>>(new Set());
-  const [hasInitializedNotified, setHasInitializedNotified] = useState(false);
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
@@ -140,16 +155,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const refreshJobs = useCallback(async () => {
+  const refreshJobs = useCallback(async (params?: { page?: number; pageSize?: number; status?: string; search?: string }) => {
     try {
-      const data = await api.fetchJobs();
-      setJobs(data);
+      const fetchParams = params || { 
+        page: jobPage, 
+        pageSize: jobPageSize, 
+        status: jobStatusFilter, 
+        search: jobSearchQuery 
+      };
+      const data = await api.fetchJobs(fetchParams);
+      setJobs(data.items);
+      setTotalJobs(data.total);
+      if (data.stats) setJobStats(data.stats);
     } catch (err) {
       console.error('Error fetching jobs:', err);
     } finally {
       setIsJobsLoaded(true);
     }
-  }, []);
+  }, [jobPage, jobPageSize, jobStatusFilter, jobSearchQuery]);
 
   const addOptimisticJob = useCallback((title: string) => {
     const optimisticJob: IngestionTask = {
@@ -180,53 +203,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     refreshModelInfo();
   }, [refreshSubjects, refreshSources, refreshJobs, refreshModelInfo]);
 
-  // Periodic refresh for jobs (Activity Monitor)
+  // Ref to store current filters for use in polling intervals without triggering re-renders
+  const jobFiltersRef = React.useRef({ 
+    page: jobPage, 
+    pageSize: jobPageSize, 
+    status: jobStatusFilter, 
+    search: jobSearchQuery 
+  });
+
   useEffect(() => {
-    const interval = setInterval(refreshJobs, 3000);
-    return () => clearInterval(interval);
-  }, [refreshJobs]);
+    jobFiltersRef.current = { 
+      page: jobPage, 
+      pageSize: jobPageSize, 
+      status: jobStatusFilter, 
+      search: jobSearchQuery 
+    };
+  }, [jobPage, jobPageSize, jobStatusFilter, jobSearchQuery]);
 
-  // Job Status Watcher: Triggers notifications when background tasks change status
-  useEffect(() => {
-    if (!isJobsLoaded || jobs.length === 0) return;
 
-    // Initialize the set with already finished/failed jobs on first load to avoid spamming
-    if (!hasInitializedNotified) {
-      jobs.forEach(job => {
-        if (['done', 'finished', 'error', 'failed'].includes(job.status)) {
-          notifiedJobIds.current.add(job.id);
-        }
-      });
-      setHasInitializedNotified(true);
-      return;
-    }
 
-    // Check for status changes in subsequent loads
-    jobs.forEach(job => {
-      const isFinished = ['done', 'finished'].includes(job.status);
-      const isFailed = ['error', 'failed'].includes(job.status);
-
-      if ((isFinished || isFailed) && !notifiedJobIds.current.has(job.id)) {
-        notifiedJobIds.current.add(job.id);
-        
-        const title = job.title || 'Source';
-        if (isFinished) {
-          addToast(t('notifications.ingestion.complete', { name: title }), 'success');
-          refreshSources(); // Auto refresh sources when a job finishes
-        } else if (isFailed) {
-          addToast(t('notifications.ingestion.error', { name: title }), 'error');
-        }
-      }
-    });
-  }, [jobs, isJobsLoaded, hasInitializedNotified, t, addToast, refreshSources]);
-
+  // Periodic refresh for state (Polling-based updates)
   useEffect(() => {
     const interval = setInterval(() => {
+      refreshJobs(jobFiltersRef.current);
       refreshSources();
       refreshSubjects();
-    }, 5000);
+    }, 5000); // 5s polling for all active state
+
     return () => clearInterval(interval);
-  }, [refreshSources, refreshSubjects]);
+  }, [refreshJobs, refreshSources, refreshSubjects]);
 
   // Persist currentView
   useEffect(() => {
@@ -345,8 +350,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refreshSources,
         sourceTypes,
         jobs,
+        totalJobs,
+        jobStats,
         isJobsLoaded,
         refreshJobs,
+        jobPage,
+        setJobPage,
+        jobPageSize,
+        setJobPageSize,
+        jobStatusFilter,
+        setJobStatusFilter,
+        jobSearchQuery,
+        setJobSearchQuery,
         addOptimisticJob,
         toasts,
         addToast,
