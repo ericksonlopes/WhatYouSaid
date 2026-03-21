@@ -153,8 +153,8 @@ def get_job_service(
 
 def get_rerank_service(request: Request) -> ReRankService:
     return request.app.state.rerank_service
- 
- 
+
+
 def get_task_queue_service(request: Request) -> TaskQueueService:
     return request.app.state.task_queue
 

@@ -10,14 +10,14 @@ logger = Logger()
 
 class TaskQueueService:
     """In-memory task queue with a background worker thread.
-    
+
     This helps serialize heavy ingestion tasks to avoid concurrency issues
     and model/tokenizer borrow conflicts.
     """
 
     def __init__(self, num_workers: int = 1):
-        self._queue = queue.Queue()
-        self._workers = []
+        self._queue: queue.Queue = queue.Queue()
+        self._workers: list[threading.Thread] = []
         self._num_workers = num_workers
         self._should_stop = False
 
@@ -29,7 +29,9 @@ class TaskQueueService:
 
         self._should_stop = False
         for i in range(self._num_workers):
-            t = threading.Thread(target=self._worker_loop, name=f"TaskQueueWorker-{i}", daemon=True)
+            t = threading.Thread(
+                target=self._worker_loop, name=f"TaskQueueWorker-{i}", daemon=True
+            )
             t.start()
             self._workers.append(t)
         logger.info(f"TaskQueueService started with {self._num_workers} workers.")
@@ -52,7 +54,9 @@ class TaskQueueService:
     def enqueue(self, func: Callable, *args, **kwargs):
         """Adds a task to the queue."""
         self._queue.put((func, args, kwargs))
-        logger.debug(f"Task enqueued: {func.__name__}. Queue size: {self._queue.qsize()}")
+        logger.debug(
+            f"Task enqueued: {func.__name__}. Queue size: {self._queue.qsize()}"
+        )
 
     def _worker_loop(self):
         """Infinite loop for the worker thread."""
@@ -73,8 +77,10 @@ class TaskQueueService:
                     duration = time.time() - start_time
                     logger.info(f"Task {func.__name__} completed in {duration:.2f}s")
                 except Exception as e:
-                    logger.error(f"Error executing task {func.__name__}: {e}",
-                                 context={"error": str(e)})
+                    logger.error(
+                        f"Error executing task {func.__name__}: {e}",
+                        context={"error": str(e)},
+                    )
                 finally:
                     self._queue.task_done()
 

@@ -202,11 +202,11 @@ class YoutubeIngestionUseCase:
                             if r.get("cancelled", False)
                         ]
                         summary = f"Partial ingestion: {len(cancelled_msgs)} items skipped (private/unplayable)."
-                        self._finish_job(ingestion, chunks_count=result.created_chunks)
-                        # Maybe update status message?
                         self.ingestion_service.update_job(
                             job_id=ingestion.id,
-                            status_message=summary
+                            status=IngestionJobStatus.FINISHED,
+                            status_message=summary,
+                            chunks_count=result.created_chunks,
                         )
                 else:
                     self._finish_job(ingestion, chunks_count=result.created_chunks)
@@ -519,12 +519,12 @@ class YoutubeIngestionUseCase:
                     )
                 except Exception as ej:
                     logger.error(f"Failed to mark job as CANCELLED: {ej}")
-            
+
             if source:
                 try:
                     self.cs_service.update_processing_status(
                         content_source_id=source.id,
-                        status=ContentSourceStatus.CANCELLED
+                        status=ContentSourceStatus.CANCELLED,
                     )
                 except Exception as ef:
                     logger.error(f"Failed to mark source as CANCELLED: {ef}")

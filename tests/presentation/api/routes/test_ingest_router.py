@@ -10,6 +10,13 @@ from uuid import UUID
 client = TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def mock_app_state():
+    app.state.task_queue = MagicMock()
+    yield
+    # No need to cleanup state in simple tests, but could if needed
+
+
 @pytest.fixture
 def mock_use_case():
     mock = MagicMock()

@@ -53,8 +53,11 @@ class YoutubeExtractor(IYoutubeExtractor):
                 raise YoutubeVideoPrivateException(self.video_id)
             if "unplayable" in error_msg.lower():
                 raise YoutubeVideoUnplayableException(self.video_id, reason=error_msg)
-            
-            logger.error("Error extracting metadata for video", context={"video_id": self.video_id, "error": error_msg})
+
+            logger.error(
+                "Error extracting metadata for video",
+                context={"video_id": self.video_id, "error": error_msg},
+            )
             return YoutubeMetadataDTO(video_id=self.video_id)
 
     @staticmethod
@@ -149,7 +152,7 @@ class YoutubeExtractor(IYoutubeExtractor):
                 raise YoutubeVideoPrivateException(self.video_id)
             if "unplayable" in error_msg.lower():
                 raise YoutubeVideoUnplayableException(self.video_id, reason=error_msg)
-                
+
             msg = f"Unexpected error while fetching transcript for video {self.video_id}: {error_msg}"
             logger.error(msg, context={"video_id": self.video_id})
             raise ValueError(msg)

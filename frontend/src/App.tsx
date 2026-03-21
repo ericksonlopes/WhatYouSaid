@@ -20,7 +20,8 @@ function ActivityMonitorView() {
   const [page, setPage] = useState(1);
   const [isSyncing, setIsSyncing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const pageSize = 12;
+  const [pageSize, setPageSize] = useState(12);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'processing' | 'completed' | 'failed'>('all');
 
   const handleRefresh = async () => {
     if (isSyncing) return;
@@ -56,14 +57,28 @@ function ActivityMonitorView() {
   }, [jobs, sources, subjects]);
 
   const filteredJobs = React.useMemo(() => {
-    if (!searchQuery.trim()) return enrichedJobs;
+    let result = enrichedJobs;
+
+    // Filter by status
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'processing') {
+        result = result.filter(j => ['processing', 'started'].includes(j.status));
+      } else if (statusFilter === 'completed') {
+        result = result.filter(j => ['done', 'finished'].includes(j.status));
+      } else if (statusFilter === 'failed') {
+        result = result.filter(j => ['failed', 'error', 'cancelled'].includes(j.status));
+      }
+    }
+
+    // Filter by search query
+    if (!searchQuery.trim()) return result;
     const query = searchQuery.toLowerCase().trim();
-    return enrichedJobs.filter(job => 
+    return result.filter(job => 
       (job.title?.toLowerCase().includes(query) ?? false) || 
       (job.statusMessage?.toLowerCase().includes(query) ?? false) ||
       (job.status?.toLowerCase().includes(query) ?? false)
     );
-  }, [enrichedJobs, searchQuery]);
+  }, [enrichedJobs, searchQuery, statusFilter]);
 
   const totalPages = Math.ceil(filteredJobs.length / pageSize);
   const paginatedJobs = filteredJobs.slice((page - 1) * pageSize, page * pageSize);
@@ -73,7 +88,7 @@ function ActivityMonitorView() {
       total: enrichedJobs.length,
       processing: enrichedJobs.filter(j => ['processing', 'started'].includes(j.status)).length,
       completed: enrichedJobs.filter(j => ['done', 'finished'].includes(j.status)).length,
-      failed: enrichedJobs.filter(j => ['failed', 'error'].includes(j.status)).length
+      failed: enrichedJobs.filter(j => ['failed', 'error', 'cancelled'].includes(j.status)).length
     };
   }, [enrichedJobs]);
 
@@ -82,6 +97,13 @@ function ActivityMonitorView() {
       setPage(newPage);
     }
   };
+
+  const statConfig: { label: string, value: number, color: string, icon: any, bg: string, pulse?: boolean, status: 'all' | 'processing' | 'completed' | 'failed' }[] = [
+    { label: t('activity.stats.total'), value: stats.total, color: 'text-zinc-400', icon: Database, bg: 'bg-zinc-400/5', status: 'all' },
+    { label: t('activity.stats.active'), value: stats.processing, color: 'text-amber-400', icon: Loader2, bg: 'bg-amber-400/5', pulse: stats.processing > 0, status: 'processing' },
+    { label: t('activity.stats.completed'), value: stats.completed, color: 'text-emerald-400', icon: CheckCircle2, bg: 'bg-emerald-400/5', status: 'completed' },
+    { label: t('activity.stats.failed'), value: stats.failed, color: 'text-rose-400', icon: AlertCircle, bg: 'bg-rose-400/5', status: 'failed' }
+  ];
 
   return (
     <div className="p-8 pt-10 max-w-7xl mx-auto h-full flex flex-col">
@@ -126,28 +148,35 @@ function ActivityMonitorView() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: t('activity.stats.total'), value: stats.total, color: 'text-zinc-400', icon: Database, bg: 'bg-zinc-400/5' },
-            { label: t('activity.stats.active'), value: stats.processing, color: 'text-amber-400', icon: Loader2, bg: 'bg-amber-400/5', pulse: stats.processing > 0 },
-            { label: t('activity.stats.completed'), value: stats.completed, color: 'text-emerald-400', icon: CheckCircle2, bg: 'bg-emerald-400/5' },
-            { label: t('activity.stats.failed'), value: stats.failed, color: 'text-rose-400', icon: AlertCircle, bg: 'bg-rose-400/5' }
-          ].map((stat, i) => (
-            <motion.div 
-              key={i} 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className={`relative overflow-hidden flex flex-col p-5 rounded-2xl border border-white/5 bg-zinc-900/40 backdrop-blur-sm ${stat.bg}`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <stat.icon className={`w-4 h-4 ${stat.color} ${stat.pulse ? 'animate-spin' : ''}`} />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600">{t('activity.stats.metric')}</span>
-              </div>
-              <span className="text-3xl font-mono font-black text-white mb-1 leading-none">{stat.value}</span>
-              <span className={`text-[10px] font-bold uppercase tracking-wider ${stat.color} opacity-80`}>{stat.label}</span>
-              {stat.pulse && <div className="absolute top-0 right-0 w-1 h-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)]" />}
-            </motion.div>
-          ))}
+          {statConfig.map((stat, i) => {
+            const isActive = statusFilter === stat.status;
+            return (
+              <motion.button 
+                key={stat.status} 
+                onClick={() => {
+                  setStatusFilter(stat.status);
+                  setPage(1);
+                }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className={`relative text-left overflow-hidden flex flex-col p-5 rounded-2xl border transition-all duration-300 backdrop-blur-sm ${
+                  isActive 
+                    ? `bg-zinc-800 border-white/20 shadow-[0_0_30px_rgba(255,255,255,0.05)] scale-[1.02] z-10` 
+                    : `bg-zinc-900/40 border-white/5 border hover:border-white/10 hover:bg-zinc-900/60 ${stat.bg}`
+                }`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <stat.icon className={`w-4 h-4 ${stat.color} ${stat.pulse ? 'animate-spin' : ''}`} />
+                  <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isActive ? 'text-zinc-300' : 'text-zinc-600'}`}>{t('activity.stats.metric')}</span>
+                </div>
+                <span className="text-3xl font-mono font-black text-white mb-1 leading-none">{stat.value}</span>
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${stat.color} ${isActive ? 'opacity-100' : 'opacity-80'}`}>{stat.label}</span>
+                {stat.pulse && <div className="absolute top-0 right-0 w-1 h-full bg-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.5)]" />}
+                {isActive && <div className="absolute bottom-0 left-0 w-full h-1 bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]" />}
+              </motion.button>
+            );
+          })}
         </div>
       </div>
 
@@ -178,13 +207,37 @@ function ActivityMonitorView() {
       </div>
 
       {/* Pagination Footer */}
-      {isJobsLoaded && enrichedJobs.length > pageSize && (
-        <div className="mt-auto pt-8 border-t border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">
-              {t('activity.status.live')}
-            </span>
+      {isJobsLoaded && enrichedJobs.length > 0 && (
+        <div className="mt-auto pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] text-zinc-500 font-black uppercase tracking-widest">
+                {t('activity.status.live')}
+              </span>
+            </div>
+
+            <div className="hidden lg:flex items-center gap-3 border-l border-white/5 pl-6">
+              <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest whitespace-nowrap">Rows per page</span>
+              <div className="flex items-center gap-1 bg-zinc-950 rounded-xl p-0.5 border border-white/5">
+                {[12, 24, 48, 96].map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => {
+                      setPageSize(size);
+                      setPage(1);
+                    }}
+                    className={`px-3 py-1 text-[10px] font-bold rounded-lg transition-all duration-300 ${
+                      pageSize === size 
+                        ? 'bg-emerald-500 text-black shadow-lg shadow-emerald-500/20' 
+                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           
           <div className="flex items-center gap-4">

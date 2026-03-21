@@ -43,7 +43,7 @@ async def lifespan(app: FastAPI):
         logger.info(f"Loading Re-rank Model: {_settings.model_rerank.name}...")
         app.state.rerank_service = ReRankService(model_name=_settings.model_rerank.name)
         logger.info("Re-rank model pre-loaded successfully.")
- 
+
         # Initialize In-memory Task Queue
         app.state.task_queue = TaskQueueService(num_workers=4)
         app.state.task_queue.start()

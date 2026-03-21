@@ -11,6 +11,12 @@ def client():
     return TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def mock_app_state():
+    app.state.task_queue = MagicMock()
+    yield
+
+
 @pytest.fixture
 def mock_file_use_case():
     mock = MagicMock()

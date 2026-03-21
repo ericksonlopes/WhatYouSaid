@@ -9,6 +9,10 @@ from youtube_transcript_api import (
 
 from src.config.logger import Logger
 from src.infrastructure.extractors.youtube_extractor import YoutubeExtractor
+from src.domain.exception.youtube_exceptions import (
+    YoutubeTranscriptNotFoundException,
+    YoutubeTranscriptsDisabledException,
+)
 
 logger = Logger()
 
@@ -45,7 +49,7 @@ class TestYoutubeExtractor:
             )
             with patch.object(logger, "info"), patch.object(logger, "error"):
                 extractor = YoutubeExtractor(video_id)
-                with pytest.raises(ValueError):
+                with pytest.raises(YoutubeTranscriptNotFoundException):
                     extractor.extract_transcript()
 
     def test_extract_transcript_transcripts_disabled(self):
@@ -54,7 +58,7 @@ class TestYoutubeExtractor:
             mock_fetch.side_effect = TranscriptsDisabled("Transcripts disabled")
             with patch.object(logger, "info"), patch.object(logger, "warning"):
                 extractor = YoutubeExtractor(video_id)
-                with pytest.raises(ValueError):
+                with pytest.raises(YoutubeTranscriptsDisabledException):
                     extractor.extract_transcript()
 
     def test_extract_transcript_generic_error(self):
