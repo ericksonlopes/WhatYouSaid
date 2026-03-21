@@ -1,0 +1,448 @@
+{
+  "common": {
+    "actions": {
+      "save": "Salvar",
+      "cancel": "Cancelar",
+      "close": "Fechar",
+      "sync": "Sincronizar",
+      "syncing": "Sincronizando...",
+      "addData": "Adicionar Dados",
+      "search": "Buscar",
+      "filter": "Filtrar",
+      "clear": "Limpar filtros",
+      "copy": "Copiar",
+      "copied": "Copiado!",
+      "reprocess": "Reprocessar",
+      "delete": "Excluir",
+      "view_details": "Ver detalhes",
+      "go_to_source": "Ver na fonte",
+      "upload": "Fazer Upload"
+    },
+    "status": {
+      "pending": "PENDENTE",
+      "processing": "PROCESSANDO",
+      "done": "CONCLUÍDO",
+      "error": "ERRO",
+      "unknown": "DESCONHECIDO",
+      "loaded": "CARREGADO",
+      "online": "Online",
+      "offline": "Offline",
+      "started": "INICIADO",
+      "completed": "CONCLUÍDO",
+      "failed": "FALHOU",
+      "duplicate": "DUPLICADO",
+      "cancelled": "CANCELADO"
+    },
+    "time": {
+      "now": "agora mesmo",
+      "ago": "atrás"
+    }
+  },
+  "sidebar": {
+    "brand": {
+      "title": "WhatYouSaid",
+      "subtitle": "Hub de Dados Vetoriais"
+    },
+    "contexts": {
+      "title": "Bases de Conhecimento",
+      "placeholder": "Filtrar contextos...",
+      "none": "Nenhum contexto encontrado.",
+      "only": "Apenas",
+      "new": "Nova Base de Conhecimento",
+      "create": "Criar novo contexto",
+      "toggle": "Clique para alternar"
+    },
+    "operations": {
+      "title": "Operações",
+      "chat": "Chat RAG (Bloqueado)",
+      "search": "Busca Semântica",
+      "sources": "Fontes de Conteúdo",
+      "chunks": "Fontes > Chunks",
+      "activity": "Monitor de Atividade",
+      "knowledge_contexts": "Contextos de Conhecimento"
+    },
+    "groups": {
+      "search": "Pesquisas",
+      "data": "Dados",
+      "monitor": "Monitor"
+    },
+    "profile": {
+      "name": "Usuário",
+      "plan": "Rodando Localmente",
+      "settings": "Configurações"
+    }
+  },
+  "search": {
+    "title": "Busca Semântica",
+    "subtitle": "Explore sua base de conhecimento usando busca semântica, palavra-chave ou híbrida.",
+    "placeholder": "Perunte qualquer coisa ou busque por palavras-chave...",
+    "modes": {
+      "title": "Estratégia de Busca",
+      "semantic": "Semântica",
+      "bm25": "Palavra-chave",
+      "hybrid": "Híbrida"
+    },
+    "options": {
+      "rerank": "Usar Re-ranking (Melhor Qualidade)",
+      "topKn": "Resultados"
+    },
+    "results": {
+      "title": "Resultados da Busca",
+      "total": "Resultados Encontrados",
+      "none": "Nenhum resultado encontrado para sua busca.",
+      "score": "Score",
+      "source": "Fonte",
+      "id": "ID",
+      "match": "match",
+      "hybrid_label": "pontuação híbrida",
+      "metadata": "Metadados do Sistema",
+      "type": "Tipo de Fonte",
+      "model": "Modelo de Embedding",
+      "tokens": "Contagem de Tokens",
+      "date": "Ingerido em",
+      "chunk_id": "ID do Chunk",
+      "knowledge_context": "Base de Conhecimento"
+    }
+  },
+  "sources": {
+    "title": "Fontes de Conteúdo",
+    "subtitle": {
+      "multiple": "Mostrando fontes para {{count}} contexto(s).",
+      "all": "Mostrando todas as fontes no banco de dados."
+    },
+    "delete_confirm": "Tem certeza que deseja excluir esta fonte de conteúdo? Isso removerá permanentemente todos os fragmentos e embeddings associados.",
+    "table": {
+      "title": "Título",
+      "type": "ORIGEM",
+      "date": "Data",
+      "chunks": "Chunks",
+      "status": "Status",
+      "model": "Modelo",
+      "origin": "identificador",
+      "dimensions": "Dimensões",
+      "tokens": "Tokens",
+      "tokens_chunk": "Tokens(Chunk)",
+      "actions": "Ações",
+      "none": "Nenhuma fonte encontrada.",
+      "pagination": "Exibindo {{start}} a {{end}} de {{total}} resultados",
+      "types": {
+        "all": "Todos os Tipos",
+        "video": "Vídeos",
+        "article": "Artigos",
+        "transcript": "Transcrições",
+        "youtube": "YouTube"
+      },
+      "headers": {
+        "icon": "Ícone",
+        "type_date": "Tipo / Data",
+        "model_dims": "Modelo / Dims",
+        "volume": "Volume",
+        "tok": "TOK"
+      }
+    },
+    "notifications": {
+      "delete_success": "Fonte de conteúdo excluída com sucesso.",
+      "delete_error": "Falha ao excluir a fonte de conteúdo.",
+      "edit_title": "Editar Título",
+      "update_title": "Atualizar Título"
+    },
+    "chunks": {
+      "title": "Fontes > Chunks",
+      "subtitle": "Gerenciando segmentos armazenados no índice vetorial.",
+      "search_placeholder": "Buscar seus segmentos...",
+      "segment_prefix": "Fragmento",
+      "pagination": "Mostrando {{start}} a {{end}} de {{total}} resultados",
+      "page": "Página {{current}} de {{total}}",
+      "chars": "Caracteres",
+      "tokens": "Tokens",
+      "content_label": "Conteúdo",
+      "content_placeholder": "Digite o conteúdo do fragmento...",
+      "edit_warning": "Editar este conteúdo disparará uma re-indexação no banco de dados vetorial. Isso garante que as futuras buscas semânticas reflitam o texto atualizado.",
+      "sidebar": {
+        "title_tech": "Detalhes técnicos",
+        "total_chunks": "Total de fragmentos",
+        "total_tokens": "Total de tokens",
+        "tokens_per_chunk": "Tokens por fragmento",
+        "title_doc": "Documento original",
+        "type": "Tipo",
+        "model": "Modelo",
+        "size": "Tamanho",
+        "dims": "dimensões",
+        "title_access": "Base de Conhecimento",
+        "subject": "Assunto",
+        "anonymous": "Usuário Anônimo",
+        "origin_url": "URL de Origem"
+      }
+    }
+  },
+  "activity": {
+    "title": "Monitor de Atividade",
+    "subtitle": "Status da pipeline de ingestão em tempo real.",
+    "loading": "Carregando pipeline de atividade...",
+    "none": "Nenhuma atividade recente.",
+    "none_desc": "A pipeline de ingestão está inativa no momento. Inicialize uma fonte de dados para começar o monitoramento.",
+    "search_placeholder": "Buscar tarefas por título, status...",
+    "no_results": "Nenhuma tarefa encontrada",
+    "no_results_desc": "Nenhuma tarefa corresponde à sua pesquisa. Tente ajustar seus critérios.",
+    "pagination": "Mostrando {{start}} a {{end}} de {{total}} tarefas",
+    "page": "Página {{current}} de {{total}}",
+    "stats": {
+      "total": "Total da Pipeline",
+      "active": "Tarefas Ativas",
+      "completed": "Ingerido com Sucesso",
+      "failed": "Erros Críticos",
+      "cancelled": "Tarefas Canceladas",
+      "metric": "Métrica"
+    },
+    "status": {
+      "live": "Monitoramento em Tempo Real"
+    },
+    "pipeline_optimized": "Pipeline otimizada",
+    "phase": "Fase",
+    "duration": "duração"
+  },
+  "settings": {
+    "title": "Configurações",
+    "subtitle": "Gerencie as configurações do seu ambiente local",
+    "tabs": {
+      "api": "API",
+      "model": "Modelo",
+      "vector": "Vetorial",
+      "sql": "SQL",
+      "processing": "Processamento"
+    },
+    "sections": {
+      "statistics": "Estatísticas da Instância",
+      "environment": "Ambiente do Sistema",
+      "identifiers": "Identificadores Internos",
+      "details": "Detalhes do Ambiente"
+    },
+    "labels": {
+      "log_levels": "Níveis de Log",
+      "store_type": "Tipo de Store",
+      "production_ready": "Pronto para produção",
+      "collection_name": "Nome da Coleção",
+      "embedding_model": "Modelo de Embedding",
+      "status_stable": "Estável",
+      "status_active": "Active",
+      "model_desc": "Modelo de vetorização de texto",
+      "api_desc": "Conexão com o servidor de API",
+      "sql_desc": "Banco de dados relacional",
+      "endpoint": "Endpoint",
+      "environment": "Ambiente",
+      "model_path": "Caminho do Modelo",
+      "host": "Host",
+      "port": "Porta",
+      "collection": "Coleção",
+      "database": "Banco de Dados",
+      "type": "Tipo"
+    },
+    "checks": {
+      "test_db": "Testar DB",
+      "test_model": "Testar Modelo",
+      "test_store": "Testar Store",
+      "ping_api": "Ping API"
+    },
+    "language": {
+      "title": "Idioma da Interface",
+      "en": "Inglês",
+      "pt-BR": "Português (Brasil)"
+    }
+  },
+  "ingestion": {
+    "title": "Adicionar à Base de Conhecimento",
+    "subtitle": "Importe novo conteúdo para sua base vetorial",
+    "url": {
+      "label": "URL do YouTube",
+      "placeholder": "https://www.youtube.com/watch?v=...",
+      "reprocess_started": "Reprocessamento iniciado!",
+      "reprocess_error": "Erro ao iniciar reprocessamento.",
+      "missing_origin": "Não foi possível reprocessar: URL original do vídeo ausente."
+    },
+    "youtube": {
+      "reprocess_started": "Reprocessamento iniciado!",
+      "reprocess_error": "Erro ao iniciar reprocessamento.",
+      "missing_origin": "Não foi possível reprocessar: URL original do vídeo ausente.",
+      "errors": {
+        "disabled_transcripts": "As legendas estão desativadas para este vídeo.",
+        "no_transcript": "Nenhuma legenda disponível para este vídeo.",
+        "invalid_url": "URL do YouTube inválida.",
+        "unavailable": "O vídeo está indisponível ou é privado."
+      }
+    },
+    "subject": {
+      "label": "Base de Conhecimento Alvo",
+      "placeholder": "Selecione um contexto..."
+    },
+    "sources": {
+      "youtube": "YouTube",
+      "article": "Artigo",
+      "pdf": "PDF",
+      "file": "Arquivo",
+      "docx": "Documento Word",
+      "pptx": "Apresentação",
+      "xlsx": "Planilha Excel",
+      "markdown": "Markdown",
+      "html": "Página HTML",
+      "asciidoc": "AsciiDoc",
+      "latex": "Documento LaTeX",
+      "csv": "Arquivo CSV",
+      "image": "Imagem (OCR)",
+      "txt": "Arquivo de Texto",
+      "other": "Outros",
+      "wikipedia": "Wikipedia",
+      "web": "Web Scrape",
+      "notion": "Notion"
+    },
+    "descriptions": {
+      "youtube": "Vídeos e Transcrições",
+      "article": "Conteúdo de Texto Web",
+      "pdf": "Documento PDF",
+      "file": "Arquivo Local",
+      "docx": "Microsoft Word",
+      "pptx": "Microsoft PowerPoint",
+      "xlsx": "Microsoft Excel",
+      "markdown": "Arquivo Markdown",
+      "html": "Conteúdo Web",
+      "asciidoc": "Documentação Técnica",
+      "latex": "Artigo Científico",
+      "csv": "Tabela de Dados",
+      "image": "Imagem Escaneada",
+      "txt": "Texto Plano",
+      "other": "Arquivo Suportado",
+      "wikipedia": "Artigos e História",
+      "web": "Extração de qualquer URL",
+      "notion": "Sincronização de Workspace"
+    },
+    "coming_soon": {
+      "title": "Integração em Breve",
+      "description": "Estamos construindo a pipeline de dados para {{name}}. Estará disponível em uma atualização futura."
+    },
+    "options": {
+      "title": "Opções Avançadas",
+      "strategy": "Estratégia",
+      "optimized": "Otimizado",
+      "ocr": {
+        "label": "Leitura Avançada (OCR)",
+        "description": "Ativa leitura de alta precisão para imagens, tabelas e layouts complexos.",
+        "warning": "Pode aumentar significativamente o tempo de processamento."
+      },
+      "max_tokens": "Máximo de Tokens",
+      "tokens_fragment": "Máximo de tokens por fragmento",
+      "context_overlap": "Sobreposição de Contexto",
+      "shared_context": "Contexto compartilhado entre chunks",
+      "model_limit": "Limite do Modelo",
+      "tokens_label": "Tokens",
+      "optimized_tip": "Otimizado para recuperação {{strategy}}.",
+      "strategies": {
+        "balanced": {
+          "name": "Equilibrado",
+          "description": "RAG de propósito geral",
+          "long_description": "Cobre a maioria dos casos de uso com boa precisão."
+        },
+        "granular": {
+          "name": "Granular",
+          "description": "Busca de fatos precisos",
+          "long_description": "Ideal para documentos técnicos e fatos específicos."
+        },
+        "context": {
+          "name": "Contexto Profundo",
+          "description": "Compreensão de textos longos",
+          "long_description": "Excelente para manter o fluxo narrativo."
+        },
+        "custom": {
+          "name": "Personalizado",
+          "name_label": "entrada personalizada",
+          "description": "Ajuste manual ativo para requisitos específicos",
+          "long_description": "Ajuste manual ativo para requisitos específicos."
+        }
+      },
+      "types": {
+        "video": "Vídeo",
+        "playlist": "Playlist",
+        "playlist_url": "URL da Playlist",
+        "video_url": "URL do Vídeo",
+        "playlist_desc": "Todos os vídeos da playlist serão extraídos, transcritos e divididos em blocos semânticos.",
+        "video_desc": "O áudio será automaticamente extraído, transcrito e dividido em blocos semânticos.",
+        "drag_drop": "Arraste e solte seu arquivo aqui",
+        "file_support": "Suporta PDF, TXT, CSV até 50MB",
+        "browse": "Procurar Arquivos",
+        "status": {
+          "chunking": "Dividindo texto...",
+          "vectorizing": "Vetorizando ({{model}})..."
+        },
+        "format_filter": "Filtro por formato (Localize mais rápido)"
+      }
+    },
+    "messages": {
+      "success": "Ingestão iniciada com sucesso!",
+      "error": "Falha ao iniciar a ingestão.",
+      "duplicate": "Esta fonte já existe neste contexto."
+    }
+  },
+  "notifications": {
+    "sync": {
+      "success": "Base de conhecimento sincronizada!",
+      "error": "Falha ao sincronizar base de conhecimento."
+    },
+    "subject": {
+      "created": "Base de Conhecimento \"{{name}}\" criada!",
+      "updated": "Base de Conhecimento \"{{name}}\" atualizada!",
+      "deleted": "Base de Conhecimento excluída com sucesso.",
+      "error": "Falha ao criar Base de Conhecimento.",
+      "error_update": "Falha ao atualizar Base de Conhecimento.",
+      "error_delete": "Falha ao excluir Base de Conhecimento."
+    },
+    "ingestion": {
+      "started": "Iniciado processamento de {{type}} para \"{{name}}\"...",
+      "complete": "Ingestão concluída para \"{{name}}\"!",
+      "duplicate": "Este conteúdo já foi ingerido. Pulando.",
+      "error": "Erro ao conectar com o servidor de ingestão."
+    },
+    "source": {
+      "updated": "Título da fonte \"{{name}}\" atualizado com sucesso!",
+      "error_update": "Falha ao atualizar o título da fonte."
+    },
+    "chunk": {
+      "updated": "Fragmento de conhecimento atualizado com sucesso!",
+      "deleted": "Fragmento de conhecimento excluído com sucesso!",
+      "error": "Falha ao atualizar fragmento."
+    }
+  },
+  "error_modal": {
+    "title": "Detalhes da Ingestão",
+    "original_task": "Tarefa de Origem",
+    "full_error": "Mensagem Técnica de Causa",
+    "no_message": "Nenhuma mensagem de erro detalhada disponível.",
+    "copy": "Copiar Erro",
+    "copied": "Copiado!",
+    "support_hint": "Este erro pode ser causado por links quebrados, falta de permissão ou formatos não suportados pelo motor de extração."
+  },
+  "chat": {
+    "locked": {
+      "title": "O Chat RAG está chegando!",
+      "description": "Enquanto preparamos a experiência de chat, que tal alimentar sua base de conhecimento? Adicione novos dados para tornar suas buscas ainda mais poderosas."
+    }
+  },
+  "knowledge_contexts": {
+    "title": "Contextos de Conhecimento",
+    "subtitle": "Gerencie e organize seus contextos de dados",
+    "filter_placeholder": "Filtrar por nome ou descrição...",
+    "source_count": "Fontes",
+    "no_description": "Nenhuma descrição fornecida.",
+    "new_context": "Novo Contexto",
+    "edit_context": "Editar Contexto",
+    "delete_confirm_title": "Excluir Contexto?",
+    "delete_confirm_desc": "Isso excluirá permanentemente \"{{name}}\" e potencialmente desconectará suas fontes. Esta ação não pode ser desfeita.",
+    "no_results": "Nenhum contexto encontrado",
+    "no_results_desc": "Tente ajustar seu filtro ou crie um novo contexto.",
+    "name_label": "Nome",
+    "description_label": "Descrição",
+    "icon_label": "Ícone",
+    "placeholder_name": "Nome do Contexto",
+    "placeholder_description": "Descrição...",
+    "save_changes": "Salvar Alterações",
+    "delete_tooltip": "Excluir",
+    "edit_tooltip": "Editar"
+  }
+}

@@ -1,6 +1,5 @@
-from typing import Optional
-
 import os
+from typing import Any
 import torch
 from sentence_transformers import SentenceTransformer
 import logging
@@ -18,27 +17,33 @@ logger = Logger()
 # Redirect transformers logs to our custom logger
 # Using ERROR level to silence the verbose loading reports and configs
 transformers_logging.set_verbosity_error()
-transformers_logging.disable_progress_bar() # Explicitly disable transformers progress bars
+transformers_logging.disable_progress_bar()  # Explicitly disable transformers progress bars
 transformers_logger = logging.getLogger("transformers")
 transformers_logger.addHandler(logger.get_intercept_handler())
-transformers_logger.propagate = False # Prevent double logging
+transformers_logger.propagate = False  # Prevent double logging
 
 disable_progress_bars()
 
 
 class ModelLoaderService(IModelLoaderService):
+    _model_cache: dict[str, Any] = {}
+
     def __init__(self, model_name: str):
         super().__init__()
         self.model_name = model_name
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model_instance: Optional[SentenceTransformer] = None
         self.load_model()
 
     def load_model(self):
-        if self.model_instance is None:
+        if self.model_name not in ModelLoaderService._model_cache:
             try:
-                self.model_instance = SentenceTransformer(self.model_name, device=self.device)
-                logger.info("Loading models", context={"model_name": self.model_name, "device": self.device})
+                logger.info(
+                    "Loading models",
+                    context={"model_name": self.model_name, "device": self.device},
+                )
+                ModelLoaderService._model_cache[self.model_name] = SentenceTransformer(
+                    self.model_name, device=self.device
+                )
             except Exception as e:
                 logger.error(f"Error loading models: {e}")
                 raise RuntimeError(f"Failed to load models '{self.model_name}': {e}")
@@ -53,12 +58,14 @@ class ModelLoaderService(IModelLoaderService):
     @property
     def max_seq_length(self) -> int:
         """Returns the maximum sequence length (tokens) the model can process."""
-        return int(getattr(self.model, "max_seq_length", 512))
+        try:
+            return int(self.model.max_seq_length)
+        except (AttributeError, TypeError):
+            return 512
 
     @property
     def model(self) -> SentenceTransformer:
-        if self.model_instance is None:
+        if self.model_name not in ModelLoaderService._model_cache:
             # Attempt to (re)load the models; load_model will raise on failure.
             self.load_model()
-        assert self.model_instance is not None
-        return self.model_instance
+        return ModelLoaderService._model_cache[self.model_name]

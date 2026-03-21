@@ -87,7 +87,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         include_object=include_object,
-        process_revision_directives=writer
+        process_revision_directives=writer,
     )
 
     with context.begin_transaction():
@@ -105,7 +105,7 @@ def run_migrations_online() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
-        url=settings.sql.url
+        url=settings.sql.url,
     )
 
     with connectable.connect() as connection:
@@ -113,7 +113,7 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             include_object=include_object,
-            process_revision_directives=writer
+            process_revision_directives=writer,
         )
 
         with context.begin_transaction():

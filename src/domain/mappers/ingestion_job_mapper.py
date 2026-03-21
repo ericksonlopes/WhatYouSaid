@@ -9,7 +9,9 @@ from src.infrastructure.repositories.sql.models.ingestion_job import IngestionJo
 
 class IngestionJobMapper:
     @staticmethod
-    def model_to_entity(model: Optional[IngestionJobModel]) -> Optional[IngestionJobEntity]:
+    def model_to_entity(
+        model: Optional[IngestionJobModel],
+    ) -> Optional[IngestionJobEntity]:
         if model is None:
             return None
 
@@ -22,9 +24,18 @@ class IngestionJobMapper:
             except ValueError:
                 status_enum = None
 
+        source_title = getattr(model, "source_title", None)
+        subject_id = None
+        if hasattr(model, "content_source") and model.content_source:
+            if not source_title:
+                source_title = getattr(model.content_source, "title", None)
+            subject_id = getattr(model.content_source, "subject_id", None)
+
         return IngestionJobEntity(
             id=cast(UUID, getattr(model, "id")),
-            content_source_id=cast(Optional[UUID], getattr(model, "content_source_id", None)),
+            content_source_id=cast(
+                Optional[UUID], getattr(model, "content_source_id", None)
+            ),
             started_at=cast(datetime, getattr(model, "started_at")),
             created_at=cast(datetime, getattr(model, "created_at")),
             finished_at=cast(Optional[datetime], getattr(model, "finished_at", None)),
@@ -34,12 +45,27 @@ class IngestionJobMapper:
             current_step=cast(Optional[int], getattr(model, "current_step", None)),
             total_steps=cast(Optional[int], getattr(model, "total_steps", None)),
             ingestion_type=cast(Optional[str], getattr(model, "ingestion_type", None)),
+            source_title=source_title,
             chunks_count=cast(Optional[int], getattr(model, "chunks_count", None)),
-            embedding_model=cast(Optional[str], getattr(model, "embedding_model", None)),
-            pipeline_version=cast(Optional[str], getattr(model, "pipeline_version", None)),
+            embedding_model=cast(
+                Optional[str], getattr(model, "embedding_model", None)
+            ),
+            pipeline_version=cast(
+                Optional[str], getattr(model, "pipeline_version", None)
+            ),
+            external_source=cast(
+                Optional[str], getattr(model, "external_source", None)
+            ),
+            subject_id=cast(Optional[UUID], subject_id),
         )
 
     @staticmethod
-    def model_list_to_entities(models: List[IngestionJobModel]) -> List[IngestionJobEntity]:
-        temp = [IngestionJobMapper.model_to_entity(o) for o in models if o is not None and isinstance(o, IngestionJobModel)]
+    def model_list_to_entities(
+        models: List[IngestionJobModel],
+    ) -> List[IngestionJobEntity]:
+        temp = [
+            IngestionJobMapper.model_to_entity(o)
+            for o in models
+            if o is not None and isinstance(o, IngestionJobModel)
+        ]
         return [r for r in temp if r is not None]

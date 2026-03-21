@@ -21,15 +21,11 @@ This repository provides modular extractors, splitting utilities, embedding inte
 
 ---
 
-## 🖥️ User Interface
+## 📚 Documentation
 
-![WhatYouSaid Interface](docs/whatyousaid_ui.png)
+Detailed guides for specific topics:
 
-The intuitive Streamlit-based interface provides a comprehensive dashboard to manage your knowledge base:
-- **Subjects Management**: Create and manage different subjects (e.g., people of interest) and their respective content.
-- **Content Sources**: View and sync data sources (YouTube videos, text, etc.), monitor their processing status, chunk counts, embedding models used, and dimensionality.
-- **Search & RAG**: Built-in tabs to search through processed data and interact via Chat.
-- **Activity Monitor**: Keep track of background ingestion and processing jobs in real-time.
+- 🐳 **[Docker Deployment Guide](docs/docker-deployment.md)**: Learn how to use Docker Profiles to run different combinations of databases (MySQL, Postgres, SQLite) and vector stores (FAISS, Weaviate).
 
 ---
 
@@ -38,50 +34,131 @@ The intuitive Streamlit-based interface provides a comprehensive dashboard to ma
 - **Multi-source extraction**: ingest data from video (YouTube), audio transcripts, and plain text sources.
 - **Transcript processing and temporal splitting**: break long transcripts into semantically coherent chunks suitable for embeddings and dense retrieval.
 - **Embeddings and model loader**: abstracted model loading so you can swap embedding providers easily.
-- **Vector-store agnostic**: produce embeddings and documents ready to index into your vector database of choice (FAISS, Pinecone, Weaviate, etc.).
+- **Pluggable Vector Stores**: support for **FAISS** (local/lite), **ChromaDB** (local/server), and **Weaviate** (scalable/cloud) out of the box.
+- **Pluggable SQL Databases**: support for **SQLite**, **PostgreSQL**, **MySQL**, **MariaDB**, and **MSSQL**.
 - **Built for RAG**: designed to support retrieval-augmented generation workflows and semantic search over people-centric data.
 
 ---
 
-## 🛠️ Quickstart
+## 🛠️ Infrastructure & Deployment
 
-### 1. Local Setup
+WhatYouSaid is designed to be flexible, from a lightweight local setup to a scalable production-ready environment.
+
+### 1. Storage Options
+
+| Component | Lightweight (Local) | Scalable / Production                                              |
+| :--- | :--- |:-------------------------------------------------------------------|
+| **Relational Database** | **SQLite** (Default, file-based) | **PostgreSQL**, **MySQL**, **MariaDB**, **MSSQL**                  |
+| **Vector Store** | **FAISS** (Local, file-based) | **Weaviate** (Container or Cloud), **ChromaDB** (Container) |
+
+### 2. Docker Compose Profiles
+
+We use **Docker Profiles** to keep the environment lean. Only the services you need are started.
+
+> 📘 **Detailed Guide**: For a step-by-step tutorial on different deployment scenarios (MySQL, Postgres, Weaviate, etc.), see our [Docker Deployment Guide](docs/docker-deployment.md).
+
+#### **Scenario A: Lite (Default)**
+Uses **SQLite** (SQL) and **FAISS** (Vector). No external database containers are started.
+```bash
+docker-compose up -d
+```
+
+#### **Scenario B: Scalable (Base)**
+Starts **PostgreSQL** (SQL) and **Weaviate** (Vector).
+```bash
+# Starts Postgres and Weaviate containers
+docker-compose --profile base up -d
+
+# Note: For the backend to use these, set SQL__TYPE=postgres and VECTOR__STORE_TYPE=weaviate
+```
+
+#### **Scenario C: Custom Database**
+You can mix and match services using specific profiles:
+- `--profile postgres`: Starts only the PostgreSQL container.
+- `--profile mysql`: Starts only the MySQL container.
+- `--profile weaviate`: Starts only the Weaviate container.
+
+**Example: Running with MySQL only**
+```bash
+# Start MySQL container
+docker-compose --profile mysql up -d
+
+# Run backend pointing to MySQL (local or docker)
+SQL__TYPE=mysql docker-compose up -d
+```
+
+**Example: Running with Weaviate only**
+```bash
+# Start Weaviate container
+docker-compose --profile weaviate up -d
+
+# Run backend pointing to Weaviate
+VECTOR__STORE_TYPE=weaviate docker-compose up -d
+```
+
+**Example: Running with MySQL + Weaviate**
+```bash
+# Start both containers
+docker-compose --profile mysql --profile weaviate up -d
+
+# Run backend pointing to both
+SQL__TYPE=mysql VECTOR__STORE_TYPE=weaviate docker-compose up -d
+```
+
+### 3. Environment Variables
+
+We use **Pydantic Settings** with double underscores (`__`) for nested configurations. 
+
+| Category | Prefix | Examples |
+| :--- | :--- | :--- |
+| **Application** | `APP__` | `APP__ENV`, `APP__LIST_LOG_LEVELS` |
+| **SQL Database** | `SQL__` | `SQL__TYPE`, `SQL__HOST`, `SQL__USER`, `SQL__PASSWORD` |
+| **Vector Store** | `VECTOR__` | `VECTOR__STORE_TYPE`, `VECTOR__WEAVIATE_HOST`, `VECTOR__CHROMA_HOST` |
+| **Embeddings** | `MODEL_EMBEDDING__` | `MODEL_EMBEDDING__NAME` |
+| **Re-ranking** | `MODEL_RERANK__` | `MODEL_RERANK__NAME` |
+
+> 💡 **Full Reference**: For a complete list of all available variables and their default values, check the [Configuration Reference in our Deployment Guide](docs/docker-deployment.md#configuration-reference).
+
+### 4. Example `.env` file
+Create a `.env` file in the root directory:
+```env
+# Relational DB (Choose: sqlite, postgres, mysql, mariadb, mssql)
+SQL__TYPE=sqlite
+
+# Vector Store (Choose: faiss, weaviate)
+VECTOR__STORE_TYPE=faiss
+VECTOR__WEAVIATE_API_KEY=your-optional-api-key
+
+# Optional: Custom embedding model
+MODEL_EMBEDDING__NAME=BAAI/bge-m3
+```
+
+---
+
+## 💻 Local Setup (without Docker)
 
 **Prerequisites:**
 - Python 3.12+
-- [uv](https://github.com/astral-sh/uv) (recommended) or pip
+- [uv](https://github.com/astral-sh/uv) (recommended)
 
-**Install dependencies:**
+**Install with all drivers:**
 ```bash
-# Using uv (recommended)
-uv sync
-uv sync --group dev
-
-# Using pip (editable mode)
-python -m pip install -e .
+# Installs core + drivers for FAISS, Weaviate, MySQL and Postgres
+uv sync --all-extras
 ```
 
-**Run locally:**
-1. Ensure you have a vector database (like Weaviate) running.
-2. Run the application:
+**Install only what you need (recommended for local development):**
 ```bash
-uv run python main.py
+# Example: Install only Postgres and Weaviate drivers
+uv sync --extra postgres --extra weaviate
+
+# Example: Install only MySQL support
+uv sync --extra mysql
 ```
 
-### 2. Docker Setup (Recommended)
-
-To run the complete environment (Application + Weaviate) using Docker Compose from your host:
-
+**Run tests:**
 ```bash
-docker compose -f .devcontainer/docker-compose.yml up --build
-```
-
-- **Frontend**: [http://localhost:8501](http://localhost:8501)
-- **Weaviate**: [http://localhost:8081](http://localhost:8081)
-
-### 3. Running Tests
-```bash
-uv run pytest -v
+uv run pytest
 ```
 
 ---
@@ -113,7 +190,7 @@ This project includes a LICENSE file; see it for licensing details.
 
 ## 🙏 Acknowledgements
 
-Built to be an extensible foundation for building searchable, vectorized person profiles and RAG-enabled applications.
+Built to be an extensible foundation for building searchable, vectorized RAG-enabled applications.
 
 <div align="center">
     <p>Made with ❤️ by Erickson Lopes </p>

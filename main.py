@@ -1,38 +1,118 @@
-import sys
-import os
-from pathlib import Path
+from contextlib import asynccontextmanager
 
-# Add project root to sys.path early
-root = Path(__file__).resolve().parent
-if str(root) not in sys.path:
-    sys.path.insert(0, str(root))
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-# Set PYTHONPATH environment variable for subprocesses/threads
-os.environ["PYTHONPATH"] = str(root)
+from src.config.logger import setup_logging
+from src.presentation.api.routes import (
+    chunk_router,
+    ingest_router,
+    job_router,
+    notification_router,
+    search_router,
+    settings_router,
+    source_router,
+    subject_router,
+)
 
-from streamlit.web import cli as stcli
+logger = setup_logging()
 
 
-def main():
-    """
-    Main entry point for the WhatYouSaid application.
-    This script launches the Streamlit interface.
-    """
-    # Path to the actual streamlit application file
-    app_path = os.path.join(os.path.dirname(__file__), "frontend", "streamlit_app.py")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from src.application.service_registry import registry
 
-    # Configure arguments for streamlit
-    # This is equivalent to running: streamlit run frontend/streamlit_app.py
-    sys.argv = [
-        "streamlit",
-        "run",
-        "--server.runOnSave=true",
-        app_path,
-    ]
+    registry.register("app", app)
 
-    # Execute streamlit
-    sys.exit(stcli.main())
+    logger.info("Starting up WhatYouSaid API...")
+
+    try:
+        from src.config.settings import Settings
+        from src.infrastructure.services.model_loader_service import ModelLoaderService
+        from src.infrastructure.services.re_rank_service import ReRankService
+        from src.infrastructure.services.redis_task_queue_service import (
+            RedisTaskQueueService,
+        )
+        from src.infrastructure.services.redis_event_bus import RedisEventBus
+
+        logger.info("Initializing Settings...")
+        _settings = Settings()
+
+        # Initialize Redis Event Bus
+        logger.info("Initializing RedisEventBus...")
+        app.state.event_bus = RedisEventBus()
+
+        # Load Embedding Model
+        logger.info(
+            f"Loading Embedding Model: {_settings.model_embedding.name} on {_settings.app.device}..."
+        )
+        app.state.model_loader = ModelLoaderService(
+            model_name=_settings.model_embedding.name
+        )
+        logger.info("Embedding model pre-loaded successfully.")
+
+        # Load Re-rank Model
+        logger.info(f"Loading Re-rank Model: {_settings.model_rerank.name}...")
+        app.state.rerank_service = ReRankService(model_name=_settings.model_rerank.name)
+        logger.info("Re-rank model pre-loaded successfully.")
+
+        # Initialize Redis Task Queue
+        logger.info("Initializing RedisTaskQueueService...")
+        app.state.task_queue = RedisTaskQueueService(num_workers=4)
+        app.state.task_queue.start()
+        logger.info("RedisTaskQueueService started.")
+
+    except Exception as e:
+        logger.error(f"Error pre-loading models: {e}")
+        if not hasattr(app.state, "model_loader"):
+            app.state.model_loader = None
+        if not hasattr(app.state, "rerank_service"):
+            app.state.rerank_service = None
+        if not hasattr(app.state, "task_queue"):
+            app.state.task_queue = None
+
+    yield
+    if hasattr(app.state, "task_queue") and app.state.task_queue:
+        app.state.task_queue.stop()
+    logger.info("Shutting down WhatYouSaid API...")
+
+
+app = FastAPI(
+    title="WhatYouSaid API",
+    description="Vectorized data hub API",
+    version="1.0.0",
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"https?://localhost(:\d+)?",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routes with the /rest prefix
+app.include_router(search_router.router, prefix="/rest/search", tags=["Search"])
+app.include_router(ingest_router.router, prefix="/rest/ingest", tags=["Ingestion"])
+app.include_router(subject_router.router, prefix="/rest/subjects", tags=["Subjects"])
+app.include_router(source_router.router, prefix="/rest/sources", tags=["Sources"])
+app.include_router(job_router.router, prefix="/rest/jobs", tags=["Jobs"])
+app.include_router(settings_router.router, prefix="/rest/settings", tags=["Settings"])
+app.include_router(chunk_router.router, prefix="/rest/chunks", tags=["Chunks"])
+app.include_router(
+    notification_router.router, prefix="/rest/notifications", tags=["Notifications"]
+)
+
+
+@app.get("/health", tags=["Health"])
+def health_check():
+    return {"status": "ok", "message": "WhatYouSaid API is running"}
 
 
 if __name__ == "__main__":
-    main()
+    import uvicorn
+
+    uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True, log_config=None)

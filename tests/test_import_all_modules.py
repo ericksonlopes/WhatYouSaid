@@ -17,10 +17,10 @@ def test_import_all_modules():
 
     for dirpath, dir_names, filenames in os.walk(root):
         for f_name in filenames:
-            if not f_name.endswith('.py'):
+            if not f_name.endswith(".py"):
                 continue
             rel = os.path.relpath(os.path.join(dirpath, f_name), root)
-            module_name = 'src.' + os.path.splitext(rel)[0].replace(os.sep, '.')
+            module_name = "src." + os.path.splitext(rel)[0].replace(os.sep, ".")
             try:
                 importlib.import_module(module_name)
             except Exception:

@@ -1,0 +1,40 @@
+# Use an official Python runtime as a parent image
+FROM python:3.12-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV UV_LINK_MODE=copy
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    build-essential \
+    curl \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && mv /root/.local/bin/uv /usr/local/bin/uv \
+    && mv /root/.local/bin/uvx /usr/local/bin/uvx
+
+# Set the working directory
+WORKDIR /app
+
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+
+# Install core dependencies (fast build)
+RUN uv sync --no-dev --no-install-project
+
+# Copy the rest of the application code
+COPY . .
+
+# Make entrypoint executable
+RUN sed -i 's/\r$//' scripts/entrypoint.sh && chmod +x scripts/entrypoint.sh
+
+# Expose FastAPI port
+EXPOSE 5000
+
+# Use the automated entrypoint script
+ENTRYPOINT ["scripts/entrypoint.sh"]

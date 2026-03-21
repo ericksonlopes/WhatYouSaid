@@ -33,12 +33,12 @@ jobs:
 
       - name: Sync dependencies with uv
         run: |
-          uv sync --locked --group dev
+          uv sync --locked --group dev --all-extras
 
       - name: Run tests with coverage
         run: |
           uv run pytest \
-            --cov=what_you_said --cov-branch --cov-report=xml:coverage.xml \
+            --cov=src --cov-branch --cov-report=xml:coverage.xml \
             --junitxml=junit.xml
 
       - name: Upload coverage to Codecov

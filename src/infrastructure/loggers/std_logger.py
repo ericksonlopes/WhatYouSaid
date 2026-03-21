@@ -15,15 +15,20 @@ class StdLogger(ILogger):
     Keeps compatibility with the ILogger interface.
     """
 
-    def __init__(self, log_format: str, name: Optional[str] = None, logger_id: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        log_format: str,
+        name: Optional[str] = None,
+        logger_id: Optional[str] = None,
+    ) -> None:
         self.log_format = log_format
         self.service_name = name or "std-loggers"
 
-        logger_name = f'std_logger_{self.service_name}'
+        logger_name = f"std_logger_{self.service_name}"
         if logger_id is not None:
-            logger_name = f'{logger_name}_{logger_id}'
+            logger_name = f"{logger_name}_{logger_id}"
         else:
-            logger_name = f'{logger_name}_{id(self)}'
+            logger_name = f"{logger_name}_{id(self)}"
         self._logger = logging.getLogger(logger_name)
 
         # Remove any existing handlers
@@ -41,7 +46,7 @@ class StdLogger(ILogger):
         console_handler.setLevel(logging.NOTSET)
 
         # Simple formatter that just prints the formatted message
-        formatter = logging.Formatter('%(message)s')
+        formatter = logging.Formatter("%(message)s")
         console_handler.setFormatter(formatter)
         self._logger.addHandler(console_handler)
 
@@ -58,13 +63,11 @@ class StdLogger(ILogger):
         This list adapts dynamically to all files present in the loggers infra.
         """
         if base_dir is None:
-            base_dir = os.path.join(
-                os.path.dirname(os.path.abspath(__file__))
-            )
+            base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)))
         logger_files = set()
         for root, _, files in os.walk(base_dir):
             for file in files:
-                if file.endswith('.py'):
+                if file.endswith(".py"):
                     logger_files.add(os.path.abspath(os.path.join(root, file)))
         return logger_files
 
@@ -82,30 +85,32 @@ class StdLogger(ILogger):
         for frame_info in stack:
             filename_abs = os.path.abspath(frame_info.filename)
             if filename_abs not in logger_files:
-                self_obj = frame_info.frame.f_locals.get('self', None)
+                self_obj = frame_info.frame.f_locals.get("self", None)
                 if self_obj:
                     cls_name = type(self_obj).__name__
                 frame_best = frame_info
                 break
 
-        asctime = datetime.now().strftime('%Y-%m-%d %H:%M:%S,%f')[:-3]
+        asctime = datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
         filename = os.path.basename(frame_best.filename)
         # Caminho relativo ao diretório do projeto
-        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
+        project_root = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "../../../..")
+        )
         filepath_abs = os.path.abspath(frame_best.filename)
-        filepath_rel = os.path.relpath(filepath_abs, project_root).replace('\\', '/')
+        filepath_rel = os.path.relpath(filepath_abs, project_root).replace("\\", "/")
         lineno = frame_best.lineno
         func_name = frame_best.function
 
         return {
-            'asctime': asctime,
-            'levelname': level.upper(),
-            'filename': filename,
-            'filepath': filepath_rel,
-            'lineno': lineno,
-            'class': cls_name,
-            'funcName': func_name,
-            'message': message
+            "asctime": asctime,
+            "levelname": level.upper(),
+            "filename": filename,
+            "filepath": filepath_rel,
+            "lineno": lineno,
+            "class": cls_name,
+            "funcName": func_name,
+            "message": message,
         }
 
     @classmethod
@@ -123,19 +128,22 @@ class StdLogger(ILogger):
         except Exception as exc:
             raise RuntimeError(f"Unexpected error in _is_allowed: {exc}") from exc
 
-    def _log(self, level: str, message: str, context: dict[str, Any] | None = None) -> None:
+    def _log(
+        self, level: str, message: str, context: dict[str, Any] | None = None
+    ) -> None:
         if not self._is_allowed(level):
             return
         ctx = StdLogger.get_log_record(level, message)
         # Adiciona o contexto como string (JSON ou str) ao campo 'context'
         if context:
             import json
+
             try:
-                ctx['context'] = json.dumps(context, ensure_ascii=False)
+                ctx["context"] = json.dumps(context, ensure_ascii=False)
             except TypeError:
-                ctx['context'] = str(context)
+                ctx["context"] = str(context)
         else:
-            ctx['context'] = ""
+            ctx["context"] = ""
         formatted_message = self.log_format.format(**ctx)
         log_method = getattr(self._logger, level.lower(), None)
         if log_method:
@@ -175,7 +183,7 @@ class InterceptHandler(logging.Handler):
         # Get corresponding Loguru level if it exists
         level = record.levelname
         message = record.getMessage()
-        
+
         # Determine which method to call on custom_logger
         if level == "DEBUG":
             self.custom_logger.debug(message)

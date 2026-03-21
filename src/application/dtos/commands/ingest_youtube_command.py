@@ -25,6 +25,7 @@ class IngestYoutubeCommand:
     tokens_per_chunk: int = 512
     tokens_overlap: int = 30
     embedding_model: Optional[str] = None
+    reprocess: bool = False
 
     # Optional pre-created job id to avoid duplicates
     ingestion_job_id: Optional[str] = None

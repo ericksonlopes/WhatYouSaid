@@ -1,20 +1,22 @@
-from langchain_weaviate import WeaviateVectorStore
-
 from src.config.logger import Logger
-from src.infrastructure.repositories.vector.weaviate.weaviate_client import WeaviateClient
+from src.infrastructure.repositories.vector.weaviate.weaviate_client import (
+    WeaviateClient,
+)
 
-from src.infrastructure.services.embeddding_service import EmbeddingService
+from src.infrastructure.services.embedding_service import EmbeddingService
 
 logger = Logger()
 
 
 class WeaviateVector:
-    def __init__(self,
-                 client: WeaviateClient,
-                 embedding_service: EmbeddingService,
-                 index_name: str,
-                 text_key: str,
-                 use_multi_tenancy: bool = False):
+    def __init__(
+        self,
+        client: WeaviateClient,
+        embedding_service: EmbeddingService,
+        index_name: str,
+        text_key: str,
+        use_multi_tenancy: bool = False,
+    ):
         self._client_wrapper = client
         self._embedding_service = embedding_service
         self._index_name = index_name
@@ -25,17 +27,22 @@ class WeaviateVector:
     def __enter__(self):
         """Context manager entry."""
         # Ensure collection with correct types exists using the wrapper
-        self._client_wrapper.create_collection_if_not_exists(self._index_name)
-        
+        self._client_wrapper.create_collection_if_not_exists(
+            self._index_name,
+            dimensions=self._embedding_service.model_loader_service.dimensions,
+        )
+
         # Open the connection and store the low-level client
         self._active_client = self._client_wrapper.__enter__()
+
+        from langchain_weaviate import WeaviateVectorStore
 
         return WeaviateVectorStore(
             client=self._active_client,
             index_name=self._index_name,
             text_key=self._text_key,
             embedding=self._embedding_service,
-            use_multi_tenancy=self._use_multi_tenancy
+            use_multi_tenancy=self._use_multi_tenancy,
         )
 
     def __exit__(self, exc_type, exc_val, exc_tb):

@@ -3,8 +3,24 @@ __pycache__/
 *.py[codz]
 *$py.class
 *.sqlite
+
 # C extensions
 *.so
+data/*
+# faiss
+*.faiss
+*.pkl
+
+# frontend
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
 
 # Distribution / packaging
 .Python

@@ -1,3 +1,8 @@
+# Node.js
+node_modules/
+frontend/dist/
+frontend/node_modules/
+*.sqlite
 # Virtual environments
 .venv/
 venv/

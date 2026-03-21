@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Any
 
+from src.domain.entities.enums.search_mode_enum import SearchMode
 from src.infrastructure.repositories.vector.models.chunk_model import ChunkModel
 
 
@@ -13,8 +14,15 @@ class IVectorRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def retriever(self, query: str, top_kn: int = 5, filters: Optional[Any] = None) -> List[ChunkModel]:
-        """Retrieve matching domain Chunk entities."""
+    def retriever(
+        self,
+        query: str,
+        top_kn: int = 5,
+        filters: Optional[Any] = None,
+        search_mode: SearchMode = SearchMode.SEMANTIC,
+        re_rank: bool = True,
+    ) -> List[ChunkModel]:
+        """Retrieve matching domain Chunk entities using the given search mode."""
         raise NotImplementedError
 
     @abstractmethod
@@ -23,6 +31,13 @@ class IVectorRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def list_chunks(self, filters: Optional[Any], limit: int = 1000) -> List[ChunkModel]:
+    def list_chunks(
+        self, filters: Optional[Any], limit: int = 1000
+    ) -> List[ChunkModel]:
         """List chunks matching query and filters without vector search."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def is_ready(self) -> bool:
+        """Check if the vector store is ready and live."""
         raise NotImplementedError

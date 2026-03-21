@@ -1,9 +1,21 @@
 # Pytest fixture to provide an in-memory SQLite DB for SQL repository tests
 import pytest
+from unittest.mock import MagicMock
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 import src.infrastructure.repositories.sql.connector as connector
+from main import app
+
+
+@pytest.fixture(autouse=True)
+def setup_app_state():
+    """Ensure app.state has necessary attributes for tests."""
+    if not hasattr(app.state, "model_loader"):
+        app.state.model_loader = MagicMock()
+    if not hasattr(app.state, "rerank_service"):
+        app.state.rerank_service = MagicMock()
+    yield
 
 
 @pytest.fixture()

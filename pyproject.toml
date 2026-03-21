@@ -4,20 +4,59 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "what-you-said"
-version = "0.1.0"
+version = "1.0.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "langchain-text-splitters>=1.1.1",
-    "pydantic-settings>=2.13.1",
+    "pydantic>=2.8.0,<2.10.0",
+    "pydantic-settings>=2.7.0",
     "sentence-transformers>=5.2.3",
     "youtube-transcript-api>=1.2.4",
-    "torch>=2.9.1",
-    "yt-dlp>=2026.3.3",
-    "langchain-weaviate>=0.0.6",
+    "torch==2.5.1",
+    "torchvision==0.20.1",
+    "yt-dlp>=2026.3.17",
+    "uvicorn>=0.42.0",
     "alembic>=1.18.4",
-    "streamlit>=1.55.0",
+    "fastapi>=0.135.1",
+    "langchain-community>=0.4.1",
+    "rank-bm25>=0.2.2",
+    "flashrank>=0.2.0",
+    "docling>=2.80.0",
+    "python-multipart>=0.0.22",
+    "transformers>=4.48.0",
+    "tokenizers>=0.21.0",
+    "huggingface-hub>=0.28.0",
+    "scipy>=1.15.1",
+    "redis>=5.0.0",
+    "sse-starlette>=3.3.3",
+]
+
+[project.optional-dependencies]
+chroma = [
+    "chromadb>=0.4.24",
+    "langchain-chroma>=0.1.0",
+]
+weaviate = [
+    "langchain-weaviate>=0.0.6",
+]
+faiss = [
+    "faiss-cpu>=1.13.2",
+]
+mysql = [
+    "pymysql>=1.1.1",
+    "cryptography>=44.0.0",
+]
+mariadb = [
+    "pymysql>=1.1.1",
+    "cryptography>=44.0.0",
+]
+mssql = [
+    "python-tds>=1.15.0",
+]
+postgres = [
+    "psycopg2-binary>=2.9.10",
 ]
 
 [dependency-groups]
@@ -25,20 +64,33 @@ dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "mypy>=1.19.1",
-    "ruff>=0.15.6",
+    "ruff>=0.15.7",
     "bandit>=1.8.3",
 ]
 
-[tool.uv.sources]
-torch = [
-    { index = "pytorch-cpu" },
-]
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
 
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu124", marker = "sys_platform == 'win32' or sys_platform == 'linux'" },
+    { index = "pytorch-cpu", marker = "sys_platform != 'win32' and sys_platform != 'linux'" }
+]
+torchvision = [
+    { index = "pytorch-cu124", marker = "sys_platform == 'win32' or sys_platform == 'linux'" },
+    { index = "pytorch-cpu", marker = "sys_platform != 'win32' and sys_platform != 'linux'" }
+]
+torchaudio = [
+    { index = "pytorch-cu124", marker = "sys_platform == 'win32' or sys_platform == 'linux'" },
+    { index = "pytorch-cpu", marker = "sys_platform != 'win32' and sys_platform != 'linux'" }
+]
 
 [tool.setuptools.packages.find]
 where = ["."]

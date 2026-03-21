@@ -1,6 +1,4 @@
-from typing import List, Optional
-
-from weaviate.collections.classes.filters import _Filters as Filters, Filter
+from typing import Any, List, Optional
 
 from src.config.logger import Logger
 from src.domain.entities.chunk_entity import ChunkEntity
@@ -27,30 +25,39 @@ class YouTubeVectorService:
 
         return result
 
-    def search(self, query: str, top_k: int = 5, filters: Optional[Filters] = None) -> List[ChunkEntity]:
+    def search(
+        self, query: str, top_k: int = 5, filters: Optional[Any] = None
+    ) -> List[ChunkEntity]:
         if not query:
             raise ValueError("Query must be provided for search")
 
-        models: List[ChunkModel] = self._repository.retriever(query=query, top_kn=top_k, filters=filters)
+        models: List[ChunkModel] = self._repository.retriever(
+            query=query, top_kn=top_k, filters=filters
+        )
 
         mapper = ChunkMapper()
         entities: List[ChunkEntity] = [mapper.model_to_entity(doc) for doc in models]
 
         return entities
 
-    def search_by_video_id(self, video_id: str, filters: Optional[Filters] = None) -> List[ChunkEntity]:
+    def search_by_video_id(
+        self, video_id: str, filters: Optional[Any] = None
+    ) -> List[ChunkEntity]:
         if not video_id:
             raise ValueError("video_id must be provided")
 
-        filters_list: List[Filters] = [
-            Filter.by_property("external_source").equal(video_id)
-        ]
-        if filters is not None:
-            filters_list.append(filters)
+        combined_filters = {"external_source": video_id}
+        if filters:
+            if isinstance(filters, dict):
+                combined_filters.update(filters)
+            else:
+                # If it's already a specialized filter object from another repo,
+                # we just pass it through, but we prefer dicts now.
+                combined_filters = filters
 
-        combined_filters: Filters = Filter.all_of(filters_list)
-
-        models: List[ChunkModel] = self._repository.list_chunks(filters=combined_filters)
+        models: List[ChunkModel] = self._repository.list_chunks(
+            filters=combined_filters
+        )
         mapper = ChunkMapper()
 
         entities: List[ChunkEntity] = [mapper.model_to_entity(doc) for doc in models]
@@ -61,10 +68,19 @@ class YouTubeVectorService:
         if not video_id:
             raise ValueError("video_id must be provided")
 
-        filters: Filters = Filter.all_of([
-            Filter.by_property("external_source").equal(video_id)
-        ])
+        filters = {"external_source": video_id}
 
+        result = self._repository.delete(filters=filters)
+
+        return result
+
+    def delete_by_job_id(self, job_id: Any) -> int:
+        """Delete all chunks from vector store associated with a specific job_id."""
+        if not job_id:
+            return 0
+
+        # Most vector stores expect string IDs
+        filters = {"job_id": str(job_id)}
         result = self._repository.delete(filters=filters)
 
         return result

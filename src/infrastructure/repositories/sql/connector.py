@@ -3,7 +3,12 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 from src.config.settings import settings
 
-engine = create_engine(settings.sql.url)
+# Engine setup based on dialect
+connect_args = {}
+if settings.sql.url.startswith("sqlite"):
+    connect_args["check_same_thread"] = False
+
+engine = create_engine(settings.sql.url, connect_args=connect_args)
 
 Session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 

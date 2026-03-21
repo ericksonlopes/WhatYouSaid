@@ -1,0 +1,449 @@
+{
+  "common": {
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "close": "Close",
+      "sync": "Sync",
+      "syncing": "Syncing...",
+      "addData": "Add Data",
+      "search": "Search",
+      "filter": "Filter",
+      "clear": "Clear all filters",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "reprocess": "Reprocess",
+      "delete": "Delete",
+      "view_details": "View Details",
+      "go_to_source": "Go to Source",
+      "upload": "Upload"
+    },
+    "status": {
+      "pending": "PENDING",
+      "processing": "PROCESSING",
+      "done": "DONE",
+      "error": "ERROR",
+      "unknown": "UNKNOWN",
+      "loaded": "LOADED",
+      "online": "Online",
+      "offline": "Offline",
+      "started": "STARTED",
+      "completed": "COMPLETED",
+      "failed": "FAILED",
+      "duplicate": "DUPLICATE",
+      "cancelled": "CANCELLED"
+    },
+    "time": {
+      "now": "just now",
+      "ago": "ago"
+    }
+  },
+  "sidebar": {
+    "brand": {
+      "title": "WhatYouSaid",
+      "subtitle": "Vector Data Hub"
+    },
+    "contexts": {
+      "title": "Knowledge Contexts",
+      "placeholder": "Filter contexts...",
+      "none": "No contexts found.",
+      "only": "Only",
+      "new": "New Knowledge Base",
+      "create": "Create new context",
+      "toggle": "Click to toggle"
+    },
+    "operations": {
+      "title": "Operations",
+      "chat": "RAG Chat (Locked)",
+      "search": "Semantic Search",
+      "sources": "Content Sources",
+      "chunks": "Sources > Chunks",
+      "activity": "Activity Monitor",
+      "knowledge_contexts": "Knowledge Contexts"
+    },
+    "groups": {
+      "search": "Searches",
+      "data": "Data",
+      "monitor": "Monitor"
+    },
+    "profile": {
+      "name": "User",
+      "plan": "Local Instance",
+      "settings": "Settings"
+    }
+  },
+  "search": {
+    "title": "Semantic Search",
+    "subtitle": "Explore your knowledge base using semantic, keyword, or hybrid search.",
+    "placeholder": "Ask anything or search by keywords...",
+    "modes": {
+      "title": "Search Strategy",
+      "semantic": "Semantic",
+      "bm25": "Keyword",
+      "hybrid": "Hybrid"
+    },
+    "options": {
+      "rerank": "Use Re-ranking (Better Quality)",
+      "topKn": "Top Results"
+    },
+    "results": {
+      "title": "Search Results",
+      "total": "Results Found",
+      "none": "No results found for your query.",
+      "score": "Score",
+      "source": "Source",
+      "id": "ID",
+      "match": "match",
+      "hybrid_label": "hybrid score",
+      "metadata": "System Metadata",
+      "type": "Source Type",
+      "model": "Embedding Model",
+      "tokens": "Token Count",
+      "date": "Ingested On",
+      "chunk_id": "Chunk ID",
+      "knowledge_context": "Knowledge Context"
+    }
+  },
+  "sources": {
+    "title": "Content Sources",
+    "subtitle": {
+      "multiple": "Showing sources for {{count}} context(s).",
+      "all": "Showing all sources in the database."
+    },
+    "delete_confirm": "Are you sure you want to delete this content source? This will permanently remove all associated chunks and embeddings.",
+    "table": {
+      "title": "Title",
+      "type": "ORIGIN",
+      "date": "Date",
+      "chunks": "Chunks",
+      "status": "Status",
+      "model": "Model",
+      "origin": "identifier",
+      "dimensions": "Dimensions",
+      "tokens": "Tokens",
+      "tokens_chunk": "Tokens(Chunk)",
+      "actions": "Actions",
+      "none": "No sources found.",
+      "pagination": "Showing {{start}} to {{end}} of {{total}} results",
+      "types": {
+        "all": "All Types",
+        "video": "Videos",
+        "article": "Articles",
+        "transcript": "Transcripts",
+        "youtube": "YouTube"
+      },
+      "headers": {
+        "icon": "Icon",
+        "type_date": "Type / Date",
+        "model_dims": "Model / Dims",
+        "volume": "Volume",
+        "tok": "TOK"
+      }
+    },
+    "notifications": {
+      "delete_success": "Content source deleted successfully.",
+      "delete_error": "Failed to delete content source.",
+      "edit_title": "Edit Title",
+      "update_title": "Update Title"
+    },
+    "chunks": {
+      "title": "Sources > Chunks",
+      "subtitle": "Managing segments stored in vector index.",
+      "search_placeholder": "Search your segments...",
+      "segment_prefix": "Chunk",
+      "pagination": "Showing {{start}} to {{end}} of {{total}} results",
+      "page": "Page {{current}} of {{total}}",
+      "chars": "Characters",
+      "tokens": "Tokens",
+      "content_label": "Content",
+      "content_placeholder": "Enter chunk content...",
+      "edit_warning": "Editing this content will trigger a re-indexing in the vector database. This ensures that future semantic searches will reflect the updated text.",
+      "sidebar": {
+        "title_tech": "Technical details",
+        "total_chunks": "Total chunks",
+        "total_tokens": "Total tokens",
+        "tokens_per_chunk": "Tokens per chunk",
+        "title_doc": "Original document",
+        "type": "Type",
+        "model": "Model",
+        "size": "Size",
+        "dims": "dims",
+        "title_access": "Knowledge Base",
+        "subject": "Subject",
+        "anonymous": "Anonymous User",
+        "origin_url": "Origin URL"
+      }
+    }
+  },
+  "activity": {
+    "title": "Activity Monitor",
+    "subtitle": "Real-time ingestion pipeline status.",
+    "loading": "Loading activity pipeline...",
+    "none": "No recent activity.",
+    "none_desc": "The ingestion pipeline is currently dormant. Initialize a data source to begin monitoring.",
+    "search_placeholder": "Search tasks by title, status...",
+    "no_results": "No tasks found",
+    "no_results_desc": "No tasks match your current search query. Try adjusting your search criteria.",
+    "pagination": "Showing {{start}} to {{end}} of {{total}} tasks",
+    "page": "Page {{current}} of {{total}}",
+    "stats": {
+      "total": "Pipeline Total",
+      "active": "Active Tasks",
+      "completed": "Successfully Ingested",
+      "failed": "Critical Errors",
+      "cancelled": "Cancelled Tasks",
+      "metric": "Metric"
+    },
+    "status": {
+      "live": "Live Monitor Active"
+    },
+    "pipeline_optimized": "Pipeline optimized",
+    "phase": "Phase",
+    "duration": "duration"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your local environment configurations",
+    "tabs": {
+      "api": "API",
+      "model": "Model",
+      "vector": "Vector",
+      "sql": "SQL",
+      "processing": "Processing"
+    },
+    "sections": {
+      "statistics": "Instance Statistics",
+      "environment": "System Environment",
+      "identifiers": "Internal Identifiers",
+      "details": "Environment Details"
+    },
+    "labels": {
+      "log_levels": "Log Levels",
+      "store_type": "Store Type",
+      "production_ready": "Production ready",
+      "collection_name": "Collection Name",
+      "embedding_model": "Embedding Model",
+      "status_stable": "Stable",
+      "status_active": "Active",
+      "model_desc": "Text vectorization model",
+      "api_desc": "Core API server connection",
+      "sql_desc": "Relational database",
+      "endpoint": "Endpoint",
+      "environment": "Environment",
+      "model_path": "Model Path",
+      "host": "Host",
+      "port": "Port",
+      "collection": "Collection",
+      "database": "Database",
+      "type": "Type"
+    },
+    "checks": {
+      "test_db": "Test DB",
+      "test_model": "Test Model",
+      "test_store": "Test Store",
+      "ping_api": "Ping API"
+    },
+    "language": {
+      "title": "Interface Language",
+      "en": "English",
+      "pt-BR": "Portuguese (Brazil)"
+    }
+  },
+  "ingestion": {
+    "title": "Add to Knowledge Base",
+    "subtitle": "Import new content to your vector store",
+    "url": {
+      "label": "YouTube URL",
+      "placeholder": "https://www.youtube.com/watch?v=...",
+      "reprocess_started": "Reprocessing started!",
+      "reprocess_error": "Error starting reprocessing.",
+      "missing_origin": "Cannot reprocess: original video URL is missing."
+    },
+    "youtube": {
+      "reprocess_started": "Reprocessing started!",
+      "reprocess_error": "Error starting reprocessing.",
+      "missing_origin": "Cannot reprocess: original video URL is missing.",
+      "errors": {
+        "disabled_transcripts": "Transcripts are disabled for this video.",
+        "no_transcript": "No transcript available for this video.",
+        "invalid_url": "Invalid YouTube URL.",
+        "unavailable": "Video is unavailable or private."
+      }
+    },
+    "subject": {
+      "label": "Target Knowledge Base",
+      "placeholder": "Select a context..."
+    },
+    "sources": {
+      "youtube": "YouTube",
+      "article": "Article",
+      "pdf": "PDF",
+      "file": "File",
+      "docx": "Word Document",
+      "pptx": "Presentation",
+      "xlsx": "Spreadsheet",
+      "markdown": "Markdown",
+      "html": "HTML Page",
+      "asciidoc": "AsciiDoc",
+      "latex": "LaTeX Document",
+      "csv": "CSV File",
+      "image": "Image (OCR)",
+      "txt": "Text File",
+      "other": "Others",
+      "wikipedia": "Wikipedia",
+      "web": "Web Scrape",
+      "notion": "Notion"
+    },
+    "descriptions": {
+      "youtube": "Videos & Transcripts",
+      "article": "Web Text Content",
+      "pdf": "PDF Document",
+      "file": "Local Document",
+      "docx": "Microsoft Word",
+      "pptx": "Microsoft PowerPoint",
+      "xlsx": "Microsoft Excel",
+      "markdown": "Markdown File",
+      "html": "Web Content",
+      "asciidoc": "Technical Doc",
+      "latex": "Scientific Paper",
+      "csv": "Data Table",
+      "image": "Scanned Image",
+      "txt": "Plain Text",
+      "other": "Supported File",
+      "wikipedia": "Articles & History",
+      "web": "Scrape any URL",
+      "notion": "Workspace Sync"
+    },
+    "coming_soon": {
+      "title": "Integration Coming Soon",
+      "description": "We are currently building the data pipeline for {{name}}. It will be available in a future update."
+    },
+    "options": {
+      "title": "Advanced Options",
+      "strategy": "Strategy",
+      "optimized": "Optimized",
+      "ocr": {
+        "label": "Advanced Reading (OCR)",
+        "description": "Enable high-precision reading for images, tables, and complex layouts.",
+        "warning": "May significantly increase processing time."
+      },
+      "max_tokens": "Maximum Tokens",
+      "tokens_fragment": "Maximum tokens per fragment",
+      "context_overlap": "Context Overlap",
+      "shared_context": "Shared context between chunks",
+      "model_limit": "Model Limit",
+      "tokens_label": "Tokens",
+      "optimized_tip": "Optimized for {{strategy}} retrieval.",
+      "strategies": {
+        "balanced": {
+          "name": "Balanced",
+          "description": "General purpose RAG",
+          "long_description": "Covers most use cases with good accuracy."
+        },
+        "granular": {
+          "name": "Granular",
+          "description": "Precise fact retrieval",
+          "long_description": "Best for technical docs and specific facts."
+        },
+        "context": {
+          "name": "Deep Context",
+          "description": "Long-form understanding",
+          "long_description": "Excellent for maintaining narrative flow."
+        },
+        "custom": {
+          "name": "Custom",
+          "name_label": "custom input",
+          "description": "Manual override active for specific requirements",
+          "long_description": "Manual override active for specific requirements."
+        }
+      },
+      "types": {
+        "video": "Video",
+        "playlist": "Playlist",
+        "playlist_url": "Playlist URL",
+        "video_url": "Video URL",
+        "playlist_desc": "All videos from the playlist will be extracted, transcribed, and chunked into semantic blocks for the selected context.",
+        "video_desc": "The audio will be automatically extracted, transcribed, and chunked into semantic blocks for the selected context.",
+        "drag_drop": "Drag and drop your file here",
+        "file_support": "Supports PDF, TXT, CSV up to 50MB",
+        "browse": "Browse Files",
+        "status": {
+          "chunking": "Chunking text...",
+          "vectorizing": "Vectorizing ({{model}})..."
+        },
+        "format_filter": "Format Filter (Locate faster)"
+      }
+    },
+    "messages": {
+      "success": "Content successfully added to Knowledge Base!",
+      "error": "Failed to add content",
+      "error_subject": "Please select a Knowledge Base",
+      "duplicate": "This source already exists in this context."
+    }
+  },
+  "notifications": {
+    "sync": {
+      "success": "Knowledge base synchronized!",
+      "error": "Failed to synchronize knowledge base."
+    },
+    "subject": {
+      "created": "Knowledge Base \"{{name}}\" created!",
+      "updated": "Knowledge Base \"{{name}}\" updated!",
+      "deleted": "Knowledge Base deleted successfully.",
+      "error": "Failed to create Knowledge Base.",
+      "error_update": "Failed to update Knowledge Base.",
+      "error_delete": "Failed to delete Knowledge Base."
+    },
+    "ingestion": {
+      "started": "Started processing {{type}} for \"{{name}}\"...",
+      "complete": "Ingestion complete for \"{{name}}\"!",
+      "duplicate": "This content has already been ingested. Skipping.",
+      "error": "Error connecting to the ingestion server."
+    },
+    "source": {
+      "updated": "Source title \"{{name}}\" updated successfully!",
+      "error_update": "Failed to update source title."
+    },
+    "chunk": {
+      "updated": "Knowledge chunk updated successfully!",
+      "deleted": "Knowledge chunk deleted successfully.",
+      "error": "Failed to update chunk."
+    }
+  },
+  "error_modal": {
+    "title": "Ingestion Details",
+    "original_task": "Original Task",
+    "full_error": "Technical Error Message",
+    "no_message": "No detailed error message available.",
+    "copy": "Copy Error",
+    "copied": "Copied!",
+    "support_hint": "This error may be caused by broken links, lack of permission, or formats not supported by the extraction engine."
+  },
+  "chat": {
+    "locked": {
+      "title": "RAG Chat is coming!",
+      "description": "While we prepare the chat experience, why not feed your knowledge base? Add new data to make your searches even more powerful."
+    }
+  },
+  "knowledge_contexts": {
+    "title": "Knowledge Contexts",
+    "subtitle": "Manage and organize your data contexts",
+    "filter_placeholder": "Filter by name or description...",
+    "source_count": "Sources",
+    "no_description": "No description provided.",
+    "new_context": "New Context",
+    "edit_context": "Edit Context",
+    "delete_confirm_title": "Delete Context?",
+    "delete_confirm_desc": "This will permanently delete \"{{name}}\" and potentially disconnect its sources. This action cannot be undone.",
+    "no_results": "No contexts found",
+    "no_results_desc": "Try adjusting your filter or create a new context.",
+    "name_label": "Name",
+    "description_label": "Description",
+    "icon_label": "Icon",
+    "placeholder_name": "Context Name",
+    "placeholder_description": "Description...",
+    "save_changes": "Save Changes",
+    "delete_tooltip": "Delete",
+    "edit_tooltip": "Edit"
+  }
+}
