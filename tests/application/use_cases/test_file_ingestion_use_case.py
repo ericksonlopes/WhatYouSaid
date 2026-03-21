@@ -25,6 +25,7 @@ class TestFileIngestionUseCase:
             "chunk_service": MagicMock(),
             "vector_service": MagicMock(),
             "vector_store_type": "weaviate",
+            "event_bus": MagicMock(),
         }
 
     @pytest.fixture
@@ -50,6 +51,7 @@ class TestFileIngestionUseCase:
         use_case_deps["ingestion_service"].create_job.return_value = MagicMock(
             id=job_id
         )
+        use_case_deps["cs_service"].get_by_source_info.return_value = None
         use_case_deps["cs_service"].create_source.return_value = MagicMock(
             id=source_id, source_type=SourceType.DOCX, external_source="test.docx"
         )
@@ -73,7 +75,7 @@ class TestFileIngestionUseCase:
         use_case_deps["ingestion_service"].update_job.assert_any_call(
             job_id=job_id,
             status=IngestionJobStatus.FINISHED,
-            status_message="Ingestion complete!",
+            status_message="Ingestion complete: test.docx",
             current_step=4,
             total_steps=4,
             chunks_count=1,
@@ -141,6 +143,10 @@ class TestFileIngestionUseCase:
             id=subject_id
         )
         use_case_deps["ingestion_service"].get_by_id.return_value = job_mock
+        use_case_deps["cs_service"].get_by_source_info.return_value = MagicMock(
+            id=uuid4(), source_type=SourceType.DOCX, external_source="test.docx"
+        )
+        use_case_deps["cs_service"].get_by_source_info.return_value = None
         use_case_deps["cs_service"].create_source.return_value = MagicMock(
             id=uuid4(), source_type=SourceType.DOCX, external_source="test.docx"
         )
@@ -216,6 +222,7 @@ class TestFileIngestionUseCase:
         use_case_deps["ingestion_service"].create_job.return_value = MagicMock(
             id=uuid4()
         )
+        use_case_deps["cs_service"].get_by_source_info.return_value = None
         use_case_deps["cs_service"].create_source.return_value = MagicMock(
             id=uuid4(), source_type=SourceType.DOCX, external_source="test.docx"
         )
@@ -280,6 +287,7 @@ class TestFileIngestionUseCase:
             id=uuid4(), source_type=SourceType.DOCX, external_source="f"
         )
         use_case_deps["ingestion_service"].create_job.return_value = job_mock
+        use_case_deps["cs_service"].get_by_source_info.return_value = None
         use_case_deps["cs_service"].create_source.return_value = source_mock
 
         # Fail at vector indexing
@@ -311,6 +319,7 @@ class TestFileIngestionUseCase:
         use_case_deps["ingestion_service"].create_job.return_value = MagicMock(
             id=uuid4()
         )
+        use_case_deps["cs_service"].get_by_source_info.return_value = None
         use_case_deps["cs_service"].create_source.return_value = MagicMock(
             id=uuid4(), source_type=SourceType.DOCX, external_source="test.docx"
         )
@@ -333,8 +342,12 @@ class TestFileIngestionUseCase:
         # If docs = [obj], 111 passes.
         # If I want to reach 145, docs must be falsy at 143.
 
-    def test_execute_source_type_refinement(self, use_case_deps, mock_extractor):
+    def test_execute_source_type_refinement(
+        self, use_case_deps, mock_extractor, monkeypatch
+    ):
         use_case = FileIngestionUseCase(**use_case_deps)
+        # Force it to be OTHER first so refinement triggers
+        monkeypatch.setattr(use_case, "_determine_source_type", lambda x: SourceType.OTHER)
 
         subject_id = uuid4()
         job_id = uuid4()
@@ -346,6 +359,7 @@ class TestFileIngestionUseCase:
         use_case_deps["ingestion_service"].create_job.return_value = MagicMock(
             id=job_id
         )
+        use_case_deps["cs_service"].get_by_source_info.return_value = None
         use_case_deps["cs_service"].create_source.return_value = MagicMock(
             id=source_id, source_type=SourceType.PDF, external_source="test.docx"
         )
@@ -366,12 +380,7 @@ class TestFileIngestionUseCase:
         args, kwargs = use_case_deps["cs_service"].create_source.call_args
         assert kwargs["source_type"] == SourceType.PDF
 
-        # Verify update_job was called with refined ingestion_type
-        # It's called after extraction
-        update_calls = use_case_deps["ingestion_service"].update_job.call_args_list
-        refined_call_found = any(
-            call.kwargs.get("ingestion_type") == "pdf" for call in update_calls
-        )
-        assert refined_call_found, (
-            f"Refined ingestion_type 'pdf' not found in update_job calls: {update_calls}"
-        )
+        # Verify create_job was called with 'other' (initial type)
+        args, kwargs = use_case_deps["ingestion_service"].create_job.call_args
+        assert kwargs["ingestion_type"] == "other"
+

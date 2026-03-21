@@ -25,3 +25,6 @@ class IngestFileCommand:
 
     # Optional pre-created job id
     ingestion_job_id: Optional[UUID] = None
+
+    # Cleanup logic
+    delete_after_ingestion: bool = False

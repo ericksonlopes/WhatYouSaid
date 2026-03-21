@@ -35,6 +35,7 @@ from src.infrastructure.services.model_loader_service import ModelLoaderService
 from src.infrastructure.services.youtube_data_process_service import (
     YoutubeDataProcessService,
 )
+from src.domain.interfaces.services.i_event_bus import IEventBus
 from src.infrastructure.services.youtube_vector_service import YouTubeVectorService
 
 logger = Logger()
@@ -58,6 +59,7 @@ class YoutubeIngestionUseCase:
         chunk_service: ChunkIndexService,
         vector_service: YouTubeVectorService,
         vector_store_type: str,
+        event_bus: IEventBus,
     ) -> None:
         self.ks_service = ks_service
         self.cs_service = cs_service
@@ -67,8 +69,17 @@ class YoutubeIngestionUseCase:
         self.chunk_service = chunk_service
         self.vector_service = vector_service
         self.vector_store_type = vector_store_type
+        self.event_bus = event_bus
 
     def execute(self, cmd: IngestYoutubeCommand) -> IngestYoutubeResult:
+        self.event_bus.publish(
+            "ingestion_status",
+            {
+                "job_id": str(cmd.ingestion_job_id) if cmd.ingestion_job_id else "new",
+                "status": "started",
+                "video_url": cmd.video_url,
+            },
+        )
         logger.info(
             "Starting YouTube ingestion",
             context={
@@ -429,6 +440,15 @@ class YoutubeIngestionUseCase:
                 total_steps=4,
                 source_title=extracted_title,
             )
+            self.event_bus.publish(
+                "ingestion_status",
+                {
+                    "job_id": str(ingestion.id),
+                    "status": "processing",
+                    "step": "extracting",
+                    "title": extracted_title,
+                },
+            )
 
             # 4. Extract and split transcript (CRITICAL STEP)
             with self._lock:
@@ -453,6 +473,16 @@ class YoutubeIngestionUseCase:
                 status_message=f"Generating embeddings for {len(docs)} chunks...",
                 current_step=2,
                 total_steps=4,
+                content_source_id=source.id,  # Link job to source in DB
+            )
+            self.event_bus.publish(
+                "ingestion_status",
+                {
+                    "job_id": str(ingestion.id),
+                    "status": "processing",
+                    "step": "embedding",
+                    "chunks_count": len(docs),
+                },
             )
             chunks = self._build_chunk_entities(
                 docs, source, subject, cmd, job_id=ingestion.id
@@ -462,9 +492,17 @@ class YoutubeIngestionUseCase:
             self.ingestion_service.update_job(
                 job_id=ingestion.id,
                 status=IngestionJobStatus.PROCESSING,
-                status_message="Indexing in vector store...",
+                status_message="Generating embeddings and indexing...",
                 current_step=3,
                 total_steps=4,
+            )
+            self.event_bus.publish(
+                "ingestion_status",
+                {
+                    "job_id": str(ingestion.id),
+                    "status": "processing",
+                    "step": "indexing",
+                },
             )
             with self._lock:
                 created_ids = self._index_chunks(chunks)
@@ -472,10 +510,20 @@ class YoutubeIngestionUseCase:
             self.ingestion_service.update_job(
                 job_id=ingestion.id,
                 status=IngestionJobStatus.FINISHED,
-                status_message="Ingestion complete!",
+                status_message=f"Ingestion complete: {cmd.title or video_url}",
                 current_step=4,
                 total_steps=4,
                 chunks_count=len(chunks),
+            )
+            self.event_bus.publish(
+                "ingestion_status",
+                {
+                    "job_id": str(ingestion.id),
+                    "status": "completed",
+                    "title": cmd.title or video_url,
+                    "source_id": str(source.id),
+                    "chunks_count": len(chunks),
+                },
             )
             total_tokens = sum(
                 c.tokens_count for c in chunks if c.tokens_count is not None
@@ -515,11 +563,19 @@ class YoutubeIngestionUseCase:
                 try:
                     self.ingestion_service.update_job(
                         job_id=ingestion.id,
-                        status=IngestionJobStatus.CANCELLED,
-                        status_message=error_msg,
+                        status=IngestionJobStatus.FAILED,
+                        error_message=error_msg,
+                    )
+                    self.event_bus.publish(
+                        "ingestion_status",
+                        {
+                            "job_id": str(ingestion.id),
+                            "status": "failed",
+                            "error": error_msg,
+                        },
                     )
                 except Exception as ej:
-                    logger.error(f"Failed to mark job as CANCELLED: {ej}")
+                    logger.error(f"Failed to mark job as FAILED: {ej}")
 
             if source:
                 try:
@@ -768,6 +824,13 @@ class YoutubeIngestionUseCase:
         )
         logger.debug(
             "Ingestion job updated to PROCESSING", context={"job_id": str(ingestion.id)}
+        )
+        self.event_bus.publish(
+            "ingestion_status",
+            {
+                "job_id": str(ingestion.id),
+                "status": "indexing",  # Using 'indexing' to represent PROCESSING phase
+            },
         )
 
     def _build_chunk_entities(

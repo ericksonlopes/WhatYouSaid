@@ -29,6 +29,8 @@ dependencies = [
     "tokenizers>=0.21.0",
     "huggingface-hub>=0.28.0",
     "scipy>=1.15.1",
+    "redis>=5.0.0",
+    "sse-starlette>=3.3.3",
 ]
 
 [project.optional-dependencies]

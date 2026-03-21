@@ -160,6 +160,13 @@ class ModelEmbedding(BaseSettings):
     )
 
 
+class RedisConfig(BaseSettings):
+    host: str = Field(default="localhost", description="Redis host URL")
+    port: int = Field(default=6379, description="Redis port")
+    db: int = Field(default=0, description="Redis database index")
+    password: Optional[str] = Field(default=None, description="Redis password")
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -183,6 +190,9 @@ class Settings(BaseSettings):
     )
     docling: DoclingConfig = Field(
         default_factory=DoclingConfig, description="Docling settings"
+    )
+    redis: RedisConfig = Field(
+        default_factory=RedisConfig, description="Redis settings"
     )
 
 

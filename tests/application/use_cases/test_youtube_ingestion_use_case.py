@@ -1,5 +1,6 @@
 import pytest
 import uuid
+from unittest.mock import MagicMock
 from types import SimpleNamespace
 
 from src.application.dtos.commands.ingest_youtube_command import IngestYoutubeCommand
@@ -157,9 +158,10 @@ def test_ingest_single_url_processes_chunks(monkeypatch):
     embedding = None
     chunk_svc = make_chunk_service()
     vec_svc = make_vector_service()
+    event_bus = MagicMock()
 
     use_case = YoutubeIngestionUseCase(
-        ks, cs, isvc, model_loader, embedding, chunk_svc, vec_svc, "weaviate"
+        ks, cs, isvc, model_loader, embedding, chunk_svc, vec_svc, "weaviate", event_bus
     )
 
     docs = [
@@ -197,7 +199,7 @@ def test_ingest_skips_existing_source(monkeypatch):
     chunk_svc = make_chunk_service()
     vec_svc = make_vector_service()
     use_case = YoutubeIngestionUseCase(
-        ks, cs, isvc, model_loader, embedding, chunk_svc, vec_svc, "weaviate"
+        ks, cs, isvc, model_loader, embedding, chunk_svc, vec_svc, "weaviate", MagicMock()
     )
     monkeypatch.setattr(
         use_case, "_extract_video_id_from_url", lambda url: "dQw4w9WgXcQ"
@@ -218,7 +220,7 @@ def test_ingest_multi_video_one_fails_others_continue(monkeypatch):
     chunk_svc = make_chunk_service()
     vec_svc = make_vector_service()
     use_case = YoutubeIngestionUseCase(
-        ks, cs, isvc, model_loader, embedding, chunk_svc, vec_svc, "weaviate"
+        ks, cs, isvc, model_loader, embedding, chunk_svc, vec_svc, "weaviate", MagicMock()
     )
 
     def mock_extract_id(url):
@@ -255,7 +257,7 @@ def test_ingest_playlist(monkeypatch):
     chunk_svc = make_chunk_service()
     vec_svc = make_vector_service()
     use_case = YoutubeIngestionUseCase(
-        ks, cs, isvc, model_loader, embedding, chunk_svc, vec_svc, "weaviate"
+        ks, cs, isvc, model_loader, embedding, chunk_svc, vec_svc, "weaviate", MagicMock()
     )
 
     from src.application.dtos.enums.youtube_data_type import YoutubeDataType
@@ -290,7 +292,7 @@ def test_ingest_playlist_empty_raises(monkeypatch):
     isvc = make_ingestion_service()
     model_loader = make_model_loader()
     use_case = YoutubeIngestionUseCase(
-        ks, cs, isvc, model_loader, None, None, None, "weaviate"
+        ks, cs, isvc, model_loader, None, None, None, "weaviate", MagicMock()
     )
 
     from src.application.dtos.enums.youtube_data_type import YoutubeDataType
@@ -330,7 +332,7 @@ def test_resolve_subject_errors(monkeypatch):
     monkeypatch.setattr(ks, "get_subject_by_id", lambda id: None)
 
     use_case = YoutubeIngestionUseCase(
-        ks, None, None, None, None, None, None, "weaviate"
+        ks, None, None, None, None, None, None, "weaviate", MagicMock()
     )
 
     cmd_name = IngestYoutubeCommand(video_url="v", subject_name="unknown")
@@ -360,7 +362,7 @@ def test_ingest_fails_to_create_job(monkeypatch):
     chunk_svc = make_chunk_service()
     vec_svc = make_vector_service()
     use_case = YoutubeIngestionUseCase(
-        ks, cs, isvc, model_loader, None, chunk_svc, vec_svc, "weaviate"
+        ks, cs, isvc, model_loader, None, chunk_svc, vec_svc, "weaviate", MagicMock()
     )
     monkeypatch.setattr(use_case, "_extract_video_id_from_url", lambda url: "vid")
 
@@ -377,7 +379,7 @@ def test_ingest_fails_no_transcript(monkeypatch):
     chunk_svc = make_chunk_service()
     vec_svc = make_vector_service()
     use_case = YoutubeIngestionUseCase(
-        ks, cs, isvc, model_loader, None, chunk_svc, vec_svc, "weaviate"
+        ks, cs, isvc, model_loader, None, chunk_svc, vec_svc, "weaviate", MagicMock()
     )
 
     from src.infrastructure.extractors.youtube_extractor import YoutubeExtractor
@@ -410,7 +412,7 @@ def test_ingest_with_pre_created_job(monkeypatch):
     chunk_svc = make_chunk_service()
     vec_svc = make_vector_service()
     use_case = YoutubeIngestionUseCase(
-        ks, cs, isvc, model_loader, None, chunk_svc, vec_svc, "weaviate"
+        ks, cs, isvc, model_loader, None, chunk_svc, vec_svc, "weaviate", MagicMock()
     )
     monkeypatch.setattr(use_case, "_extract_video_id_from_url", lambda url: "vid")
     monkeypatch.setattr(
@@ -434,7 +436,7 @@ def test_resolve_subject_by_id(monkeypatch):
     )
 
     use_case = YoutubeIngestionUseCase(
-        ks, None, None, None, None, None, None, "weaviate"
+        ks, None, None, None, None, None, None, "weaviate", MagicMock()
     )
 
     # Test valid UUID object
@@ -462,7 +464,9 @@ def test_execute_exception_recovery(monkeypatch):
         lambda id: SimpleNamespace(id=id, content_source_id=source_id),
     )
 
-    use_case = YoutubeIngestionUseCase(ks, cs, isvc, None, None, None, None, "weaviate")
+    use_case = YoutubeIngestionUseCase(
+        ks, cs, isvc, None, None, None, None, "weaviate", MagicMock()
+    )
 
     # Force error in _resolve_subject
     def mock_error(*args, **kwargs):
@@ -493,7 +497,7 @@ def test_process_single_video_with_existing_but_not_done_source(monkeypatch):
     chunk_svc = make_chunk_service()
     vec_svc = make_vector_service()
     use_case = YoutubeIngestionUseCase(
-        ks, cs, isvc, model_loader, None, chunk_svc, vec_svc, "weaviate"
+        ks, cs, isvc, model_loader, None, chunk_svc, vec_svc, "weaviate", MagicMock()
     )
 
     monkeypatch.setattr(use_case, "_extract_video_id_from_url", lambda url: "vid")
@@ -549,6 +553,7 @@ def test_execute_job_recovery_success(monkeypatch):
         make_chunk_service(),
         make_vector_service(),
         "weaviate",
+        MagicMock()
     )
     monkeypatch.setattr(use_case, "_extract_video_id_from_url", lambda url: "vid")
     monkeypatch.setattr(
@@ -563,7 +568,7 @@ def test_execute_job_recovery_success(monkeypatch):
 def test_execute_playlist_no_url():
     ks = make_ks_service()
     use_case = YoutubeIngestionUseCase(
-        ks, None, None, None, None, None, None, "weaviate"
+        ks, None, None, None, None, None, None, "weaviate", MagicMock()
     )
     from src.application.dtos.enums.youtube_data_type import YoutubeDataType
 
@@ -580,10 +585,10 @@ def test_execute_playlist_no_url():
 def test_execute_no_urls():
     ks = make_ks_service()
     use_case = YoutubeIngestionUseCase(
-        ks, None, None, None, None, None, None, "weaviate"
+        ks, None, None, None, None, None, None, "weaviate", MagicMock()
     )
     cmd = IngestYoutubeCommand(video_url=None, video_urls=[], subject_name="s")
-    with pytest.raises(ValueError, match="No video_url\(s\) provided"):
+    with pytest.raises(ValueError, match=r"No video_url\(s\) provided"):
         use_case.execute(cmd)
 
 
@@ -622,6 +627,7 @@ def test_process_single_video_reprocess(monkeypatch):
         chunk_svc,
         vec_svc,
         "weaviate",
+        MagicMock()
     )
     monkeypatch.setattr(
         use_case, "_extract_and_split", lambda *args, **kwargs: [DummyDoc("c")]
@@ -662,7 +668,7 @@ def test_process_single_video_rollback_on_fail(monkeypatch):
     )
 
     use_case = YoutubeIngestionUseCase(
-        ks, cs, isvc, make_model_loader(), None, chunk_svc, vec_svc, "weaviate"
+        ks, cs, isvc, make_model_loader(), None, chunk_svc, vec_svc, "weaviate", MagicMock()
     )
     monkeypatch.setattr(
         use_case, "_extract_and_split", lambda *args, **kwargs: [DummyDoc("c")]
@@ -694,7 +700,7 @@ def test_process_single_video_rollback_on_fail(monkeypatch):
 
 def test_resolve_subject_invalid_uuid(monkeypatch):
     use_case = YoutubeIngestionUseCase(
-        None, None, None, None, None, None, None, "weaviate"
+        None, None, None, None, None, None, None, "weaviate", MagicMock()
     )
     cmd = IngestYoutubeCommand(video_url="v", subject_id="not-a-uuid")
     with pytest.raises(ValueError, match="Invalid subject_id provided"):
@@ -716,6 +722,7 @@ def test_process_single_video_fails_to_create_job(monkeypatch):
         make_chunk_service(),
         make_vector_service(),
         "weaviate",
+        MagicMock()
     )
     cmd = IngestYoutubeCommand(video_url="vid", subject_name="s")
     with pytest.raises(ValueError, match="Failed to create or retrieve ingestion job"):

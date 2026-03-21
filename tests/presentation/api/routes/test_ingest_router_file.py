@@ -14,6 +14,7 @@ def client():
 @pytest.fixture(autouse=True)
 def mock_app_state():
     app.state.task_queue = MagicMock()
+    app.state.event_bus = MagicMock()
     yield
 
 

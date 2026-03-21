@@ -164,6 +164,16 @@ services:
       MSSQL_LOG_DIR: /var/opt/mssql/log
       MSSQL_BACKUP_DIR: /var/opt/mssql/backup
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - 6379:6379
+    networks:
+      - wys_network
+    volumes:
+      - ./data/redis:/data
+    restart: always
+
 networks:
   wys_network:
     driver: bridge

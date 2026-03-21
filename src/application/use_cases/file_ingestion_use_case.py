@@ -1,3 +1,5 @@
+import os
+import shutil
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List
@@ -22,6 +24,7 @@ from src.infrastructure.services.knowledge_subject_service import (
 from src.infrastructure.services.model_loader_service import ModelLoaderService
 from src.infrastructure.services.chunk_vector_service import ChunkVectorService
 from src.infrastructure.services.text_splitter_service import TextSplitterService
+from src.domain.interfaces.services.i_event_bus import IEventBus
 
 logger = Logger()
 
@@ -39,6 +42,7 @@ class FileIngestionUseCase:
         chunk_service: ChunkIndexService,
         vector_service: ChunkVectorService,
         vector_store_type: str,
+        event_bus: IEventBus,
     ) -> None:
         self.ks_service = ks_service
         self.cs_service = cs_service
@@ -48,9 +52,18 @@ class FileIngestionUseCase:
         self.chunk_service = chunk_service
         self.vector_service = vector_service
         self.vector_store_type = vector_store_type
+        self.event_bus = event_bus
         self.extractor = DoclingExtractor()
 
     def execute(self, cmd: IngestFileCommand) -> Dict[str, Any]:
+        self.event_bus.publish(
+            "ingestion_status",
+            {
+                "job_id": str(cmd.ingestion_job_id) if cmd.ingestion_job_id else "new",
+                "status": "started",
+                "file_name": cmd.file_name,
+            },
+        )
         logger.info(
             "Starting File ingestion",
             context={
@@ -89,6 +102,15 @@ class FileIngestionUseCase:
                 current_step=1,
                 total_steps=4,
             )
+            self.event_bus.publish(
+                "ingestion_status",
+                {
+                    "job_id": str(ingestion.id),
+                    "status": "processing",
+                    "step": "extracting",
+                    "title": cmd.title or cmd.file_name,
+                },
+            )
 
             docs = self.extractor.extract(cmd.file_path, do_ocr=cmd.do_ocr)
             if not docs:
@@ -123,29 +145,41 @@ class FileIngestionUseCase:
                     except ValueError:
                         pass
 
-            # 3. Create ContentSource
-            source = self.cs_service.create_source(
-                subject_id=subject.id,
+            # 3. Initialize Source Ingestion
+            source = self.cs_service.get_by_source_info(
                 source_type=source_type,
                 external_source=cmd.file_name,
-                title=cmd.title or cmd.file_name,
-                language=cmd.language,
-                status=ContentSourceStatus.ACTIVE,
-                processing_status="processing",
-                source_metadata=docs[0].metadata,
+                subject_id=cmd.subject_id,
             )
+            if not source:
+                source = self.cs_service.create_source(
+                    subject_id=subject.id,
+                    source_type=source_type,
+                    external_source=cmd.file_name,
+                    status=ContentSourceStatus.PROCESSING,
+                    title=cmd.title or cmd.file_name,
+                    language=cmd.language,
+                    source_metadata=docs[0].metadata,
+                )
 
+            # 4. Generate chunks and Embeddings
             self.ingestion_service.update_job(
                 job_id=ingestion.id,
                 status=IngestionJobStatus.PROCESSING,
-                content_source_id=source.id,
-                status_message="Splitting content into chunks...",
+                status_message=f"Generating embeddings for {len(docs)} chunks...",
                 current_step=2,
                 total_steps=4,
-                ingestion_type=source_type.value,
+                content_source_id=source.id,  # Link job to source in DB
             )
-
-            # 4. Split and Tokenize
+            self.event_bus.publish(
+                "ingestion_status",
+                {
+                    "job_id": str(ingestion.id),
+                    "status": "processing",
+                    "step": "embedding",
+                    "chunks_count": len(docs),
+                },
+            )
             tokenizer = (
                 self.model_loader_service.model.tokenizer
                 if hasattr(self.model_loader_service, "model")
@@ -155,13 +189,16 @@ class FileIngestionUseCase:
 
             effective_tokens = cmd.tokens_per_chunk
 
+            full_text = "\n\n".join([doc.page_content for doc in docs])
+            base_metadata = docs[0].metadata if docs else {}
+
             if tokenizer and docs:
                 splitter_service = TextSplitterService(tokenizer=tokenizer)
                 split_docs = splitter_service.split_text(
-                    text=docs[0].page_content,
+                    text=full_text,
                     tokens_per_chunk=effective_tokens,
                     tokens_overlap=cmd.tokens_overlap,
-                    metadata=docs[0].metadata,
+                    metadata=base_metadata,
                 )
             elif docs:
                 # Fallback to basic RecursiveCharacterTextSplitter if no tokenizer
@@ -171,7 +208,9 @@ class FileIngestionUseCase:
                     chunk_size=effective_tokens * 4,
                     chunk_overlap=cmd.tokens_overlap * 4,
                 )
-                split_docs = langchain_splitter.split_documents(docs)
+                # Create a temporary document with the full text for langchain_splitter
+                full_doc = Document(page_content=full_text, metadata=base_metadata)
+                split_docs = langchain_splitter.split_documents([full_doc])
             else:
                 split_docs = []
 
@@ -185,9 +224,17 @@ class FileIngestionUseCase:
             self.ingestion_service.update_job(
                 job_id=ingestion.id,
                 status=IngestionJobStatus.PROCESSING,
-                status_message="Generating embeddings and indexing...",
+                status_message="Indexing in vector store...",
                 current_step=3,
                 total_steps=4,
+            )
+            self.event_bus.publish(
+                "ingestion_status",
+                {
+                    "job_id": str(ingestion.id),
+                    "status": "processing",
+                    "step": "indexing",
+                },
             )
 
             created_ids = self.vector_service.index_documents(chunks)
@@ -196,10 +243,20 @@ class FileIngestionUseCase:
             self.ingestion_service.update_job(
                 job_id=ingestion.id,
                 status=IngestionJobStatus.FINISHED,
-                status_message="Ingestion complete!",
+                status_message=f"Ingestion complete: {cmd.title or cmd.file_name}",
                 current_step=4,
                 total_steps=4,
                 chunks_count=len(chunks),
+            )
+            self.event_bus.publish(
+                "ingestion_status",
+                {
+                    "job_id": str(ingestion.id),
+                    "status": "completed",
+                    "title": cmd.title or cmd.file_name,
+                    "source_id": str(source.id),
+                    "chunks_count": len(chunks),
+                },
             )
 
             total_tokens = sum(
@@ -240,11 +297,32 @@ class FileIngestionUseCase:
                     status=IngestionJobStatus.FAILED,
                     error_message=str(e),
                 )
+                self.event_bus.publish(
+                    "ingestion_status",
+                    {
+                        "job_id": str(ingestion.id),
+                        "status": "failed",
+                        "error": str(e),
+                    },
+                )
             if source:
                 self.cs_service.update_processing_status(
                     content_source_id=source.id, status=ContentSourceStatus.FAILED
                 )
             raise e
+        finally:
+            if cmd.delete_after_ingestion and os.path.exists(cmd.file_path):
+                try:
+                    # If it's in a temp dir we created, delete the whole dir
+                    # Assumption: it's in a subfolder of tempfile.gettempdir()
+                    parent_dir = os.path.dirname(cmd.file_path)
+                    if "tmp" in parent_dir.lower() or "temp" in parent_dir.lower():
+                        shutil.rmtree(parent_dir, ignore_errors=True)
+                    else:
+                        os.remove(cmd.file_path)
+                    logger.info(f"Cleaned up temporary file/directory: {cmd.file_path}")
+                except Exception as ex:
+                    logger.warning(f"Failed to cleanup {cmd.file_path}: {ex}")
 
     def _resolve_subject(self, cmd: IngestFileCommand):
         if cmd.subject_id:

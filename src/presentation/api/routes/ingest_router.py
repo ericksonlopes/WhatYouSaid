@@ -7,8 +7,12 @@ from src.application.dtos.commands.ingest_youtube_command import IngestYoutubeCo
 from src.application.dtos.commands.ingest_file_command import IngestFileCommand
 from src.application.use_cases.youtube_ingestion_use_case import YoutubeIngestionUseCase
 from src.application.use_cases.file_ingestion_use_case import FileIngestionUseCase
+from src.application.workers import (
+    run_file_ingestion_worker,
+    run_youtube_ingestion_worker,
+)
 from src.config.logger import Logger
-from src.infrastructure.services.task_queue_service import TaskQueueService
+from src.domain.interfaces.services.i_task_queue import ITaskQueue
 from src.presentation.api.dependencies import (
     get_ingest_youtube_use_case,
     get_file_ingestion_use_case,
@@ -42,7 +46,7 @@ router = APIRouter()
 def ingest_youtube(
     request: Annotated[YoutubeIngestRequest, Body()],
     use_case: Annotated[YoutubeIngestionUseCase, Depends(get_ingest_youtube_use_case)],
-    task_queue: Annotated[TaskQueueService, Depends(get_task_queue_service)],
+    task_queue: Annotated[ITaskQueue, Depends(get_task_queue_service)],
 ):
     """
     Ingest data from YouTube videos or playlists into the vector store.
@@ -70,7 +74,7 @@ def ingest_youtube(
     if request.reprocess:
         logger.info("Running reprocessing in background via queue")
         task_queue.enqueue(
-            use_case.execute,
+            run_youtube_ingestion_worker,
             cmd,
             task_title=request.title or request.video_url or "YouTube Ingestion",
             metadata={"job_id": str(request.ingestion_job_id)}
@@ -112,7 +116,7 @@ def ingest_youtube(
 )
 async def ingest_file(
     use_case: Annotated[FileIngestionUseCase, Depends(get_file_ingestion_use_case)],
-    task_queue: Annotated[TaskQueueService, Depends(get_task_queue_service)],
+    task_queue: Annotated[ITaskQueue, Depends(get_task_queue_service)],
     file: Annotated[UploadFile, File(...)],
     subject_id: Annotated[Optional[str], Form()] = None,
     subject_name: Annotated[Optional[str], Form()] = None,
@@ -162,18 +166,10 @@ async def ingest_file(
         do_ocr=do_ocr,
     )
 
-    # Execute ingestion in background to avoid timeout
-    # Note: The temp file should be deleted AFTER ingestion
-    def run_ingestion_and_cleanup(command: IngestFileCommand):
-        try:
-            use_case.execute(command)
-        finally:
-            if os.path.exists(command.file_path):
-                os.remove(command.file_path)
-                os.rmdir(os.path.dirname(command.file_path))
+    cmd.delete_after_ingestion = True
 
     task_queue.enqueue(
-        run_ingestion_and_cleanup,
+        run_file_ingestion_worker,
         cmd,
         task_title=filename,
         metadata={"filename": filename},
@@ -196,7 +192,7 @@ async def ingest_file(
 async def ingest_file_url(
     request: Annotated[FileUrlIngestRequest, Body()],
     use_case: Annotated[FileIngestionUseCase, Depends(get_file_ingestion_use_case)],
-    task_queue: Annotated[TaskQueueService, Depends(get_task_queue_service)],
+    task_queue: Annotated[ITaskQueue, Depends(get_task_queue_service)],
 ):
     """
     Ingest a file from a URL.
@@ -267,18 +263,11 @@ async def ingest_file_url(
         do_ocr=request.do_ocr,
     )
 
-    # Execute ingestion in background
-    def run_ingestion_and_cleanup(command: IngestFileCommand, dir_to_remove: str):
-        try:
-            use_case.execute(command)
-        finally:
-            if os.path.exists(dir_to_remove):
-                shutil.rmtree(dir_to_remove)
+    cmd.delete_after_ingestion = True
 
     task_queue.enqueue(
-        run_ingestion_and_cleanup,
+        run_file_ingestion_worker,
         cmd,
-        temp_dir,
         task_title=filename,
         metadata={"filename": filename, "url": request.file_url},
     )

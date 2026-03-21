@@ -75,19 +75,30 @@ class TextSplitterService:
                 chunk_index += 1
         except Exception as e:
             logger.error(
-                f"Error during text splitting: {e}. Falling back to simple split.",
+                f"Error during token-based text splitting: {e}. Falling back to character-based split.",
                 context={"text_length": len(text)},
             )
-            documents.append(
-                Document(
-                    page_content=text,
-                    metadata={
-                        **(metadata or {}),
-                        "token_count": len(text) // 4,
-                        "chunk_index": 0,
-                    },
-                )
+            # Use a basic character-based split as fallback to avoid "all-in-one-chunk" monster chunks
+            from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+            # 1 token approx 4 chars. 512 tokens -> 2048 chars
+            char_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=tokens_per_chunk * 4, chunk_overlap=tokens_overlap * 4
             )
+            backup_docs = char_splitter.split_text(text)
+
+            for idx, content in enumerate(backup_docs):
+                chunk_metadata = (metadata or {}).copy()
+                chunk_metadata.update(
+                    {
+                        "token_count": len(content) // 4,
+                        "chunk_index": idx,
+                        "is_fallback": True,
+                    }
+                )
+                documents.append(
+                    Document(page_content=content, metadata=chunk_metadata)
+                )
 
         logger.debug(
             f"Split text into {len(documents)} chunks.",

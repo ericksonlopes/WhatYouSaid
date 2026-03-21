@@ -6,7 +6,7 @@ from src.application.dtos.commands.ingest_youtube_command import IngestYoutubeCo
 from src.application.dtos.enums.youtube_data_type import YoutubeDataType
 
 
-@pytest.mark.YoutubeIngestionUseCase
+@pytest.mark.Dependencies
 class TestYoutubeIngestionUseCaseEdgeCases:
     @pytest.fixture
     def mock_services(self):
@@ -19,6 +19,7 @@ class TestYoutubeIngestionUseCaseEdgeCases:
             "chunk_service": MagicMock(),
             "vector_service": MagicMock(),
             "vector_store_type": "FAISS",
+            "event_bus": MagicMock(),
         }
 
     @pytest.fixture

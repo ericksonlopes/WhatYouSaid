@@ -20,16 +20,27 @@ logger = setup_logging()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from src.application.service_registry import registry
+
+    registry.register("app", app)
+
     logger.info("Starting up WhatYouSaid API...")
 
     try:
         from src.config.settings import Settings
         from src.infrastructure.services.model_loader_service import ModelLoaderService
         from src.infrastructure.services.re_rank_service import ReRankService
-        from src.infrastructure.services.task_queue_service import TaskQueueService
+        from src.infrastructure.services.redis_task_queue_service import (
+            RedisTaskQueueService,
+        )
+        from src.infrastructure.services.redis_event_bus import RedisEventBus
 
         logger.info("Initializing Settings...")
         _settings = Settings()
+
+        # Initialize Redis Event Bus
+        logger.info("Initializing RedisEventBus...")
+        app.state.event_bus = RedisEventBus()
 
         # Load Embedding Model
         logger.info(
@@ -45,11 +56,11 @@ async def lifespan(app: FastAPI):
         app.state.rerank_service = ReRankService(model_name=_settings.model_rerank.name)
         logger.info("Re-rank model pre-loaded successfully.")
 
-        # Initialize In-memory Task Queue
-        logger.info("Initializing TaskQueueService...")
-        app.state.task_queue = TaskQueueService(num_workers=4)
+        # Initialize Redis Task Queue
+        logger.info("Initializing RedisTaskQueueService...")
+        app.state.task_queue = RedisTaskQueueService(num_workers=4)
         app.state.task_queue.start()
-        logger.info("TaskQueueService started.")
+        logger.info("RedisTaskQueueService started.")
 
     except Exception as e:
         logger.error(f"Error pre-loading models: {e}")
@@ -89,9 +100,11 @@ app.include_router(ingest_router.router, prefix="/rest/ingest", tags=["Ingestion
 app.include_router(subject_router.router, prefix="/rest/subjects", tags=["Subjects"])
 app.include_router(source_router.router, prefix="/rest/sources", tags=["Sources"])
 app.include_router(job_router.router, prefix="/rest/jobs", tags=["Jobs"])
-app.include_router(notification_router.router, tags=["Notifications"])
 app.include_router(settings_router.router, prefix="/rest/settings", tags=["Settings"])
 app.include_router(chunk_router.router, prefix="/rest/chunks", tags=["Chunks"])
+app.include_router(
+    notification_router.router, prefix="/rest/notifications", tags=["Notifications"]
+)
 
 
 @app.get("/health", tags=["Health"])

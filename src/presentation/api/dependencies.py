@@ -25,6 +25,8 @@ from src.infrastructure.repositories.sql.knowledge_subject_repository import (
     KnowledgeSubjectSQLRepository,
 )
 from src.infrastructure.services.chunk_index_service import ChunkIndexService
+from src.domain.interfaces.services.i_event_bus import IEventBus
+from src.domain.interfaces.services.i_task_queue import ITaskQueue
 from src.infrastructure.services.chunk_vector_service import ChunkVectorService
 from src.infrastructure.services.content_source_service import ContentSourceService
 from src.infrastructure.services.embedding_service import EmbeddingService
@@ -34,7 +36,6 @@ from src.infrastructure.services.knowledge_subject_service import (
 )
 from src.infrastructure.services.model_loader_service import ModelLoaderService
 from src.infrastructure.services.re_rank_service import ReRankService
-from src.infrastructure.services.task_queue_service import TaskQueueService
 from src.infrastructure.services.youtube_vector_service import YouTubeVectorService
 
 
@@ -155,8 +156,12 @@ def get_rerank_service(request: Request) -> ReRankService:
     return request.app.state.rerank_service
 
 
-def get_task_queue_service(request: Request) -> TaskQueueService:
+def get_task_queue_service(request: Request) -> ITaskQueue:
     return request.app.state.task_queue
+
+
+def get_event_bus(request: Request) -> IEventBus:
+    return request.app.state.event_bus
 
 
 def get_chunk_vector_service(
@@ -194,6 +199,7 @@ def get_ingest_youtube_use_case(
     embed_svc: EmbeddingService = Depends(get_embedding_service),
     chunk_svc: ChunkIndexService = Depends(get_chunk_index_service),
     yt_vector_svc: YouTubeVectorService = Depends(get_youtube_vector_service),
+    event_bus: IEventBus = Depends(get_event_bus),
     settings: Settings = Depends(get_settings),
 ) -> YoutubeIngestionUseCase:
     return YoutubeIngestionUseCase(
@@ -205,6 +211,7 @@ def get_ingest_youtube_use_case(
         chunk_service=chunk_svc,
         vector_service=yt_vector_svc,
         vector_store_type=settings.vector.store_type.value,
+        event_bus=event_bus,
     )
 
 
@@ -240,6 +247,7 @@ def get_file_ingestion_use_case(
     embed_svc: EmbeddingService = Depends(get_embedding_service),
     chunk_svc: ChunkIndexService = Depends(get_chunk_index_service),
     vector_svc: ChunkVectorService = Depends(get_chunk_vector_service),
+    event_bus: IEventBus = Depends(get_event_bus),
     settings: Settings = Depends(get_settings),
 ) -> FileIngestionUseCase:
     return FileIngestionUseCase(
@@ -251,4 +259,5 @@ def get_file_ingestion_use_case(
         chunk_service=chunk_svc,
         vector_service=vector_svc,
         vector_store_type=settings.vector.store_type.value,
+        event_bus=event_bus,
     )
