@@ -61,8 +61,9 @@ class ChunkChromaRepository(IVectorRepository):
             texts = [doc.content for doc in valid_docs if doc.content is not None]
             ids = [str(doc.id) for doc in valid_docs]
 
-            metadatas = []
+            meta_datas = []
             for doc in valid_docs:
+                logger.info(f"Creating document: {doc}")
                 meta = doc.model_dump(exclude={"content", "score"})
 
                 # Convert UUIDs and datetimes to string
@@ -77,12 +78,12 @@ class ChunkChromaRepository(IVectorRepository):
 
                 # Clean up None values as Chroma doesn't like them in metadata
                 meta = {k: v for k, v in meta.items() if v is not None}
-
-                metadatas.append(meta)
+                logger.info(f"Creating document: {meta}")
+                meta_datas.append(meta)
 
             self._vector_store.add_texts(
                 texts=texts,
-                metadatas=metadatas,
+                metadatas=meta_datas,
                 ids=ids,
             )
 

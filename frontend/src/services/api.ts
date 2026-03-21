@@ -97,6 +97,15 @@ export const api = {
     await handleResponseError(response, 'Failed to delete source');
   },
 
+  async updateSource(id: string, title: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/sources/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title })
+    });
+    await handleResponseError(response, 'Failed to update source title');
+  },
+
   async fetchSourceTypes(): Promise<string[]> {
     const response = await fetch(`${API_BASE_URL}/sources/types`);
     await handleResponseError(response, 'Failed to fetch source types');

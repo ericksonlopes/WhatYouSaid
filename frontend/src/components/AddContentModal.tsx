@@ -698,10 +698,10 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
                                                                             <Scan className="w-4 h-4" />
                                                                         </div>
                                                                         <div>
-                                                                            <h4 className="text-[13px] font-semibold text-zinc-200">
+                                                                            <h4 className="text-sm font-semibold text-zinc-200">
                                                                                 {t('ingestion.options.ocr.label')}
                                                                             </h4>
-                                                                            <p className="text-[11px] text-zinc-500">
+                                                                            <p className="text-xs text-zinc-400 font-medium">
                                                                                 {t('ingestion.options.ocr.description')}
                                                                             </p>
                                                                         </div>
@@ -728,7 +728,7 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
                                                                         className="flex items-start gap-2 p-2.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10"
                                                                     >
                                                                         <Info className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
-                                                                        <p className="text-[10px] text-zinc-400 leading-relaxed font-medium">
+                                                                        <p className="text-[11px] text-zinc-400 leading-relaxed font-medium">
                                                                             {t('ingestion.options.ocr.warning')}
                                                                         </p>
                                                                     </motion.div>

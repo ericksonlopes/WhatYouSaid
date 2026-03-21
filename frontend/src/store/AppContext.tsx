@@ -33,6 +33,7 @@ interface AppState {
   addToast: (message: string, type?: ToastType) => void;
   removeToast: (id: string) => void;
   deleteSource: (id: string) => Promise<void>;
+  updateSourceTitle: (id: string, title: string) => Promise<void>;
   modelInfo: ModelInfo | null;
   refreshModelInfo: () => Promise<void>;
   isAddModalOpen: boolean;
@@ -268,6 +269,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [addToast, t]);
 
+  const updateSourceTitle = useCallback(async (id: string, title: string) => {
+    try {
+      await api.updateSource(id, title);
+      setSources((prev) => prev.map((s) => s.id === id ? { ...s, title } : s));
+      addToast(t('notifications.source.updated', { name: title }), 'success');
+    } catch (err) {
+      console.error('Error updating source title:', err);
+      addToast(t('notifications.source.error_update'), 'error');
+      throw err;
+    }
+  }, [addToast, t]);
+
   const addSubject = useCallback(async (subjectData: Omit<Subject, 'id' | 'sourceCount'>) => {
     try {
       const newSubject = await api.createSubject(subjectData.name, subjectData.description, subjectData.icon);
@@ -339,6 +352,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addToast,
         removeToast,
         deleteSource,
+        updateSourceTitle,
         modelInfo,
         refreshModelInfo,
         isAddModalOpen,

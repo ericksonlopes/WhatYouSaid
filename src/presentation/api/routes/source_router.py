@@ -13,10 +13,37 @@ from src.presentation.api.dependencies import (
 from src.domain.entities.enums.source_type_enum_entity import SourceType
 from src.application.use_cases.content_source_use_case import ContentSourceUseCase
 from src.presentation.api.schemas.model_schemas import ModelInfoResponse
-from src.presentation.api.schemas.source_schemas import SourceResponse
+from src.presentation.api.schemas.source_schemas import SourceResponse, SourceUpdate
+
 
 logger = Logger()
 router = APIRouter()
+
+
+@router.patch("/{id}", responses={404: {"description": "Source not found"}})
+def update_source_title(
+    id: str,
+    update: SourceUpdate,
+    cs_service: Annotated[ContentSourceService, Depends(get_cs_service)],
+):
+    """Update a content source title."""
+    try:
+        import uuid
+
+        source_id = uuid.UUID(id)
+        source = cs_service.get_by_id(source_id)
+        if not source:
+            raise HTTPException(status_code=404, detail="Content source not found")
+
+        cs_service.update_title(source_id, update.title)
+        return {"success": True, "message": f"Source {id} title updated successfully"}
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating source {id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/types", response_model=List[str])

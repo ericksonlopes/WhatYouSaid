@@ -142,7 +142,9 @@
     },
     "notifications": {
       "delete_success": "Fonte de conteúdo excluída com sucesso.",
-      "delete_error": "Falha ao excluir a fonte de conteúdo."
+      "delete_error": "Falha ao excluir a fonte de conteúdo.",
+      "edit_title": "Editar Título",
+      "update_title": "Atualizar Título"
     },
     "chunks": {
       "title": "Fontes > Chunks",
@@ -395,6 +397,10 @@
       "complete": "Ingestão concluída para \"{{name}}\"!",
       "duplicate": "Este conteúdo já foi ingerido. Pulando.",
       "error": "Erro ao conectar com o servidor de ingestão."
+    },
+    "source": {
+      "updated": "Título da fonte \"{{name}}\" atualizado com sucesso!",
+      "error_update": "Falha ao atualizar o título da fonte."
     },
     "chunk": {
       "updated": "Fragmento de conhecimento atualizado com sucesso!",

@@ -142,7 +142,9 @@
     },
     "notifications": {
       "delete_success": "Content source deleted successfully.",
-      "delete_error": "Failed to delete content source."
+      "delete_error": "Failed to delete content source.",
+      "edit_title": "Edit Title",
+      "update_title": "Update Title"
     },
     "chunks": {
       "title": "Sources > Chunks",
@@ -396,6 +398,10 @@
       "complete": "Ingestion complete for \"{{name}}\"!",
       "duplicate": "This content has already been ingested. Skipping.",
       "error": "Error connecting to the ingestion server."
+    },
+    "source": {
+      "updated": "Source title \"{{name}}\" updated successfully!",
+      "error_update": "Failed to update source title."
     },
     "chunk": {
       "updated": "Knowledge chunk updated successfully!",

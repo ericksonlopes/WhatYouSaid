@@ -141,6 +141,10 @@ class ContentSourceService:
             max_tokens_per_chunk=max_tokens_per_chunk,
         )
 
+    def update_title(self, content_source_id: UUID, title: str) -> None:
+        """Update the title of a content source."""
+        self._repo.update_title(content_source_id=content_source_id, title=title)
+
     def delete_source(self, content_source_id: UUID) -> bool:
         """Delete a content source by ID."""
         return self._repo.delete(content_source_id=content_source_id)

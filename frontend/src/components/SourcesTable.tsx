@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { ContentSource } from '../types';
 import { useTranslation } from 'react-i18next';
-import { FileText, ChevronLeft, ChevronRight, Search, Filter, ChevronDown, Check, Database, Youtube, BookOpen, Globe, Newspaper, RotateCcw, Plus, Trash2, FileCode, FileSpreadsheet, FileImage, Presentation, FileAudio, FileVideo, Terminal, Share2, Layers } from 'lucide-react';
+import { FileText, ChevronLeft, ChevronRight, Search, Filter, ChevronDown, Check, Database, Youtube, BookOpen, Globe, Newspaper, RotateCcw, Plus, Trash2, Edit3, FileCode, FileSpreadsheet, FileImage, Presentation, FileAudio, FileVideo, Terminal, Share2, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppContext } from '../store/AppContext';
 import { api } from '../services/api';
+import { EditSourceModal } from './EditSourceModal';
 
 interface SourcesTableProps {
   sources: ContentSource[];
@@ -60,6 +61,7 @@ export function SourcesTable({
   const { t } = useTranslation();
   const { sourceTypes, addToast, refreshJobs, refreshSources, setIsAddModalOpen, deleteSource } = useAppContext();
   const [reprocessingIds, setReprocessingIds] = useState<Set<string>>(new Set());
+  const [editingSource, setEditingSource] = useState<ContentSource | null>(null);
 
   const handleReprocess = async (e: React.MouseEvent, source: ContentSource) => {
     e.stopPropagation();
@@ -114,6 +116,11 @@ export function SourcesTable({
     } catch (err) {
       // Error handled in AppContext
     }
+  };
+
+  const handleEdit = (e: React.MouseEvent, source: ContentSource) => {
+    e.stopPropagation();
+    setEditingSource(source);
   };
   const typeOptions = [
     { value: 'all', label: t('sources.table.types.all'), icon: getIcon('all') },
@@ -247,7 +254,7 @@ export function SourcesTable({
               <th className="w-24 px-4 py-5 border-b border-white/5 font-semibold text-[11px] text-zinc-500 uppercase tracking-widest text-center">{t('sources.table.status')}</th>
               <th className="w-auto px-4 py-5 border-b border-white/5 font-semibold text-[11px] text-zinc-500 uppercase tracking-widest text-left">{t('sources.table.headers.model_dims')}</th>
               <th className="w-28 px-4 py-5 border-b border-white/5 font-semibold text-[11px] text-zinc-500 uppercase tracking-widest text-right">{t('sources.table.headers.volume')}</th>
-              <th className="w-24 px-6 py-5 border-b border-white/5 font-semibold text-[11px] text-zinc-500 uppercase tracking-widest text-center">
+              <th className="w-36 px-6 py-5 border-b border-white/5 font-semibold text-[11px] text-zinc-500 uppercase tracking-widest text-center">
                 {t('sources.table.actions')}
               </th>
             </tr>
@@ -311,7 +318,7 @@ export function SourcesTable({
                           <span className="font-semibold text-zinc-100 group-hover:text-white transition-colors truncate text-sm">
                             {source.title}
                           </span>
-                          <span className="truncate text-[11px] text-zinc-500 font-medium opacity-60" title={source.origin || ''}>
+                          <span className="truncate text-xs text-zinc-400 font-medium" title={source.origin || ''}>
                             {source.origin || 'no-origin'}
                           </span>
                         </div>
@@ -360,21 +367,30 @@ export function SourcesTable({
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <div className="flex items-center justify-center gap-2.5">
+                        <div className="flex items-center justify-center gap-1.5 p-1 bg-white/[0.03] border border-white/5 rounded-2xl shadow-inner">
                           {source.type.toLowerCase() === 'youtube' && (
                             <button
                               onClick={(e) => handleReprocess(e, source)}
                               disabled={reprocessingIds.has(source.id)}
-                              className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-zinc-400 hover:text-orange-400 hover:bg-orange-500/10 hover:border-orange-500/10 transition-all active:scale-95 disabled:opacity-50"
+                              className="flex items-center justify-center w-10 h-10 rounded-xl hover:bg-orange-500/20 text-orange-400/70 hover:text-orange-400 transition-all duration-300 active:scale-90"
+                              title={t('common.actions.reprocess')}
                             >
-                              <RotateCcw className={`w-3.5 h-3.5 ${reprocessingIds.has(source.id) ? 'animate-spin' : ''}`} />
+                              <RotateCcw className={`w-4.5 h-4.5 ${reprocessingIds.has(source.id) ? 'animate-spin' : ''}`} />
                             </button>
                           )}
                           <button
-                            onClick={(e) => handleDelete(e, source)}
-                            className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/10 transition-all active:scale-95"
+                            onClick={(e) => handleEdit(e, source)}
+                            className="flex items-center justify-center w-10 h-10 rounded-xl hover:bg-emerald-500/20 text-emerald-400/70 hover:text-emerald-400 transition-all duration-300 active:scale-90"
+                            title={t('sources.notifications.edit_title')}
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Edit3 className="w-4.5 h-4.5" />
+                          </button>
+                          <button
+                            onClick={(e) => handleDelete(e, source)}
+                            className="flex items-center justify-center w-10 h-10 rounded-xl hover:bg-rose-500/20 text-rose-400/70 hover:text-rose-400 transition-all duration-300 active:scale-90"
+                            title={t('common.actions.delete')}
+                          >
+                            <Trash2 className="w-4.5 h-4.5" />
                           </button>
                         </div>
                       </td>
@@ -443,6 +459,12 @@ export function SourcesTable({
           </button>
         </div>
       </div>
+
+      <EditSourceModal
+        isOpen={!!editingSource}
+        onClose={() => setEditingSource(null)}
+        source={editingSource}
+      />
     </div>
   );
 }
