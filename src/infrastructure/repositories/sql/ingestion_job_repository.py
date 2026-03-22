@@ -25,6 +25,7 @@ class IngestionJobSQLRepository:
         vector_store_type: Optional[str] = None,
         source_title: Optional[str] = None,
         external_source: Optional[str] = None,
+        subject_id: Optional[UUID] = None,
     ) -> UUID:
         with Connector() as session:
             try:
@@ -37,6 +38,7 @@ class IngestionJobSQLRepository:
                     "vector_store_type": vector_store_type,
                     "source_title": source_title,
                     "external_source": external_source,
+                    "subject_id": subject_id,
                 }
                 logger.debug("Creating ingestion job", context=extra)
                 job = IngestionJobModel(
@@ -48,6 +50,7 @@ class IngestionJobSQLRepository:
                     vector_store_type=vector_store_type,
                     source_title=source_title,
                     external_source=external_source,
+                    subject_id=subject_id,
                 )
                 session.add(job)
                 session.commit()

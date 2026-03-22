@@ -35,6 +35,10 @@ class ChunkIndexSQLRepository:
                         chars=ch.get("chars", content_size),
                         tokens_count=ch.get("tokens_count"),
                         language=ch.get("language"),
+                        source_type=ch.get("source_type"),
+                        subject_id=ch.get("subject_id"),
+                        external_source=ch.get("external_source"),
+                        extra=ch.get("extra"),
                         version_number=ch.get("version_number", 1),
                         vector_store_type=ch.get("vector_store_type"),
                     )

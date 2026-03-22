@@ -14,6 +14,7 @@ from sqlalchemy import (
     text,
     UUID,
     Index,
+    JSON,
 )
 from sqlalchemy.orm import relationship
 
@@ -40,6 +41,14 @@ class ChunkIndexModel(Base):
     chars = Column(Integer, nullable=False, server_default=text("0"))
     tokens_count = Column(Integer, nullable=True)
     language = Column(Text, nullable=True)
+    source_type = Column(Text, nullable=True)
+    subject_id = Column(
+        UUID,
+        ForeignKey("knowledge_subjects.id", deferrable=True, initially="IMMEDIATE"),
+        nullable=True,
+    )
+    external_source = Column(Text, nullable=True)
+    extra = Column(JSON, nullable=True)
     version_number = Column(Integer, nullable=False, server_default=text("1"))
     vector_store_type = Column(Text, nullable=True)
     created_at = Column(

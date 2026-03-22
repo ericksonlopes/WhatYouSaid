@@ -167,7 +167,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
         search: jobSearchQuery 
       };
       const data = await api.fetchJobs(fetchParams);
-      setJobs(data.items);
+      
+      // Preserve optimistic jobs that aren't yet in the server results
+      setJobs((prev) => {
+        const optimisticJobs = prev.filter(job => job.id.startsWith('optimistic-'));
+        // If a real job with a matching title exists, we could remove the optimistic one,
+        // but for now, we'll keep them until they are replaced by a real job from the server.
+        // Simple heuristic: if we have server results, only keep optimistic jobs that were created very recently (e.g. < 30s ago)
+        const recentOptimisticJobs = optimisticJobs.filter(job => {
+          const createdAt = new Date(job.createdAt).getTime();
+          return Date.now() - createdAt < 30000; // 30 seconds
+        });
+        
+        // Final list is server jobs + recent optimistic jobs that don't look like they are already in the list
+        // (matching by title is a bit risky but we can just show both if unsure)
+        return [...data.items, ...recentOptimisticJobs.filter(oj => !data.items.some(rj => rj.title === oj.title))];
+      });
+      
       setTotalJobs(data.total);
       if (data.stats) setJobStats(data.stats);
     } catch (err) {

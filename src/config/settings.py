@@ -167,6 +167,16 @@ class RedisConfig(BaseSettings):
     password: Optional[str] = Field(default=None, description="Redis password")
 
 
+class YoutubeConfig(BaseSettings):
+    # Throttling configurations
+    throttle_batch_size: int = Field(
+        default=4, description="Number of videos to process before waiting"
+    )
+    throttle_wait_seconds: int = Field(
+        default=10, description="Seconds to wait between batches"
+    )
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -193,6 +203,9 @@ class Settings(BaseSettings):
     )
     redis: RedisConfig = Field(
         default_factory=RedisConfig, description="Redis settings"
+    )
+    youtube: YoutubeConfig = Field(
+        default_factory=YoutubeConfig, description="YouTube ingestion settings"
     )
 
 

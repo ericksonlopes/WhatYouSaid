@@ -44,3 +44,6 @@ docker-compose.yml
 # Logs and databases
 *.log
 *.sqlite
+
+# Playwright
+.ms-playwright/

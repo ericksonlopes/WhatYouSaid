@@ -51,3 +51,11 @@ class YoutubeTranscriptsDisabledException(YoutubeException):
     def __init__(self, video_id: str):
         message = f"Transcripts are disabled for video {video_id}."
         super().__init__(message, video_id=video_id)
+
+
+class YoutubeNetworkException(YoutubeException):
+    """Raised when there is a network-related error (DNS, connection)."""
+
+    def __init__(self, video_id: str, error_msg: str):
+        message = f"Network error while accessing video {video_id}. Please check your connection. Details: {error_msg}"
+        super().__init__(message, video_id=video_id)

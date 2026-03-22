@@ -239,10 +239,7 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
     const SOURCES: SourceOption[] = [
         {id: 'youtube', name: t('ingestion.sources.youtube'), description: t('ingestion.descriptions.youtube'), icon: Youtube, enabled: true},
         {id: 'pdf', name: t('ingestion.sources.file'), description: t('ingestion.descriptions.file'), icon: FileUp, enabled: true},
-        {id: 'article', name: t('ingestion.sources.article'), description: t('ingestion.descriptions.article'), icon: Newspaper, enabled: false},
-        {id: 'wikipedia', name: t('ingestion.sources.wikipedia'), description: t('ingestion.descriptions.wikipedia'), icon: BookOpen, enabled: false},
-        {id: 'web', name: t('ingestion.sources.web'), description: t('ingestion.descriptions.web'), icon: Globe, enabled: false},
-        {id: 'notion', name: t('ingestion.sources.notion'), description: t('ingestion.descriptions.notion'), icon: Layers, enabled: false},
+        {id: 'web', name: t('ingestion.sources.web'), description: t('ingestion.descriptions.web'), icon: Globe, enabled: true},
     ];
 
     const [contentType, setContentType] = useState<ContentType>('youtube');
@@ -266,6 +263,8 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
     const [youtubeDataType, setYoutubeDataType] = useState<'video' | 'playlist'>('video');
     const [fileInputMode, setFileInputMode] = useState<'upload' | 'url'>('upload');
     const [doOcr, setDoOcr] = useState(false);
+    const [webDepth, setWebDepth] = useState(1);
+    const [cssSelector, setCssSelector] = useState('');
 
     const strategyProps = {
         tokensPerChunk,
@@ -295,93 +294,63 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
             return;
         }
 
-        if (contentType === 'youtube') {
-            startIngestion(inputValue, contentType, targetSubject, tokensPerChunk, tokensOverlap, youtubeDataType);
-            setInputValue('');
+        try {
+            if (contentType === 'youtube') {
+                // Await is not strictly necessary for the view switch, 
+                // but we await to ensure the request is at least sent
+                startIngestion('youtube', {
+                    url: inputValue,
+                    subject: targetSubject,
+                    tokensPerChunk,
+                    tokensOverlap,
+                    youtubeDataType
+                });
+            } else if (contentType === 'web') {
+                setUploadStatus('chunking');
+                setProgress(30);
+                await startIngestion('web', {
+                    url: inputValue,
+                    subject: targetSubject,
+                    tokensPerChunk,
+                    tokensOverlap,
+                    cssSelector
+                });
+            } else if (contentType === 'pdf' && fileInputMode === 'url' && inputValue.trim()) {
+                setUploadStatus('chunking');
+                setProgress(30);
+                await startIngestion('file_url', {
+                    url: inputValue,
+                    subject: targetSubject,
+                    tokensPerChunk,
+                    tokensOverlap,
+                    doOcr
+                });
+            } else if (selectedFile) {
+                setUploadStatus('chunking');
+                setProgress(30);
+                await startIngestion('file', {
+                    file: selectedFile,
+                    subject: targetSubject,
+                    tokensPerChunk,
+                    tokensOverlap,
+                    doOcr
+                });
+            }
+
+            // Common success path - switch view and close modal
             setCurrentView('activity');
             onClose();
-            return;
-        } 
-        
-        if (contentType === 'pdf' && fileInputMode === 'url' && inputValue.trim()) {
-            // URL ingestion for files
-            setUploadStatus('chunking');
-            setProgress(30);
-
-            try {
-                if (typeof (api as any).ingestFileByUrl !== 'function') {
-                    console.error('API Error: ingestFileByUrl is missing', api);
-                    throw new Error('Internal Error: ingestFileByUrl is missing from API service');
-                }
-                
-                await (api as any).ingestFileByUrl({
-                    file_url: inputValue,
-                    subject_id: targetSubject.id,
-                    tokens_per_chunk: tokensPerChunk,
-                    tokens_overlap: tokensOverlap,
-                    do_ocr: doOcr,
-                    language: 'pt'
-                });
-                setProgress(100);
-                setUploadStatus('done');
-                setCurrentView('activity');
-                addToast(t('ingestion.messages.success'), 'success');
-                setTimeout(() => {
-                    setInputValue('');
-                    setUploadStatus('idle');
-                    setProgress(0);
-                    onClose();
-                }, 500);
-            } catch (err: any) {
-                setUploadStatus('idle');
-                addToast(t('ingestion.messages.error') + ': ' + (err.message || err), 'error');
-            }
-            return;
-        }
-
-        if (selectedFile) {
-            // Real file ingestion
-            setUploadStatus('chunking');
+            
+            // Reset local state
+            setInputValue('');
+            setCssSelector('');
+            setSelectedFile(null);
+            setUploadStatus('idle');
             setProgress(0);
-
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-            formData.append('subject_id', targetSubject.id);
-            formData.append('tokens_per_chunk', tokensPerChunk.toString());
-            formData.append('tokens_overlap', tokensOverlap.toString());
-            formData.append('do_ocr', doOcr.toString());
-            formData.append('language', 'pt');
-
-            // Progress simulation for UI feedback during the network request
-            const interval = setInterval(() => {
-                setProgress(p => {
-                    if (p >= 90) {
-                        clearInterval(interval);
-                        return 90;
-                    }
-                    if (p === 30) setUploadStatus('vectorizing');
-                    return p + 5;
-                });
-            }, 200);
-
-            try {
-                await api.ingestFile(formData);
-                clearInterval(interval);
-                setProgress(100);
-                setUploadStatus('done');
-                setCurrentView('activity');
-                addToast(t('ingestion.messages.success'), 'success');
-                setTimeout(() => {
-                    setSelectedFile(null);
-                    setUploadStatus('idle');
-                    setProgress(0);
-                    onClose();
-                }, 500);
-            } catch (err: any) {
-                clearInterval(interval);
-                setUploadStatus('idle');
-                addToast(t('ingestion.messages.error') + ': ' + (err.message || err), 'error');
-            }
+        } catch (err) {
+            // Error handling is now mostly inside startIngestion, 
+            // but we reset status here if needed
+            setUploadStatus('idle');
         }
     };
 
@@ -415,9 +384,10 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
 
     const isSubmitDisabled = !selectedSource?.enabled || 
         (contentType === 'youtube' && !inputValue.trim()) || 
+        (contentType === 'web' && !inputValue.trim()) ||
         (contentType === 'pdf' && fileInputMode === 'upload' && !selectedFile) || 
         (contentType === 'pdf' && fileInputMode === 'url' && !inputValue.trim()) ||
-        (contentType !== 'youtube' && contentType !== 'pdf' && !selectedFile) ||
+        (contentType !== 'youtube' && contentType !== 'pdf' && contentType !== 'web' && !selectedFile) ||
         uploadStatus !== 'idle';
 
     return (
@@ -662,6 +632,72 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
                                                                     {youtubeDataType === 'playlist'
                                                                         ? t('ingestion.options.types.playlist_desc')
                                                                         : t('ingestion.coming_soon.description', { name: 'YouTube' })}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    ) : contentType === 'web' ? (
+                                                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                                            <div className="space-y-2">
+                                                                <label className="text-sm font-medium text-zinc-300">
+                                                                    {t('ingestion.options.types.web_url')}
+                                                                </label>
+                                                                <div className="relative">
+                                                                    <Globe className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+                                                                    <input
+                                                                        type="url"
+                                                                        required
+                                                                        value={inputValue}
+                                                                        onChange={(e) => setInputValue(e.target.value)}
+                                                                        placeholder="https://example.com"
+                                                                        className="w-full bg-black/40 border border-zinc-800 rounded-xl pl-11 pr-4 py-3 text-sm text-zinc-200 focus:outline-none focus:border-emerald-500/50 transition-all placeholder:text-zinc-600 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]"
+                                                                    />
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <div className="space-y-2">
+                                                                    <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+                                                                        <Layers className="w-3 h-3" />
+                                                                        {t('ingestion.options.types.depth')}
+                                                                    </label>
+                                                                    <div className="flex items-center gap-3 bg-black/40 border border-zinc-800 rounded-xl p-1">
+                                                                        {[1, 2, 3].map((d) => (
+                                                                            <button
+                                                                                key={d}
+                                                                                type="button"
+                                                                                onClick={() => setWebDepth(d)}
+                                                                                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                                                                                    webDepth === d ? 'bg-zinc-800 text-emerald-400 border border-zinc-700/50 shadow-sm' : 'text-zinc-500 hover:text-zinc-400'
+                                                                                }`}
+                                                                            >
+                                                                                {d}
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                    <p className="text-[10px] text-zinc-500 font-medium leading-tight mt-1 px-1">
+                                                                        {t('ingestion.options.types.depth_desc')}
+                                                                    </p>
+                                                                </div>
+                                                                
+                                                                <div className="space-y-2">
+                                                                    <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+                                                                        <Settings2 className="w-3 h-3" />
+                                                                        {t('ingestion.options.types.css_selector')}
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={cssSelector}
+                                                                        onChange={(e) => setCssSelector(e.target.value)}
+                                                                        placeholder={t('ingestion.options.types.css_selector_placeholder')}
+                                                                        className="w-full bg-black/40 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500/50 transition-all placeholder:text-zinc-600"
+                                                                    />
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex items-start gap-2 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+                                                                <Info className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                                                                <p className="text-xs text-zinc-400 leading-relaxed">
+                                                                    {t('ingestion.descriptions.web')}
                                                                 </p>
                                                             </div>
                                                         </div>

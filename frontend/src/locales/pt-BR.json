@@ -291,7 +291,7 @@
       "txt": "Arquivo de Texto",
       "other": "Outros",
       "wikipedia": "Wikipedia",
-      "web": "Web Scrape",
+      "web": "Web Scraping",
       "notion": "Notion"
     },
     "descriptions": {
@@ -311,7 +311,7 @@
       "txt": "Texto Plano",
       "other": "Arquivo Suportado",
       "wikipedia": "Artigos e História",
-      "web": "Extração de qualquer URL",
+      "web": "Extração via Crawl4AI",
       "notion": "Sincronização de Workspace"
     },
     "coming_soon": {
@@ -371,7 +371,12 @@
           "chunking": "Dividindo texto...",
           "vectorizing": "Vetorizando ({{model}})..."
         },
-        "format_filter": "Filtro por formato (Localize mais rápido)"
+        "format_filter": "Filtro por formato (Localize mais rápido)",
+        "depth": "Profundidade",
+        "depth_desc": "Define quantos níveis de links internos o robô deve seguir. No momento, o sistema processa apenas o nível 1 para garantir estabilidade.",
+        "css_selector": "Seletor CSS (Opcional)",
+        "css_selector_placeholder": ".conteudo-principal ou #artigo",
+        "web_url": "URL da Página"
       }
     },
     "messages": {

@@ -171,9 +171,9 @@ export function ChunksViewer() {
         </h1>
       </div>
 
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+      <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_320px] gap-8">
         {/* Main Content: Search + List */}
-        <div className="flex flex-col gap-6 min-h-0">
+        <div className="flex flex-col gap-6 min-h-0 min-w-0">
           <div className="relative group shrink-0">
             <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-emerald-500 transition-colors" />
             <input 
@@ -237,7 +237,7 @@ export function ChunksViewer() {
                       </div>
                     </div>
                     
-                    <p className="text-[15px] text-zinc-400 leading-relaxed font-serif selection:bg-emerald-500/20">
+                    <p className="text-[15px] text-zinc-400 leading-relaxed font-serif selection:bg-emerald-500/20 break-words">
                       {chunk.content}
                     </p>
                   </motion.div>
@@ -264,20 +264,10 @@ export function ChunksViewer() {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <div className="flex items-center gap-1 mx-2">
-                  {[...Array(totalPages)].map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setPage(i + 1)}
-                      className={`w-6 h-6 rounded-md text-[10px] font-bold transition-all ${
-                        page === i + 1 
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20' 
-                        : 'text-zinc-600 hover:text-zinc-300'
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-2 px-3">
+                  <span className="text-xs font-bold text-white">{page}</span>
+                  <span className="text-zinc-600 font-bold text-[10px]">/</span>
+                  <span className="text-xs font-bold text-zinc-500">{totalPages || 1}</span>
                 </div>
                 <button 
                   onClick={() => setPage(page + 1)} 
@@ -292,7 +282,7 @@ export function ChunksViewer() {
         </div>
 
         {/* Sidebar: Metadata */}
-        <div className="hidden lg:flex flex-col gap-10 py-4 pr-4 overflow-y-auto custom-scrollbar-premium">
+        <div className="hidden md:flex flex-col gap-10 py-4 pr-4 overflow-y-auto custom-scrollbar-premium min-w-0">
           <section className="space-y-4">
             <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500">{t('sources.chunks.sidebar.title_tech')}</h3>
             <div className="space-y-3">

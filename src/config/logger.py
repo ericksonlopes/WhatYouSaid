@@ -49,6 +49,9 @@ def setup_logging():
         "weaviate",
         "faiss",
         "onnxruntime",
+        "playwright",
+        "microsoft",
+        "pyppeteer",
     ]
 
     for logger_name in silence_loggers:
@@ -66,6 +69,7 @@ def setup_logging():
         "rapidocr_onnxruntime",
         "huggingface_hub",
         "transformers",
+        "crawl4ai",
     ]
 
     for logger_name in verbose_loggers:

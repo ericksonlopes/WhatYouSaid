@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "langchain-text-splitters>=1.1.1",
-    "pydantic>=2.8.0,<2.10.0",
+    "pydantic>=2.8.0",
     "pydantic-settings>=2.7.0",
     "sentence-transformers>=5.2.3",
     "youtube-transcript-api>=1.2.4",
@@ -31,6 +31,11 @@ dependencies = [
     "scipy>=1.15.1",
     "redis>=5.0.0",
     "sse-starlette>=3.3.3",
+    "crawl4ai[all]>=0.4.311",
+    "playwright>=1.50.1",
+    "urllib3<2.0.0",
+    "requests>=2.32.0",
+    "chardet<6.0.0",
 ]
 
 [project.optional-dependencies]

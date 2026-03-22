@@ -69,16 +69,23 @@ def _build_entity_kwargs(
         "source_type": source_type,
         "external_source": cast(
             Optional[str],
-            cs_meta.get("external_source") or getattr(model, "chunk_id", None),
+            getattr(model, "external_source", None)
+            or cs_meta.get("external_source")
+            or getattr(model, "chunk_id", None),
         ),
-        "subject_id": cast(Optional[UUID], cs_meta.get("subject_id")),
+        "subject_id": cast(
+            Optional[UUID], getattr(model, "subject_id", None) or cs_meta.get("subject_id")
+        ),
         "index": cast(Optional[int], getattr(model, "index", None)),
         "content": cast(Optional[str], getattr(model, "content", None)),
         "tokens_count": cast(Optional[int], getattr(model, "tokens_count", None)),
         "chunk_id": cast(Optional[str], getattr(model, "chunk_id", None)),
-        "extra": {},
+        "extra": cast(dict, getattr(model, "extra", {}) or {}),
         "language": cast(Optional[str], getattr(model, "language", None)),
-        "embedding_model": cast(Optional[str], cs_meta.get("embedding_model")),
+        "embedding_model": cast(
+            Optional[str],
+            getattr(model, "embedding_model", None) or cs_meta.get("embedding_model"),
+        ),
         "created_at": cast(datetime, getattr(model, "created_at")),
         "version_number": cast(int, getattr(model, "version_number", 1)),
     }
@@ -98,7 +105,10 @@ class ChunkIndexMapper:
         if model is None:
             return None
         cs_meta = _extract_cs_metadata(model)
-        source_type = _resolve_source_type(cs_meta.get("source_type_str"))
+        source_type_str = getattr(model, "source_type", None) or cs_meta.get(
+            "source_type_str"
+        )
+        source_type = _resolve_source_type(source_type_str)
         kwargs = _build_entity_kwargs(model, cs_meta, source_type)
         return ChunkEntity(**kwargs)
 

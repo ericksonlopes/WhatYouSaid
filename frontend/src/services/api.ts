@@ -243,5 +243,30 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/settings/check/${component}`);
     await handleResponseError(response, `Health check failed for ${component}`);
     return response.json();
+  },
+
+  async ingestWeb(data: {
+    url: string;
+    subject_id?: string;
+    subject_name?: string;
+    title?: string;
+    language?: string;
+    tokens_per_chunk?: number;
+    tokens_overlap?: number;
+    css_selector?: string;
+    depth?: number;
+    ingestion_job_id?: string;
+    reprocess?: boolean;
+  }): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/ingest/web`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (response.status === 409) {
+      throw new Error('DUPLICATE_SOURCE');
+    }
+    await handleResponseError(response, 'Web ingestion request failed');
+    return response.json();
   }
 };

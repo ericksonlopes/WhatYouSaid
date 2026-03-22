@@ -8,48 +8,86 @@ export function useIngestion() {
   const { t } = useTranslation();
   const { addToast, addOptimisticJob, refreshJobs } = useAppContext();
 
+  /**
+   * Universal ingestion function that handles optimistic updates and refreshes
+   */
   const startIngestion = useCallback(async (
-    url: string, 
-    type: string, 
-    targetSubject: Subject,
-    tokensPerChunk?: number,
-    tokensOverlap?: number,
-    dataType?: 'video' | 'playlist'
+    inputType: 'youtube' | 'web' | 'file' | 'file_url',
+    params: {
+      url?: string;
+      subject: Subject;
+      tokensPerChunk?: number;
+      tokensOverlap?: number;
+      youtubeDataType?: 'video' | 'playlist';
+      file?: File;
+      doOcr?: boolean;
+      cssSelector?: string;
+    }
   ) => {
-    if (!targetSubject) return;
+    const { subject, tokensPerChunk, tokensOverlap, url, youtubeDataType, file, doOcr, cssSelector } = params;
+    if (!subject) return;
 
-    // 1. Feedback imediato para o usuário
-    addToast(t('notifications.ingestion.started', { type, name: targetSubject.name }), 'info');
+    // 1. Immediate feedback
+    const displayType = inputType.includes('file') ? 'file' : inputType;
+    addToast(t('notifications.ingestion.started', { type: displayType, name: subject.name }), 'info');
     
-    // 2. Add optimistic job card immediately in Activity Monitor
-    addOptimisticJob(`Ingesting ${type} for "${targetSubject.name}"...`);
+    // 2. Add optimistic job card
+    const title = file ? file.name : (url || `Ingesting ${displayType}...`);
+    addOptimisticJob(title);
 
     try {
-      const response = await api.ingestYoutube({
-        video_url: url,
-        subject_id: targetSubject.id,
-        tokens_per_chunk: tokensPerChunk,
-        tokens_overlap: tokensOverlap,
-        data_type: dataType,
-      });
+      let response;
+      if (inputType === 'youtube') {
+        response = await api.ingestYoutube({
+          video_url: url!,
+          subject_id: subject.id,
+          tokens_per_chunk: tokensPerChunk,
+          tokens_overlap: tokensOverlap,
+          data_type: youtubeDataType,
+        });
+      } else if (inputType === 'web') {
+        response = await api.ingestWeb({
+          url: url!,
+          subject_id: subject.id,
+          tokens_per_chunk: tokensPerChunk,
+          tokens_overlap: tokensOverlap,
+          css_selector: cssSelector,
+          language: 'pt'
+        });
+      } else if (inputType === 'file_url') {
+        response = await (api as any).ingestFileByUrl({
+          file_url: url!,
+          subject_id: subject.id,
+          tokens_per_chunk: tokensPerChunk,
+          tokens_overlap: tokensOverlap,
+          do_ocr: doOcr,
+          language: 'pt'
+        });
+      } else if (inputType === 'file' && file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('subject_id', subject.id);
+        formData.append('tokens_per_chunk', (tokensPerChunk || 512).toString());
+        formData.append('tokens_overlap', (tokensOverlap || 50).toString());
+        formData.append('do_ocr', (doOcr || false).toString());
+        formData.append('language', 'pt');
+        response = await api.ingestFile(formData);
+      }
 
-      if (response && response.job_id) {
-        addToast(t('notifications.ingestion.complete', { name: targetSubject.name }), 'success');
-      } else {
-        addToast(t('notifications.ingestion.complete', { name: targetSubject.name }), 'success');
-      }
+      addToast(t('notifications.ingestion.complete', { name: subject.name }), 'success');
+      return response;
     } catch (error: any) {
-      console.error('Ingestion error:', error);
-      if (error?.message === 'DUPLICATE_SOURCE') {
-        addToast(t('notifications.ingestion.duplicate'), 'error');
-      } else {
-        addToast(t('notifications.ingestion.error'), 'error');
-      }
+      console.error(`${inputType} ingestion error:`, error);
+      const errorMsg = error?.message === 'DUPLICATE_SOURCE' 
+        ? t('notifications.ingestion.duplicate') 
+        : t('notifications.ingestion.error');
+      addToast(errorMsg, 'error');
+      throw error;
     } finally {
-      // 3. Refresh jobs to replace optimistic card with real server data
+      // 3. Refresh jobs to replace optimistic card
       await refreshJobs();
     }
-  }, [addToast, addOptimisticJob, refreshJobs]);
+  }, [addToast, addOptimisticJob, refreshJobs, t]);
 
   return { startIngestion };
 }

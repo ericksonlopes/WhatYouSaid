@@ -291,7 +291,7 @@
       "txt": "Text File",
       "other": "Others",
       "wikipedia": "Wikipedia",
-      "web": "Web Scrape",
+      "web": "Web Scraping",
       "notion": "Notion"
     },
     "descriptions": {
@@ -311,7 +311,7 @@
       "txt": "Plain Text",
       "other": "Supported File",
       "wikipedia": "Articles & History",
-      "web": "Scrape any URL",
+      "web": "Extraction via Crawl4AI",
       "notion": "Workspace Sync"
     },
     "coming_soon": {
@@ -371,7 +371,12 @@
           "chunking": "Chunking text...",
           "vectorizing": "Vectorizing ({{model}})..."
         },
-        "format_filter": "Format Filter (Locate faster)"
+        "format_filter": "Format Filter (Locate faster)",
+        "depth": "Depth",
+        "depth_desc": "Defines how many levels of internal links the crawler should follow. Currently, the system only processes level 1 to ensure stability.",
+        "css_selector": "CSS Selector (Optional)",
+        "css_selector_placeholder": ".main-content or #article",
+        "web_url": "Page URL"
       }
     },
     "messages": {
