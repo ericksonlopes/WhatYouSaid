@@ -166,6 +166,18 @@ class RedisConfig(BaseSettings):
     db: int = Field(default=0, description="Redis database index")
     password: Optional[str] = Field(default=None, description="Redis password")
 
+    @field_validator("host", mode="after")
+    @classmethod
+    def _fallback_host(cls, v: str) -> str:
+        """Fallback to localhost if 'redis' host is not reachable (e.g., local development)."""
+        import os
+        import sys
+
+        # If explicitly 'redis' and on windows without being in docker
+        if v == "redis" and sys.platform == "win32" and not os.path.exists("/.dockerenv"):
+            return "localhost"
+        return v
+
 
 class YoutubeConfig(BaseSettings):
     # Throttling configurations
