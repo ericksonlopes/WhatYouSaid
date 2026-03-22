@@ -7,6 +7,8 @@ from src.application.use_cases.file_ingestion_use_case import FileIngestionUseCa
 from src.application.use_cases.knowledge_subject_use_case import KnowledgeSubjectUseCase
 from src.application.use_cases.search_use_case import SearchUseCase
 from src.application.use_cases.youtube_ingestion_use_case import YoutubeIngestionUseCase
+from src.application.use_cases.web_scraping_use_case import WebScrapingUseCase
+from src.infrastructure.extractors.crawl4ai_extractor import Crawl4AIExtractor
 from src.config.settings import Settings
 
 # Import services and repositories
@@ -260,4 +262,34 @@ def get_file_ingestion_use_case(
         vector_service=vector_svc,
         vector_store_type=settings.vector.store_type.value,
         event_bus=event_bus,
+    )
+
+
+def get_web_extractor() -> Crawl4AIExtractor:
+    return Crawl4AIExtractor()
+
+
+def get_web_scraping_use_case(
+    ks_svc: KnowledgeSubjectService = Depends(get_ks_service),
+    cs_svc: ContentSourceService = Depends(get_cs_service),
+    job_svc: IngestionJobService = Depends(get_job_service),
+    model_loader: ModelLoaderService = Depends(get_model_loader),
+    embed_svc: EmbeddingService = Depends(get_embedding_service),
+    chunk_svc: ChunkIndexService = Depends(get_chunk_index_service),
+    vector_svc: ChunkVectorService = Depends(get_chunk_vector_service),
+    event_bus: IEventBus = Depends(get_event_bus),
+    settings: Settings = Depends(get_settings),
+    extractor: Crawl4AIExtractor = Depends(get_web_extractor),
+) -> WebScrapingUseCase:
+    return WebScrapingUseCase(
+        ks_service=ks_svc,
+        cs_service=cs_svc,
+        ingestion_service=job_svc,
+        model_loader_service=model_loader,
+        embedding_service=embed_svc,
+        chunk_service=chunk_svc,
+        vector_service=vector_svc,
+        vector_store_type=settings.vector.store_type.value,
+        event_bus=event_bus,
+        extractor=extractor,
     )

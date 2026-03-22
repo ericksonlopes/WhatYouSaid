@@ -1,7 +1,9 @@
 import os
-import httpx
 from typing import List
+
+import httpx
 from langchain_core.documents import Document
+
 from src.config.logger import Logger
 
 logger = Logger()
@@ -34,7 +36,7 @@ class PlainTextExtractor:
             return self._extract_from_local(file_path_or_url)
 
     def _extract_from_url(self, url: str) -> List[Document]:
-        logger.info(f"Extracting plain text from URL: {url}")
+        logger.info("Extracting plain text from URL", context={"url": url})
         try:
             with httpx.Client(
                 follow_redirects=True, headers=self.headers, timeout=self.timeout
@@ -46,21 +48,20 @@ class PlainTextExtractor:
                 filename = url.split("/")[-1].split("?")[0] or "downloaded_file"
                 extension = os.path.splitext(filename)[1].lower().lstrip(".") or "txt"
 
-                metadata = {
-                    "source": url,
-                    "file_name": filename,
-                    "source_type": extension,
-                    "docling_source_type": "plain_text",
-                    "is_structural_chunk": False,
-                }
+                metadata = self._build_metadata(url, filename, extension)
 
                 return [Document(page_content=content, metadata=metadata)]
         except Exception as e:
-            logger.error(f"Error downloading plain text from URL: {e}")
+            logger.error(
+                "Error downloading plain text from URL",
+                context={"url": url, "error": str(e)},
+            )
             raise ValueError(f"Failed to download content from {url}: {str(e)}")
 
     def _extract_from_local(self, file_path: str) -> List[Document]:
-        logger.info(f"Extracting plain text from local file: {file_path}")
+        logger.info(
+            "Extracting plain text from local file", context={"file_path": file_path}
+        )
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
 
@@ -71,15 +72,22 @@ class PlainTextExtractor:
             filename = os.path.basename(file_path)
             extension = os.path.splitext(filename)[1].lower().lstrip(".") or "txt"
 
-            metadata = {
-                "source": file_path,
-                "file_name": filename,
-                "source_type": extension,
-                "docling_source_type": "plain_text",
-                "is_structural_chunk": False,
-            }
+            metadata = self._build_metadata(file_path, filename, extension)
 
             return [Document(page_content=content, metadata=metadata)]
         except Exception as e:
-            logger.error(f"Error reading local plain text file: {e}")
+            logger.error(
+                "Error reading local plain text file",
+                context={"file_path": file_path, "error": str(e)},
+            )
             raise ValueError(f"Failed to read content from {file_path}: {str(e)}")
+
+    @staticmethod
+    def _build_metadata(source: str, filename: str, extension: str) -> dict:
+        return {
+            "source": source,
+            "file_name": filename,
+            "source_type": extension,
+            "docling_source_type": "plain_text",
+            "is_structural_chunk": False,
+        }

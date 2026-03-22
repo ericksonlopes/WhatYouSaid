@@ -27,6 +27,8 @@ python -m venv .venv
 .\.venv\Scripts\Activate
 uv sync --group dev
 python -m pip install -e .
+uv run playwright install chromium
+uv run crawl4ai-setup
 ```
 
 ### Quick Setup (Frontend)

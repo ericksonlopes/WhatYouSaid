@@ -1,0 +1,2 @@
+* text=auto
+scripts/entrypoint.sh text eol=lf

@@ -25,11 +25,13 @@ class IngestionJobMapper:
                 status_enum = None
 
         source_title = getattr(model, "source_title", None)
-        subject_id = None
+        subject_id = getattr(model, "subject_id", None)
+
         if hasattr(model, "content_source") and model.content_source:
             if not source_title:
                 source_title = getattr(model.content_source, "title", None)
-            subject_id = getattr(model.content_source, "subject_id", None)
+            if not subject_id:
+                subject_id = getattr(model.content_source, "subject_id", None)
 
         return IngestionJobEntity(
             id=cast(UUID, getattr(model, "id")),

@@ -68,7 +68,7 @@ export function SourcesTable({
     
     if (reprocessingIds.has(source.id)) return;
     
-    if (source.type.toLowerCase() !== 'youtube') return;
+    if (source.type.toLowerCase() !== 'youtube' && source.type.toLowerCase() !== 'web') return;
 
     if (!source.origin) {
       addToast(t('ingestion.youtube.missing_origin'), 'error');
@@ -77,12 +77,20 @@ export function SourcesTable({
 
     setReprocessingIds(prev => new Set(prev).add(source.id));
     try {
-      await api.ingestYoutube({
-        video_url: source.origin,
-        reprocess: true,
-        subject_id: source.subjectId
-      });
-      addToast(t('ingestion.youtube.reprocess_started'), 'success');
+      if (source.type.toLowerCase() === 'youtube') {
+        await api.ingestYoutube({
+          video_url: source.origin!,
+          reprocess: true,
+          subject_id: source.subjectId
+        });
+      } else if (source.type.toLowerCase() === 'web') {
+        await api.ingestWeb({
+          url: source.origin!,
+          reprocess: true,
+          subject_id: source.subjectId
+        });
+      }
+      addToast(t('ingestion.url.reprocess_started'), 'success');
       refreshJobs();
       refreshSources();
     } catch (err: any) {
@@ -371,7 +379,7 @@ export function SourcesTable({
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center justify-center gap-1.5 p-1 bg-white/[0.03] border border-white/5 rounded-2xl shadow-inner">
-                          {source.type.toLowerCase() === 'youtube' && (
+                          {['youtube', 'web'].includes(source.type.toLowerCase()) && (
                             <button
                               onClick={(e) => handleReprocess(e, source)}
                               disabled={reprocessingIds.has(source.id)}

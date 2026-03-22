@@ -39,3 +39,17 @@ class FileUrlIngestRequest(BaseModel):
     tokens_per_chunk: int = 512
     tokens_overlap: int = 50
     do_ocr: bool = False
+
+
+class WebIngestRequest(BaseModel):
+    url: str
+    subject_id: Optional[str] = None
+    subject_name: Optional[str] = None
+    title: Optional[str] = None
+    language: str = "pt"
+    tokens_per_chunk: int = 512
+    tokens_overlap: int = 50
+    css_selector: Optional[str] = None
+    depth: int = 1
+    ingestion_job_id: Optional[str] = None
+    reprocess: bool = False

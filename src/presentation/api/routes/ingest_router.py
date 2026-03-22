@@ -11,21 +11,25 @@ from src.application.dtos.commands.ingest_file_command import IngestFileCommand
 from src.application.dtos.commands.ingest_youtube_command import IngestYoutubeCommand
 from src.application.use_cases.file_ingestion_use_case import FileIngestionUseCase
 from src.application.use_cases.youtube_ingestion_use_case import YoutubeIngestionUseCase
+from src.application.use_cases.web_scraping_use_case import WebScrapingUseCase
 from src.application.workers import (
     run_file_ingestion_worker,
     run_youtube_ingestion_worker,
+    run_web_ingestion_worker,
 )
 from src.config.logger import Logger
 from src.domain.interfaces.services.i_task_queue import ITaskQueue
 from src.presentation.api.dependencies import (
     get_ingest_youtube_use_case,
     get_file_ingestion_use_case,
+    get_web_scraping_use_case,
     get_task_queue_service,
 )
 from src.presentation.api.schemas.ingest_schemas import (
     IngestResponse,
     YoutubeIngestRequest,
     FileUrlIngestRequest,
+    WebIngestRequest,
 )
 
 logger = Logger()
@@ -231,4 +235,54 @@ async def ingest_file_url(
     return {
         "message": "File URL ingestion started in background.",
         "file_name": filename,
+    }
+
+
+@router.post(
+    "/web",
+    response_model=Dict,
+    responses={
+        400: {"description": "Validation error"},
+        500: {"description": "Internal server error"},
+    },
+)
+async def ingest_web(
+    request: Annotated[WebIngestRequest, Body()],
+    use_case: Annotated[WebScrapingUseCase, Depends(get_web_scraping_use_case)],
+    task_queue: Annotated[ITaskQueue, Depends(get_task_queue_service)],
+):
+    """
+    Ingest content from a URL using Crawl4AI.
+    """
+    logger.info(
+        "API request to ingest web content",
+        context={"url": request.url, "subject_id": request.subject_id},
+    )
+
+    from src.application.dtos.commands.ingest_web_command import IngestWebCommand
+
+    cmd = IngestWebCommand(
+        url=request.url,
+        css_selector=request.css_selector,
+        title=request.title,
+        subject_id=request.subject_id,
+        subject_name=request.subject_name,
+        language=request.language,
+        tokens_per_chunk=request.tokens_per_chunk,
+        tokens_overlap=request.tokens_overlap,
+        depth=request.depth,
+        ingestion_job_id=request.ingestion_job_id,
+        reprocess=request.reprocess,
+    )
+
+    task_queue.enqueue(
+        run_web_ingestion_worker,
+        cmd,
+        task_title=request.title or request.url,
+        metadata={"url": request.url},
+    )
+
+    return {
+        "message": "Web scraping ingestion started in background.",
+        "url": request.url,
     }

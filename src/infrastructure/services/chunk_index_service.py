@@ -3,6 +3,7 @@ from uuid import UUID
 
 from src.config.logger import Logger
 from src.domain.entities.chunk_entity import ChunkEntity
+from src.domain.entities.enums.source_type_enum_entity import SourceType
 from src.domain.mappers.chunk_index_mapper import ChunkIndexMapper
 from src.infrastructure.repositories.sql.chunk_index_repository import (
     ChunkIndexSQLRepository,
@@ -33,6 +34,12 @@ class ChunkIndexService:
                     "chars": len(e.content) if e.content is not None else 0,
                     "tokens_count": e.tokens_count,
                     "language": e.language,
+                    "source_type": e.source_type.value
+                    if isinstance(e.source_type, SourceType)
+                    else e.source_type,
+                    "subject_id": e.subject_id,
+                    "external_source": e.external_source,
+                    "extra": e.extra,
                     "version_number": e.version_number,
                     "vector_store_type": e.extra.get("vector_store_type")
                     if hasattr(e, "extra")

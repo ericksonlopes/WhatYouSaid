@@ -27,6 +27,11 @@ COPY pyproject.toml uv.lock ./
 # Install core dependencies (fast build)
 RUN uv sync --no-dev --no-install-project
 
+# Install Playwright
+RUN uv run playwright install-deps
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/.ms-playwright
+RUN mkdir -p /app/.ms-playwright && uv run playwright install chromium
+
 # Copy the rest of the application code
 COPY . .
 

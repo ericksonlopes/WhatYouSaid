@@ -1,7 +1,9 @@
+import random
 import re
 import uuid
 import concurrent.futures
 import threading
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs, urlparse
@@ -23,6 +25,7 @@ from src.domain.exception.youtube_exceptions import (
     YoutubeVideoUnplayableException,
     YoutubeTranscriptNotFoundException,
     YoutubeTranscriptsDisabledException,
+    YoutubeNetworkException,
 )
 from src.infrastructure.services.chunk_index_service import ChunkIndexService
 from src.infrastructure.services.content_source_service import ContentSourceService
@@ -37,6 +40,7 @@ from src.infrastructure.services.youtube_data_process_service import (
 )
 from src.domain.interfaces.services.i_event_bus import IEventBus
 from src.infrastructure.services.youtube_vector_service import YouTubeVectorService
+from src.config.settings import settings
 
 logger = Logger()
 
@@ -162,23 +166,79 @@ class YoutubeIngestionUseCase:
                             f"Unable to extract video id from url: {video_url}"
                         )
                     return self._process_single_video(video_url, video_id, subject, cmd)
+                except YoutubeNetworkException as e:
+                    logger.error(f"Network error processing {video_url}: {e}")
+                    return {
+                        "video_url": video_url,
+                        "error": str(e),
+                        "is_network_error": True,
+                    }
                 except Exception as e:
                     logger.error(e, context={"video_url": video_url})
                     return {"video_url": video_url, "error": str(e)}
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-                futures = [executor.submit(process_video, url) for url in video_list]
-                for future in concurrent.futures.as_completed(futures):
-                    single_result = future.result()
-                    result.video_results.append(single_result)
-                    if (
-                        not single_result.get("skipped", False)
-                        and "error" not in single_result
-                    ):
-                        result.created_chunks = (
-                            result.created_chunks or 0
-                        ) + single_result.get("created_chunks", 0)
-                        result.vector_ids.extend(single_result.get("vector_ids", []))
+            batch_size = settings.youtube.throttle_batch_size
+            wait_time = settings.youtube.throttle_wait_seconds
+            current_wait_time = wait_time
+
+            for i in range(0, len(video_list), batch_size):
+                batch = video_list[i : i + batch_size]
+                logger.debug(
+                    "Processing batch of YouTube videos",
+                    context={
+                        "batch_index": i // batch_size + 1,
+                        "batch_size": len(batch),
+                        "total_videos": len(video_list),
+                    },
+                )
+
+                batch_has_network_error = False
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=len(batch)
+                ) as executor:
+                    futures = [executor.submit(process_video, url) for url in batch]
+                    for future in concurrent.futures.as_completed(futures):
+                        single_result = future.result()
+                        result.video_results.append(single_result)
+
+                        if single_result.get("is_network_error"):
+                            batch_has_network_error = True
+
+                        if (
+                            not single_result.get("skipped", False)
+                            and "error" not in single_result
+                        ):
+                            result.created_chunks = (
+                                result.created_chunks or 0
+                            ) + single_result.get("created_chunks", 0)
+                            result.vector_ids.extend(
+                                single_result.get("vector_ids", [])
+                            )
+
+                # Adaptive Throttling: If we hit a network error, double the wait time for the next batch
+                if batch_has_network_error:
+                    current_wait_time = min(
+                        current_wait_time * 2, 600
+                    )  # Max 10 minutes
+                    logger.warning(
+                        f"Network error detected in batch. Increasing wait time to {current_wait_time} seconds.",
+                        context={"new_wait_time": current_wait_time},
+                    )
+
+                # Wait if there are more batches to process
+                if i + batch_size < len(video_list):
+                    # Add jitter to the wait time (randomly add 0-5 seconds)
+                    jitter = random.uniform(0, 5)
+                    total_wait = current_wait_time + jitter
+                    logger.info(
+                        f"Throttling: waiting {total_wait:.2f} seconds before next batch...",
+                        context={
+                            "wait_time": total_wait,
+                            "jitter": jitter,
+                            "current_base_wait": current_wait_time,
+                        },
+                    )
+                    time.sleep(total_wait)
 
             # 1. Determine overall status
             any_failed = any("error" in r for r in result.video_results)
@@ -382,7 +442,9 @@ class YoutubeIngestionUseCase:
                             f"Job {cmd.ingestion_job_id} not found, creating new one"
                         )
                         ingestion = self._create_ingestion_job(
-                            source=source, external_source=video_id
+                            source=source,
+                            external_source=video_id,
+                            subject_id=subject.id,
                         )
                     else:
                         logger.debug(
@@ -394,11 +456,11 @@ class YoutubeIngestionUseCase:
                         f"Failed to retrieve pre-created job {cmd.ingestion_job_id}, creating new one: {ej}"
                     )
                     ingestion = self._create_ingestion_job(
-                        source=source, external_source=video_id
+                        source=source, external_source=video_id, subject_id=subject.id
                     )
             else:
                 ingestion = self._create_ingestion_job(
-                    source=source, external_source=video_id
+                    source=source, external_source=video_id, subject_id=subject.id
                 )
 
             if ingestion is None:
@@ -759,7 +821,10 @@ class YoutubeIngestionUseCase:
         return source
 
     def _create_ingestion_job(
-        self, source: Optional[Any] = None, external_source: Optional[str] = None
+        self,
+        source: Optional[Any] = None,
+        external_source: Optional[str] = None,
+        subject_id: Optional[UUID] = None,
     ):
         source_id = source.id if source else None
         ingestion = self.ingestion_service.create_job(
@@ -770,6 +835,7 @@ class YoutubeIngestionUseCase:
             ingestion_type=SourceType.YOUTUBE.value,
             vector_store_type=self.vector_store_type,
             external_source=external_source,
+            subject_id=subject_id,
         )
         if ingestion:
             logger.debug(

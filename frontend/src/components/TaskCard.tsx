@@ -105,9 +105,14 @@ export function TaskCard({ task }: TaskCardProps) {
           reprocess: true,
           subject_id: task.subjectId
         });
+      } else if (task.ingestionType === 'web') {
+        await api.ingestWeb({
+          url: task.externalSource,
+          reprocess: true,
+          subject_id: task.subjectId
+        });
       } else {
-        // Fallback for other types if they support reprocess via the same or similar logic
-        // For now, most use cases are covered by the generic reprocess flag if implemented in backend
+        // Fallback for other types
         addToast("Reprocessing of this type is not yet fully implemented", "info");
         return;
       }

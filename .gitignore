@@ -207,6 +207,9 @@ cython_debug/
 # Ruff stuff:
 .ruff_cache/
 
+# Playwright
+.ms-playwright/
+
 # PyPI configuration file
 .pypirc
 

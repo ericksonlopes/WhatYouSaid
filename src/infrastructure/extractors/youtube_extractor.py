@@ -1,3 +1,4 @@
+import time
 from youtube_transcript_api import (
     YouTubeTranscriptApi,
     FetchedTranscript,
@@ -7,16 +8,17 @@ from youtube_transcript_api import (
 from yt_dlp import YoutubeDL
 
 from src.config.logger import Logger
-from src.domain.interfaces.extractors.youtube_extractor_interface import (
-    IYoutubeExtractor,
-)
-from src.infrastructure.extractors.models.youtube_metadata_dto import YoutubeMetadataDTO
 from src.domain.exception.youtube_exceptions import (
     YoutubeTranscriptNotFoundException,
     YoutubeTranscriptsDisabledException,
     YoutubeVideoPrivateException,
     YoutubeVideoUnplayableException,
+    YoutubeNetworkException,
 )
+from src.domain.interfaces.extractors.youtube_extractor_interface import (
+    IYoutubeExtractor,
+)
+from src.infrastructure.extractors.models.youtube_metadata_dto import YoutubeMetadataDTO
 
 logger = Logger()
 
@@ -53,6 +55,11 @@ class YoutubeExtractor(IYoutubeExtractor):
                 raise YoutubeVideoPrivateException(self.video_id)
             if "unplayable" in error_msg.lower():
                 raise YoutubeVideoUnplayableException(self.video_id, reason=error_msg)
+            if (
+                "getaddrinfo failed" in error_msg
+                or "Failed to establish a new connection" in error_msg
+            ):
+                raise YoutubeNetworkException(self.video_id, error_msg)
 
             logger.error(
                 "Error extracting metadata for video",
@@ -116,7 +123,7 @@ class YoutubeExtractor(IYoutubeExtractor):
             return []
 
     def extract_transcript(self) -> FetchedTranscript:
-        """Fetches the transcript for a given video with fallback support."""
+        """Fetches the transcript for a given video with fallback support and retries."""
         # Define preferred languages: requested first, then common Portuguese variants
         preferred_languages = [self.language]
         for lang in ["pt", "pt-BR", "ptbr"]:
@@ -128,55 +135,92 @@ class YoutubeExtractor(IYoutubeExtractor):
             context={"video_id": self.video_id, "preference": preferred_languages},
         )
 
-        try:
-            # First attempt: Try preferred languages in order
-            transcript = YouTubeTranscriptApi().fetch(
-                video_id=self.video_id, languages=preferred_languages
-            )
-            logger.debug(
-                "Transcript fetched successfully (preferred).",
-                context={
-                    "video_id": self.video_id,
-                    "language": preferred_languages,
-                },
-            )
-            return transcript
+        retries = 3
+        last_error = None
 
-        except NoTranscriptFound:
-            # Second attempt: Fallback to ANY available transcript
+        for attempt in range(retries):
             try:
-                transcript_list = YouTubeTranscriptApi().list(self.video_id)
-                # Pick the first one available (this will prefer manual over generated usually)
-                fallback_transcript = next(iter(transcript_list))
-
-                logger.warning(
-                    f"Preferred languages {preferred_languages} not found. "
-                    f"Falling back to available language: '{fallback_transcript.language_code}'",
+                # First attempt: Try preferred languages in order
+                transcript = YouTubeTranscriptApi().fetch(
+                    video_id=self.video_id, languages=preferred_languages
+                )
+                logger.debug(
+                    "Transcript fetched successfully (preferred).",
                     context={
                         "video_id": self.video_id,
-                        "fallback_lang": fallback_transcript.language_code,
+                        "language": preferred_languages,
                     },
                 )
+                return transcript
 
-                return fallback_transcript.fetch()
-            except Exception as e:
-                # If even listing fails or no transcripts at all exist
-                msg = f"No transcript available for video {self.video_id} in ANY language."
-                logger.error(msg, context={"video_id": self.video_id, "error": str(e)})
-                raise YoutubeTranscriptNotFoundException(self.video_id, self.language)
+            except NoTranscriptFound:
+                # Second attempt: Fallback to ANY available transcript
+                try:
+                    transcript_list = YouTubeTranscriptApi().list(self.video_id)
+                    # Pick the first one available (this will prefer manual over generated usually)
+                    fallback_transcript = next(iter(transcript_list))
 
-        except TranscriptsDisabled:
-            msg = f"Transcripts are disabled for video {self.video_id}."
-            logger.warning(msg, context={"video_id": self.video_id})
-            raise YoutubeTranscriptsDisabledException(self.video_id)
+                    logger.warning(
+                        f"Preferred languages {preferred_languages} not found. "
+                        f"Falling back to available language: '{fallback_transcript.language_code}'",
+                        context={
+                            "video_id": self.video_id,
+                            "fallback_lang": fallback_transcript.language_code,
+                        },
+                    )
 
-        except Exception as error:
-            error_msg = str(error)
-            if "This video is private" in error_msg:
-                raise YoutubeVideoPrivateException(self.video_id)
-            if "unplayable" in error_msg.lower():
-                raise YoutubeVideoUnplayableException(self.video_id, reason=error_msg)
+                    return fallback_transcript.fetch()
+                except Exception as e:
+                    # If listing fails with network error, we might want to retry
+                    if "getaddrinfo failed" in str(
+                        e
+                    ) or "Failed to establish a new connection" in str(e):
+                        last_error = e
+                        logger.warning(
+                            f"Network error during transcript listing (attempt {attempt + 1}/{retries}). Retrying in {2**attempt}s..."
+                        )
+                        time.sleep(2**attempt)
+                        continue
 
-            msg = f"Unexpected error while fetching transcript for video {self.video_id}: {error_msg}"
-            logger.error(msg, context={"video_id": self.video_id})
-            raise ValueError(msg)
+                    # If even listing fails or no transcripts at all exist
+                    msg = f"No transcript available for video {self.video_id} in ANY language."
+                    logger.error(
+                        msg, context={"video_id": self.video_id, "error": str(e)}
+                    )
+                    raise YoutubeTranscriptNotFoundException(
+                        self.video_id, self.language
+                    )
+
+            except TranscriptsDisabled:
+                msg = f"Transcripts are disabled for video {self.video_id}."
+                logger.warning(msg, context={"video_id": self.video_id})
+                raise YoutubeTranscriptsDisabledException(self.video_id)
+
+            except Exception as error:
+                error_msg = str(error)
+                last_error = error
+
+                if "This video is private" in error_msg:
+                    raise YoutubeVideoPrivateException(self.video_id)
+                if "unplayable" in error_msg.lower():
+                    raise YoutubeVideoUnplayableException(
+                        self.video_id, reason=error_msg
+                    )
+
+                # Connection/DNS errors
+                if (
+                    "getaddrinfo failed" in error_msg
+                    or "Failed to establish a new connection" in error_msg
+                ):
+                    logger.warning(
+                        f"Network error during transcript fetch (attempt {attempt + 1}/{retries}). Retrying in {2**attempt}s..."
+                    )
+                    time.sleep(2**attempt)
+                    continue
+
+                msg = f"Unexpected error while fetching transcript for video {self.video_id}: {error_msg}"
+                logger.error(msg, context={"video_id": self.video_id})
+                raise ValueError(msg)
+
+        # If we reached here, all retries failed due to network errors
+        raise YoutubeNetworkException(self.video_id, str(last_error))

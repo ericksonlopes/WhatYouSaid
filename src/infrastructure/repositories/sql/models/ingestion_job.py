@@ -43,6 +43,11 @@ class IngestionJobModel(Base):
     vector_store_type = Column(Text, nullable=True)
     pipeline_version = Column(Text, nullable=True)
     external_source = Column(Text, nullable=True)
+    subject_id = Column(
+        UUID,
+        ForeignKey("knowledge_subjects.id", deferrable=True, initially="IMMEDIATE"),
+        nullable=True,
+    )
 
     content_source = relationship("ContentSourceModel", back_populates="ingestion_jobs")
     chunks = relationship(
