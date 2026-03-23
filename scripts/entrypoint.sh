@@ -20,6 +20,10 @@ case "$VEC_VAL" in
   "chroma")   EXTRAS="$EXTRAS --extra chroma"   ;;
 esac
 
+if [ "$INSTALL_GPU" = "true" ]; then
+    EXTRAS="$EXTRAS --extra gpu"
+fi
+
 echo "🚀 Automating environment for SQL:$SQL__TYPE and Vector:$VECTOR__STORE_TYPE"
 echo "📂 UV Cache Dir: $UV_CACHE_DIR"
 

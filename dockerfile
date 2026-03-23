@@ -20,12 +20,19 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uvx /bin/uvx
 # Set the working directory
 WORKDIR /app
 
+# Add build-time argument for GPU support
+ARG INSTALL_GPU=false
+
 # Copy dependency files using link for faster builds
 COPY pyproject.toml uv.lock ./
 
 # Install dependencies using cache mount
 # Installing all extras to avoid runtime uv sync
-RUN uv sync --no-dev --no-install-project --locked
+RUN if [ "$INSTALL_GPU" = "true" ]; then \
+        uv sync --no-dev --no-install-project --locked --extra gpu; \
+    else \
+        uv sync --no-dev --no-install-project --locked; \
+    fi
 
 # Install Playwright browsers (deps will be installed in runtime)
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/data/.ms-playwright

@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: dockerfile
+      args:
+        - INSTALL_GPU=${INSTALL_GPU:-false}
     ports:
       - 5000:5000
     networks:
@@ -36,6 +38,7 @@ services:
       - SQL__PASSWORD=${SQL__PASSWORD:-}
       - SQL__DATABASE=${SQL__DATABASE:-}
       - SQL__URL=${SQL__URL:-}
+      - INSTALL_GPU=${INSTALL_GPU:-false}
       - DOCKER_BUILDKIT=1
     volumes:
       - .:/app

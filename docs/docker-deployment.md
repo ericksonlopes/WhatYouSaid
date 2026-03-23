@@ -105,7 +105,21 @@ This keeps the image small and ensures you only run the code you actually need.
 By default, WhatYouSaid starts in **CPU mode** to ensure compatibility with all systems. If you have an NVIDIA GPU and want to accelerate embedding and re-ranking:
 
 1. Ensure you have the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) installed.
-2. Run Docker Compose with the GPU override:
+2. Build or start the containers with the GPU configuration. 
+
+### 7.1 Build-time GPU Support (`INSTALL_GPU`)
+If you are building the image yourself (e.g., via `docker-compose build`), you can pass the `INSTALL_GPU` build argument to include the GPU-specific dependencies (`--extra gpu`) during the `uv sync` phase.
+
+```bash
+docker build --build-arg INSTALL_GPU=true -t whatyousaid-gpu .
+```
+
+In `docker-compose.gpu.yml`, this is already pre-configured.
+
+### 7.2 Compatibility Note
+For better compatibility with various environments (including older Docker versions and CI systems that don't support BuildKit's cache mounts), the `Dockerfile` has been optimized to exclude specific caching and linking flags (like `--mount=type=cache` or `--link`). This ensures a "standard" Docker build process.
+
+3. Run Docker Compose with the GPU override:
    ```bash
    docker-compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
    ```
