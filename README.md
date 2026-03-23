@@ -33,9 +33,10 @@ Detailed guides for specific topics:
 
 ## 🚀 Features
 
-- **Multi-source Extraction**: Ingest data from YouTube (transcripts), local files (PDF, DOCX, TXT), and **remote URLs** via the Docling engine.
+- **Multi-source Extraction**: Ingest data from YouTube (transcripts), local files (PDF, DOCX, TXT), **remote URLs** via Docling, and **Websites** via Crawl4AI.
 - **Robust Fallbacks**: Integrated `PlainTextExtractor` ensuring successful ingestion even for formats not supported by specialized extractors.
-- **Async Task Queue**: High-performance background processing powered by **Redis**, ensuring responsive ingestion workflows.
+- **Async Task Queue**: High-performance background processing powered by **Redis**, ensuring responsive workflows.
+- **Structured Logging & Tracing**: Centralized logging equipped with contextvars and request tracing (Correlation IDs) for end-to-end observability.
 - **Real-time Updates**: Live ingestion status and progress monitoring via a **Redis Event Bus** (SSE-ready).
 - **Advanced Search**: Semantic, keyword (BM25), and **Hybrid Search** with cross-encoder re-ranking for maximum precision.
 - **Pluggable Vector Stores**: Support for **FAISS** (local), **ChromaDB**, and **Weaviate** (scalable).
@@ -56,9 +57,9 @@ WhatYouSaid is designed to be flexible, from a lightweight local setup to a scal
 | **Vector Store** | **FAISS** (Local, file-based) | **Weaviate** (Container or Cloud), **ChromaDB** |
 | **Task Queue & Bus** | **In-memory** (Limited) | **Redis** (Default in Docker) |
 
-### 2. Docker Compose Profiles
+### 2. Docker Compose Profiles & Dependencies
 
-We use **Docker Profiles** to keep the environment lean. Only the services you need are started.
+We use **Docker Profiles** to keep the environment lean. Only the services you need are started. The project also natively supports both **CPU** and **GPU** environments via optional Python dependencies.
 
 > 📘 **Detailed Guide**: For a step-by-step tutorial on different deployment scenarios, see our [Docker Deployment Guide](docs/docker-deployment.md).
 

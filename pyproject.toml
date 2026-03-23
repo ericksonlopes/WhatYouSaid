@@ -93,15 +93,15 @@ explicit = true
 [tool.uv.sources]
 torch = [
     { index = "pytorch-cu124", marker = "extra == 'gpu'" },
-    { index = "pytorch-cpu", marker = "extra == 'cpu'" }
+    { index = "pytorch-cpu", marker = "extra != 'gpu'" }
 ]
 torchvision = [
     { index = "pytorch-cu124", marker = "extra == 'gpu'" },
-    { index = "pytorch-cpu", marker = "extra == 'cpu'" }
+    { index = "pytorch-cpu", marker = "extra != 'gpu'" }
 ]
 torchaudio = [
     { index = "pytorch-cu124", marker = "extra == 'gpu'" },
-    { index = "pytorch-cpu", marker = "extra == 'cpu'" }
+    { index = "pytorch-cpu", marker = "extra != 'gpu'" }
 ]
 
 [tool.setuptools.packages.find]
