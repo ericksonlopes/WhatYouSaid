@@ -123,6 +123,12 @@ class App(BaseSettings):
         description="Application environment (e.g., 'development', 'production', "
         "'testing')",
     )
+    use_ngrok: bool = Field(
+        default=False, description="Enable Ngrok tunnel for local development"
+    )
+    ngrok_authtoken: Optional[str] = Field(
+        default=None, description="Ngrok authtoken"
+    )
 
     @field_validator("env")
     @classmethod

@@ -34,6 +34,7 @@ dependencies = [
     "tokenizers>=0.21.0",
     "scipy>=1.15.1",
     "crawl4ai[all]>=0.4.311",
+    "pyngrok>=7.1.2",
 ]
 
 [project.optional-dependencies]
