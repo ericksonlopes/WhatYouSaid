@@ -54,8 +54,8 @@ services:
       - 3001:80
     networks:
       - wys_network
-    env_file:
-      - .env
+    environment:
+      - APP_URL=${APP_URL:-https://localhost:5000}
     depends_on:
       backend:
         condition: service_healthy
