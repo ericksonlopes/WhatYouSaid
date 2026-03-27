@@ -37,11 +37,6 @@ services:
       - SQL__DATABASE=${SQL__DATABASE:-}
       - SQL__URL=${SQL__URL:-}
       - INSTALL_GPU=${INSTALL_GPU:-false}
-    volumes:
-      - .:/app
-      - /app/.venv
-      - /app/data/.ms-playwright
-      - ./data/app:/app/data
     restart: always
     shm_size: '2gb'
 
@@ -71,8 +66,6 @@ services:
       - 50051:50051
     networks:
       - wys_network
-    volumes:
-      - ./data/weaviate:/data/weaviate
     environment:
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
       PERSISTENCE_DATA_PATH: '/data/weaviate'
@@ -86,8 +79,6 @@ services:
       - 8000:8000
     networks:
       - wys_network
-    volumes:
-      - ./data/chroma:/data/chroma
     environment:
       - IS_PERSISTENT=TRUE
       - ALLOW_RESET=TRUE
@@ -102,8 +93,6 @@ services:
       - 5432:5432
     networks:
       - wys_network
-    volumes:
-      - ./data/postgres:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${SQL__USER:-user}
       POSTGRES_PASSWORD: ${SQL__PASSWORD:-pass}
@@ -118,8 +107,6 @@ services:
       - 3306:3306
     networks:
       - wys_network
-    volumes:
-      - ./data/mysql:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${SQL__ROOT_PASSWORD:-rootpass}
       MYSQL_DATABASE: ${SQL__DATABASE:-whatyousaid}
@@ -135,8 +122,6 @@ services:
       - 3307:3306
     networks:
       - wys_network
-    volumes:
-      - ./data/mariadb:/var/lib/mysql
     environment:
       MARIADB_ROOT_PASSWORD: ${SQL__ROOT_PASSWORD:-rootpass}
       MARIADB_DATABASE: ${SQL__DATABASE:-whatyousaid}
@@ -152,8 +137,6 @@ services:
       - 1433:1433
     networks:
       - wys_network
-    volumes:
-      - ./data/mssql:/var/opt/mssql
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${SQL__PASSWORD:-Password123!}
@@ -168,8 +151,6 @@ services:
       - 6379:6379
     networks:
       - wys_network
-    volumes:
-      - ./data/redis:/data
     restart: always
 
 networks:
