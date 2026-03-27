@@ -31,7 +31,7 @@ COPY pyproject.toml uv.lock ./
 RUN if [ "$INSTALL_GPU" = "true" ]; then \
         uv sync --no-dev --no-install-project --extra gpu; \
     else \
-        uv sync --no-dev --no-install-project --extra cpu; \
+        uv sync --no-dev --no-install-project; \
     fi
 
 # Install Playwright browsers (deps will be installed in runtime)

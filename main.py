@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
 
                 if _settings.app.ngrok_authtoken:
                     ngrok.set_auth_token(_settings.app.ngrok_authtoken)
-                tunnel = ngrok.connect(5000)
+                tunnel = ngrok.connect(str(_settings.app.port))
                 logger.info(
                     "Ngrok tunnel established", context={"public_url": tunnel.public_url}
                 )
@@ -151,5 +151,8 @@ def health_check():
 
 if __name__ == "__main__":
     import uvicorn
+    from src.config.settings import settings
 
-    uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True, log_config=None)
+    uvicorn.run(
+        "main:app", host="0.0.0.0", port=settings.app.port, reload=True, log_config=None
+    )

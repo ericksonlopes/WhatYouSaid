@@ -38,15 +38,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-cpu = [
-    "torch==2.5.1+cpu",
-    "torchvision==0.20.1+cpu"
-
-]
-gpu = [
-    "torch==2.5.1+cu124",
-    "torchvision==0.20.1+cu124"
-]
+gpu = []
 chroma = [
     "chromadb>=0.4.24",
     "langchain-chroma>=0.1.0",
