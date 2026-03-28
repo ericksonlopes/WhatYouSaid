@@ -22,6 +22,10 @@ def mock_settings():
     settings.vector.weaviate_port = 8080
     settings.vector.weaviate_grpc_port = 50051
     settings.vector.collection_name_chunks = "Chunks"
+    
+    settings.vector.qdrant_host = "localhost"
+    settings.vector.qdrant_port = 6333
+    settings.vector.qdrant_grpc_port = 6334
     settings.model_embedding.name = "all-MiniLM-L6-v2"
     settings.sql.type = "sqlite"
     settings.sql.database = "test.sqlite"
@@ -50,6 +54,10 @@ def test_get_current_settings(mock_settings):
     data = response.json()
     assert data["app"]["env"] == "test"
     assert "INFO, DEBUG" in data["app"]["log_levels"]
+    assert data["vector"]["qdrant_host"] == "localhost"
+    assert data["vector"]["qdrant_port"] == 6333
+    assert data["vector"]["qdrant_grpc_port"] == 6334
+    assert data["vector"]["qdrant_collection"] == "Chunks"
 
 
 def test_check_health_api():

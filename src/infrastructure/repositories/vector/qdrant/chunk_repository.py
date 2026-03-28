@@ -140,6 +140,7 @@ class ChunkQdrantRepository(IVectorRepository):
                 "re_rank": re_rank,
             },
         )
+        self._ensure_collection_exists()
 
         try:
             qdrant_filters = self._convert_filters(filters)
@@ -342,6 +343,8 @@ class ChunkQdrantRepository(IVectorRepository):
                 "Delete called without filters in Qdrant, skipping for safety."
             )
             return 0
+        
+        self._ensure_collection_exists()
 
         try:
             with self._connector as client:

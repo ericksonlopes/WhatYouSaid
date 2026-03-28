@@ -34,6 +34,10 @@ def get_current_settings(settings: Annotated[Settings, Depends(get_settings)]):
             weaviate_port=settings.vector.weaviate_port,
             weaviate_grpc_port=settings.vector.weaviate_grpc_port,
             weaviate_collection=settings.vector.collection_name_chunks,
+            qdrant_host=settings.vector.qdrant_host,
+            qdrant_port=settings.vector.qdrant_port,
+            qdrant_grpc_port=settings.vector.qdrant_grpc_port,
+            qdrant_collection=settings.vector.collection_name_chunks,
         ),
         model=ModelSettingsSchema(name=settings.model_embedding.name),
         sql=SQLSettingsSchema(
