@@ -1,11 +1,15 @@
 import time
+import requests
 from youtube_transcript_api import (
     YouTubeTranscriptApi,
     FetchedTranscript,
     TranscriptsDisabled,
     NoTranscriptFound,
 )
+from youtube_transcript_api.proxies import WebshareProxyConfig
 from yt_dlp import YoutubeDL
+
+from src.config.settings import settings
 
 from src.config.logger import Logger
 from src.domain.exception.youtube_exceptions import (
@@ -36,6 +40,20 @@ class YoutubeExtractor(IYoutubeExtractor):
         logger.info("Starting metadata extraction", context={"video_id": self.video_id})
 
         ydl_opts = {"logger": logger}
+
+        # Handle Proxy for yt-dlp
+        proxy = settings.youtube.proxy_url
+        if (
+            not proxy
+            and settings.youtube.webshare_username
+            and settings.youtube.webshare_password
+        ):
+            # Fallback construct webshare proxy URL for yt-dlp
+            proxy = f"http://{settings.youtube.webshare_username}:{settings.youtube.webshare_password}@p.webshare.io:80"
+
+        if proxy:
+            ydl_opts["proxy"] = proxy
+            logger.debug("Using proxy for metadata extraction", context={"proxy": proxy})
 
         try:
             with YoutubeDL(ydl_opts) as ydl:
@@ -138,13 +156,41 @@ class YoutubeExtractor(IYoutubeExtractor):
             context={"video_id": self.video_id, "preference": preferred_languages},
         )
 
+        # Setup Proxy for YouTubeTranscriptApi
+        proxy_config = None
+        session = None
+
+        if settings.youtube.webshare_username and settings.youtube.webshare_password:
+            logger.debug("Using WebshareProxyConfig for transcript fetch")
+            proxy_config = WebshareProxyConfig(
+                username=settings.youtube.webshare_username,
+                password=settings.youtube.webshare_password,
+            )
+        elif settings.youtube.proxy_url:
+            logger.debug(
+                "Using generic session proxy for transcript fetch",
+                context={"proxy": settings.youtube.proxy_url},
+            )
+            session = requests.Session()
+            session.proxies = {
+                "http": settings.youtube.proxy_url,
+                "https": settings.youtube.proxy_url,
+            }
+
         retries = 3
         last_error = None
 
         for attempt in range(retries):
             try:
+                # Initialize API with proxy/session if available
+                api = YouTubeTranscriptApi()
+                if proxy_config:
+                    api = YouTubeTranscriptApi(proxy_config=proxy_config)
+                elif session:
+                    api = YouTubeTranscriptApi(session=session)
+
                 # First attempt: Try preferred languages in order
-                transcript = YouTubeTranscriptApi().fetch(
+                transcript = api.fetch(
                     video_id=self.video_id, languages=preferred_languages
                 )
                 logger.debug(
@@ -159,7 +205,7 @@ class YoutubeExtractor(IYoutubeExtractor):
             except NoTranscriptFound:
                 # Second attempt: Fallback to ANY available transcript
                 try:
-                    transcript_list = YouTubeTranscriptApi().list(self.video_id)
+                    transcript_list = api.list_transcripts(self.video_id)
                     # Pick the first one available (this will prefer manual over generated usually)
                     fallback_transcript = next(iter(transcript_list))
 

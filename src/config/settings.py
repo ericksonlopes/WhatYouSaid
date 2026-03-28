@@ -234,6 +234,18 @@ class YoutubeConfig(BaseSettings):
         default=10, description="Seconds to wait between batches"
     )
 
+    # Proxy configurations
+    proxy_url: Optional[str] = Field(
+        default=None,
+        description="Generic proxy URL (e.g. http://user:pass@host:port)",
+    )
+    webshare_username: Optional[str] = Field(
+        default=None, description="Webshare.io username for optimized proxy"
+    )
+    webshare_password: Optional[str] = Field(
+        default=None, description="Webshare.io password for optimized proxy"
+    )
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
