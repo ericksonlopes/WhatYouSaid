@@ -190,9 +190,9 @@ class ChunkQdrantRepository(IVectorRepository):
         # Combine with existing filters
         if filters:
             if filters.must:
-                if text_filter.must is None:
-                    text_filter.must = []
-                text_filter.must.extend(filters.must)  # type: ignore
+                current_must = text_filter.must or []
+                additional_must = filters.must or []
+                text_filter.must = current_must + list(additional_must)
             if filters.should:
                 text_filter.should = filters.should
             if filters.must_not:
