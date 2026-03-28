@@ -4,7 +4,7 @@ from typing import Annotated
 import sqlalchemy
 from src.config.settings import Settings
 
-from fastapi import Depends, APIRouter, HTTPException
+from fastapi import Depends, APIRouter, HTTPException, Request
 from src.presentation.api.dependencies import get_vector_repository, get_settings
 from src.domain.interfaces.repository.retriver_repository import IVectorRepository
 from src.presentation.api.schemas.settings_schemas import (
@@ -55,8 +55,9 @@ def get_current_settings(settings: Annotated[Settings, Depends(get_settings)]):
 )
 def check_component_health(
     component: str,
-    vector_repo: Annotated[IVectorRepository, Depends(get_vector_repository)],
     settings: Annotated[Settings, Depends(get_settings)],
+    request: Request,
+    vector_repo: Annotated[IVectorRepository, Depends(get_vector_repository)],
 ):
     """Perform health check for a specific component"""
     start_time = time.time()

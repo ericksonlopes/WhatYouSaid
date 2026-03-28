@@ -28,12 +28,19 @@ class DummyVectorService:
         self.last_search_mode = search_mode
         self.last_re_rank = re_rank
         # return dummy chunks as simple objects (avoid ChunkEntity validation in tests)
-        return [SimpleNamespace(id=uuid.uuid4(), content="a", subject_id=uuid.uuid4())]
+        return [
+            SimpleNamespace(
+                id=uuid.uuid4(), content="a", subject_id=uuid.uuid4(), extra={}
+            )
+        ]
 
 
 class DummyKS:
     def get_by_name(self, name: str):
         return SimpleNamespace(id=uuid.uuid4(), name=name)
+
+    def get_subject_by_id(self, sid: uuid.UUID):
+        return SimpleNamespace(id=sid, name="Alice")
 
 
 def test_search_filters_by_subject_id():

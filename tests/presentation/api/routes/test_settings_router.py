@@ -14,8 +14,9 @@ def mock_settings():
     settings.app.list_log_levels = ["INFO", "DEBUG"]
 
     # store_type.value is used in settings_router
-    settings.vector.store_type = MagicMock()
-    settings.vector.store_type.value = "faiss"
+    from src.domain.entities.enums.vector_store_type_enum import VectorStoreType
+
+    settings.vector.store_type = VectorStoreType.FAISS
 
     settings.vector.weaviate_host = "localhost"
     settings.vector.weaviate_port = 8080

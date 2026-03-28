@@ -35,6 +35,8 @@ class ChunkResultSchema(BaseModel):
     tokens_count: Optional[int] = None
     language: Optional[str] = None
     embedding_model: Optional[str] = None
+    subject_id: Optional[UUID] = None
+    index: Optional[int] = None
     created_at: Optional[datetime] = None
     score: Optional[float] = None
     extra: Dict[str, Any] = Field(default_factory=dict)

@@ -83,6 +83,19 @@ class SearchUseCase:
             re_rank=re_rank,
         )
 
+        # Populate subject_name in extra if ks_service is available
+        if self.ks_service and results:
+            subject_cache = {}
+            for res in results:
+                if res.subject_id and "subject_name" not in res.extra:
+                    sid = str(res.subject_id)
+                    if sid not in subject_cache:
+                        subject = self.ks_service.get_subject_by_id(res.subject_id)
+                        subject_cache[sid] = subject.name if subject else None
+
+                    if subject_cache[sid]:
+                        res.extra["subject_name"] = subject_cache[sid]
+
         logger.info(
             "Search completed", context={"query": query, "results_count": len(results)}
         )
