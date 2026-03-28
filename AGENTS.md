@@ -63,7 +63,7 @@ npm run dev
 ---
 
 ## 🧠 Integrations and LLMs
-- **Vector Stores**: Native support for Weaviate and FAISS via `IVectorRepository`.
+- **Vector Stores**: Native support for Weaviate, FAISS, and Qdrant via `IVectorRepository`.
 - **Embeddings**: Abstracted via `EmbeddingService`. Default models: `BAAI/bge-m3`.
 
 ---

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional, Any, Dict
+from typing import List, Optional, Any, Dict, cast, Sequence
 from uuid import UUID
 
 from qdrant_client.http import models as rest
@@ -32,6 +32,7 @@ class ChunkQdrantRepository(IVectorRepository):
         """Ensure the collection exists with proper configuration."""
         try:
             with self._connector as client:
+                client = cast(Any, client)
                 if not client.collection_exists(self._collection_name):
                     logger.info(
                         f"Creating Qdrant collection: {self._collection_name}",
@@ -106,6 +107,7 @@ class ChunkQdrantRepository(IVectorRepository):
                 )
 
             with self._connector as client:
+                client = cast(Any, client)
                 client.upsert(
                     collection_name=self._collection_name,
                     points=points,
@@ -161,6 +163,7 @@ class ChunkQdrantRepository(IVectorRepository):
         query_vector = self._embedding_service.embed_query(query)
 
         with self._connector as client:
+            client = cast(Any, client)
             search_result = client.query_points(
                 collection_name=self._collection_name,
                 query=query_vector,
@@ -187,20 +190,16 @@ class ChunkQdrantRepository(IVectorRepository):
         # Combine with existing filters
         if filters:
             if filters.must:
-                text_filter.must.extend(filters.must)
+                if text_filter.must is None:
+                    text_filter.must = []
+                text_filter.must.extend(filters.must)  # type: ignore
             if filters.should:
                 text_filter.should = filters.should
             if filters.must_not:
                 text_filter.must_not = filters.must_not
 
         with self._connector as client:
-            # When using only filters (no vector), Qdrant returns results based on the index
-            # but we need to use 'scroll' or just a dummy search if we want specific ordering.
-            # Actually, Qdrant search requires a vector or some query.
-            # For a pure text search without vector, we can use the 'query' API if available or scroll with filters.
-            # However, standard 'search' with a zero vector and filters might work but it's not ideal.
-            # Better: use the new 'Query' API in v1.11+
-
+            client = cast(Any, client)
             try:
                 # Attempt to use the new Query API which is better for this
                 search_result = client.query_points(
@@ -209,7 +208,7 @@ class ChunkQdrantRepository(IVectorRepository):
                     prefetch=None,
                     query_filter=text_filter,
                     limit=top_kn,
-                ).points  # type: ignore
+                ).points
             except Exception:
                 # Fallback to scroll if query_points is not available or fails
                 scroll_result = client.scroll(
@@ -217,7 +216,7 @@ class ChunkQdrantRepository(IVectorRepository):
                     scroll_filter=text_filter,
                     limit=top_kn,
                     with_payload=True,
-                )[0]  # type: ignore
+                )[0]
                 search_result = scroll_result
 
         return self._transform_hits(search_result)
@@ -234,7 +233,7 @@ class ChunkQdrantRepository(IVectorRepository):
         return self._reciprocal_rank_fusion([semantic_results, bm25_results], top_kn)
 
     def _reciprocal_rank_fusion(
-        self, results_lists: List[List[ChunkModel]], k: int = 60, top_n: int = 5
+        self, results_lists: Sequence[Sequence[ChunkModel]], k: int = 60, top_n: int = 5
     ) -> List[ChunkModel]:
         """Merge multiple ranked lists using Reciprocal Rank Fusion."""
         fused_scores: Dict[str, float] = {}
@@ -325,6 +324,7 @@ class ChunkQdrantRepository(IVectorRepository):
 
         try:
             with self._connector as client:
+                client = cast(Any, client)
                 client.delete(
                     collection_name=self._collection_name,
                     points_selector=rest.FilterSelector(filter=qdrant_filters),
@@ -344,6 +344,7 @@ class ChunkQdrantRepository(IVectorRepository):
         try:
             self._ensure_collection_exists()
             with self._connector as client:
+                client = cast(Any, client)
                 scroll_result = client.scroll(
                     collection_name=self._collection_name,
                     scroll_filter=qdrant_filters,

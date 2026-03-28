@@ -18,6 +18,7 @@ case "$VEC_VAL" in
   "weaviate") EXTRAS="$EXTRAS --extra weaviate" ;;
   "faiss")    EXTRAS="$EXTRAS --extra faiss"    ;;
   "chroma")   EXTRAS="$EXTRAS --extra chroma"   ;;
+  "qdrant")   EXTRAS="$EXTRAS --extra qdrant"   ;;
 esac
 
 if [ "$INSTALL_GPU" = "true" ]; then

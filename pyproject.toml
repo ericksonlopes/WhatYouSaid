@@ -49,6 +49,9 @@ weaviate = [
 faiss = [
     "faiss-cpu>=1.13.2",
 ]
+qdrant = [
+    "qdrant-client>=1.13.2",
+]
 mysql = [
     "pymysql>=1.1.1",
     "cryptography>=44.0.0",

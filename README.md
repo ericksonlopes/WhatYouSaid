@@ -10,8 +10,6 @@
 
 ![Python](https://img.shields.io/badge/-Python-3776AB?&logo=Python&logoColor=FFFFFF)
 ![React](https://img.shields.io/badge/-React-61DAFB?&logo=React&logoColor=000000)
-![Tailwind CSS](https://img.shields.io/badge/-Tailwind_CSS-38B2AC?&logo=Tailwind%20CSS&logoColor=FFFFFF)
-![Redis](https://img.shields.io/badge/-Redis-DC382D?&logo=Redis&logoColor=FFFFFF)
 ![Pytest](https://img.shields.io/badge/-Pytest-0A9EDC?&logo=Pytest&logoColor=FFFFFF)
 ![GitHub Actions](https://img.shields.io/badge/-GitHub%20Actions-2088FF?&logo=GitHub%20Actions&logoColor=FFFFFF)
 
@@ -39,7 +37,7 @@ Detailed guides for specific topics:
 - **Structured Logging & Tracing**: Centralized logging equipped with contextvars and request tracing (Correlation IDs) for end-to-end observability.
 - **Real-time Updates**: Live ingestion status and progress monitoring via a **Redis Event Bus** (SSE-ready).
 - **Advanced Search**: Semantic, keyword (BM25), and **Hybrid Search** with cross-encoder re-ranking for maximum precision.
-- **Pluggable Vector Stores**: Support for **FAISS** (local), **ChromaDB**, and **Weaviate** (scalable).
+- **Pluggable Vector Stores**: Support for **FAISS** (local), **ChromaDB**, **Weaviate** (scalable), and **Qdrant**.
 - **Pluggable SQL Databases**: Support for **SQLite**, **PostgreSQL**, **MySQL**, **MariaDB**, and **MSSQL**.
 - **Modern Dashboard**: A clean React + Tailwind CSS frontend for managing knowledge subjects, content sources, and monitoring background tasks.
 

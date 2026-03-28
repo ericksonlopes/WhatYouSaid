@@ -1,6 +1,6 @@
-import sys
 import os
 import shutil
+import sys
 
 # Add project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -56,6 +56,23 @@ def clear_vector_db():
                         logger.debug(f"Deleting Weaviate collection: {name}")
                         client.collections.delete(name)
             logger.info("Weaviate cleanup completed.")
+
+        elif store_type == VectorStoreType.QDRANT:
+            from qdrant_client import QdrantClient
+
+            client = QdrantClient(
+                host=settings.vector.qdrant_host,
+                port=settings.vector.qdrant_port,
+                grpc_port=settings.vector.qdrant_grpc_port,
+                api_key=settings.vector.qdrant_api_key,
+                prefer_grpc=True,
+            )
+            collections = client.get_collections().collections
+            for col in collections:
+                if col.name.startswith(collection_name):
+                    logger.debug(f"Deleting Qdrant collection: {col.name}")
+                    client.delete_collection(col.name)
+            logger.info("Qdrant cleanup completed.")
 
         elif store_type == VectorStoreType.FAISS:
             index_path = settings.vector.vector_index_path

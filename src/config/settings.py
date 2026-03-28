@@ -90,6 +90,11 @@ class VectorConfig(BaseSettings):
     chroma_host: str = Field(default="localhost", description="ChromaDB host URL")
     chroma_port: int = Field(default=8000, description="ChromaDB port")
 
+    qdrant_host: str = Field(default="localhost", description="Qdrant host URL")
+    qdrant_port: int = Field(default=6333, description="Qdrant HTTP port")
+    qdrant_grpc_port: int = Field(default=6334, description="Qdrant gRPC port")
+    qdrant_api_key: Optional[str] = Field(default=None, description="Qdrant API key")
+
     @field_validator("weaviate_host", "chroma_host", mode="after")
     @classmethod
     def _fallback_host(cls, v: str) -> str:
@@ -97,7 +102,7 @@ class VectorConfig(BaseSettings):
         import os
         import sys
 
-        docker_hosts = {"weaviate", "chroma", "vector-db"}
+        docker_hosts = {"weaviate", "chroma", "vector-db", "qdrant"}
         if (
             v in docker_hosts
             and sys.platform == "win32"

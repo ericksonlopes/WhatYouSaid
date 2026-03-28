@@ -10,10 +10,14 @@ class AppSettingsSchema(BaseModel):
 
 class VectorSettingsSchema(BaseModel):
     store_type: str
-    weaviate_host: str
-    weaviate_port: int
-    weaviate_grpc_port: int
-    weaviate_collection: str
+    weaviate_host: Optional[str] = None
+    weaviate_port: Optional[int] = None
+    weaviate_grpc_port: Optional[int] = None
+    weaviate_collection: Optional[str] = None
+    qdrant_host: Optional[str] = None
+    qdrant_port: Optional[int] = None
+    qdrant_grpc_port: Optional[int] = None
+    qdrant_collection: Optional[str] = None
 
 
 class ModelSettingsSchema(BaseModel):

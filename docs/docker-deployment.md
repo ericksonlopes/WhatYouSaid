@@ -9,7 +9,7 @@ WhatYouSaid uses **Docker Profiles** to allow a modular and lightweight infrastr
 The project supports three main components:
 1.  **Backend & Frontend**: Always required.
 2.  **SQL Database**: Choose between `SQLite` (default), `PostgreSQL`, `MySQL`, `MariaDB`, or `MSSQL`.
-3.  **Vector Store**: Choose between `FAISS` (default), `Weaviate`, or `ChromaDB`.
+3.  **Vector Store**: Choose between `FAISS` (default), `Weaviate`, `ChromaDB`, or `Qdrant`.
 
 ### 1. Scenario: Lightweight (Default)
 **Stack**: SQLite (SQL) + FAISS (Vector)
@@ -60,8 +60,19 @@ SQL__TYPE=mysql docker-compose up -d
 # Start Weaviate container
 docker-compose --profile weaviate up -d
 
-# Override settings to use Weaviate
-VECTOR__STORE_TYPE=weaviate docker-compose up -d
+---
+ 
+### 5. Scenario: High Performance (Qdrant)
+**Stack**: PostgreSQL + Qdrant
+- **Best for**: Performance focused setups.
+- **Why**: Qdrant is optimized for high-speed retrieval and hybrid search.
+
+```bash
+# Start Qdrant and Postgres containers
+docker-compose --profile qdrant --profile postgres up -d
+
+# Override settings
+SQL__TYPE=postgres VECTOR__STORE_TYPE=qdrant docker-compose up -d
 ```
 
 ---
@@ -159,6 +170,10 @@ Required if using any database other than SQLite.
 | `VECTOR__WEAVIATE_GRPC_PORT` | `50051` | Weaviate gRPC port. |
 | `VECTOR__CHROMA_HOST` | `localhost` | ChromaDB server hostname. |
 | `VECTOR__CHROMA_PORT` | `8000` | ChromaDB port. |
+| `VECTOR__QDRANT_HOST` | `localhost` | Qdrant server hostname. |
+| `VECTOR__QDRANT_PORT` | `6333` | Qdrant HTTP port. |
+| `VECTOR__QDRANT_GRPC_PORT` | `6334` | Qdrant gRPC port. |
+| `VECTOR__QDRANT_API_KEY` | `******` | Optional Qdrant API key. |
 
 ### 4. Model Settings (`MODEL_EMBEDDING__`)
 | Variable | Default | Description |

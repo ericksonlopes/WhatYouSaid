@@ -7,3 +7,4 @@ class VectorStoreType(str, Enum):
     CHROMA = "chroma"
     WEAVIATE = "weaviate"
     FAISS = "faiss"
+    QDRANT = "qdrant"

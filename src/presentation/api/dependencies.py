@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import Depends, Request
 
@@ -6,14 +6,16 @@ from src.application.use_cases.content_source_use_case import ContentSourceUseCa
 from src.application.use_cases.file_ingestion_use_case import FileIngestionUseCase
 from src.application.use_cases.knowledge_subject_use_case import KnowledgeSubjectUseCase
 from src.application.use_cases.search_use_case import SearchUseCase
-from src.application.use_cases.youtube_ingestion_use_case import YoutubeIngestionUseCase
 from src.application.use_cases.web_scraping_use_case import WebScrapingUseCase
-from src.infrastructure.extractors.crawl4ai_extractor import Crawl4AIExtractor
+from src.application.use_cases.youtube_ingestion_use_case import YoutubeIngestionUseCase
 from src.config.settings import Settings
 
 # Import services and repositories
 from src.domain.entities.enums.vector_store_type_enum import VectorStoreType
 from src.domain.interfaces.repository.retriver_repository import IVectorRepository
+from src.domain.interfaces.services.i_event_bus import IEventBus
+from src.domain.interfaces.services.i_task_queue import ITaskQueue
+from src.infrastructure.extractors.crawl4ai_extractor import Crawl4AIExtractor
 from src.infrastructure.repositories.sql.chunk_index_repository import (
     ChunkIndexSQLRepository,
 )
@@ -27,8 +29,6 @@ from src.infrastructure.repositories.sql.knowledge_subject_repository import (
     KnowledgeSubjectSQLRepository,
 )
 from src.infrastructure.services.chunk_index_service import ChunkIndexService
-from src.domain.interfaces.services.i_event_bus import IEventBus
-from src.domain.interfaces.services.i_task_queue import ITaskQueue
 from src.infrastructure.services.chunk_vector_service import ChunkVectorService
 from src.infrastructure.services.content_source_service import ContentSourceService
 from src.infrastructure.services.embedding_service import EmbeddingService
@@ -87,8 +87,28 @@ def get_weaviate_client(settings: Settings = Depends(get_settings)) -> Any:
 
 def get_vector_repository(
     settings: Settings = Depends(get_settings),
-    model_loader: ModelLoaderService = Depends(get_model_loader),
+    model_loader: Optional[ModelLoaderService] = Depends(get_model_loader),
 ) -> IVectorRepository:
+    if model_loader is None:
+        # Provide a dummy repo that indicates it's not ready
+        class ErrorVectorStore(IVectorRepository):
+            def retriever(self, *args, **kwargs):
+                return []
+
+            def create_documents(self, *args, **kwargs):
+                return []
+
+            def delete(self, *args, **kwargs):
+                return 0
+
+            def list_chunks(self, *args, **kwargs):
+                return []
+
+            def is_ready(self):
+                return False
+
+        return ErrorVectorStore()
+
     emb_service = EmbeddingService(model_loader_service=model_loader)
     # Automatically append dimensionality to collection/index name to avoid mismatches
     base_name = settings.vector.collection_name_chunks
@@ -131,6 +151,26 @@ def get_vector_repository(
             embedding_service=emb_service,
             index_path=settings.vector.vector_index_path,
             index_name=collection_name,
+        )
+
+    if settings.vector.store_type == VectorStoreType.QDRANT:
+        from src.infrastructure.repositories.vector.qdrant.chunk_repository import (
+            ChunkQdrantRepository,
+        )
+        from src.infrastructure.repositories.vector.qdrant.connector import (
+            QdrantConnector,
+        )
+
+        connector = QdrantConnector(
+            host=settings.vector.qdrant_host,
+            port=settings.vector.qdrant_port,
+            grpc_port=settings.vector.qdrant_grpc_port,
+            api_key=settings.vector.qdrant_api_key,
+        )
+        return ChunkQdrantRepository(
+            connector=connector,
+            embedding_service=emb_service,
+            collection_name=collection_name,
         )
 
     raise ValueError(f"Unsupported vector store type: {settings.vector.store_type}")
