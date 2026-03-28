@@ -1,12 +1,11 @@
 import time
-import requests
 from youtube_transcript_api import (
     YouTubeTranscriptApi,
     FetchedTranscript,
     TranscriptsDisabled,
     NoTranscriptFound,
 )
-from youtube_transcript_api.proxies import WebshareProxyConfig
+from youtube_transcript_api.proxies import GenericProxyConfig, WebshareProxyConfig
 from yt_dlp import YoutubeDL
 
 from src.config.settings import settings
@@ -158,32 +157,30 @@ class YoutubeExtractor(IYoutubeExtractor):
 
         # Setup Proxy for YouTubeTranscriptApi
         proxy_config = None
-        session = None
 
-        if settings.youtube.webshare_username and settings.youtube.webshare_password:
+        if settings.youtube.proxy_url:
+            logger.debug(
+                "Using GenericProxyConfig for transcript fetch",
+                context={"proxy": settings.youtube.proxy_url},
+            )
+            proxy_config = GenericProxyConfig(
+                http_url=settings.youtube.proxy_url,
+                https_url=settings.youtube.proxy_url,
+            )
+        elif settings.youtube.webshare_username and settings.youtube.webshare_password:
             logger.debug("Using WebshareProxyConfig for transcript fetch")
             proxy_config = WebshareProxyConfig(
                 proxy_username=settings.youtube.webshare_username,
                 proxy_password=settings.youtube.webshare_password,
             )
-        elif settings.youtube.proxy_url:
-            logger.debug(
-                "Using generic session proxy for transcript fetch",
-                context={"proxy": settings.youtube.proxy_url},
-            )
-            session = requests.Session()
-            session.proxies = {
-                "http": settings.youtube.proxy_url,
-                "https": settings.youtube.proxy_url,
-            }
 
         retries = 3
         last_error = None
 
         for attempt in range(retries):
             try:
-                # Initialize API with proxy/session if available
-                api = YouTubeTranscriptApi(proxy_config=proxy_config, http_client=session)
+                # Initialize API with proxy config if available
+                api = YouTubeTranscriptApi(proxy_config=proxy_config)
 
                 # First attempt: Try preferred languages in order
                 transcript = api.fetch(
