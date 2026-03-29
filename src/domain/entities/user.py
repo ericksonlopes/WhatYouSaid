@@ -1,18 +1,19 @@
-from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
-import uuid
+from uuid import uuid4
+
+from pydantic import BaseModel, Field
 
 
-@dataclass
-class User:
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    email: str = ""
+class User(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    email: str
     full_name: Optional[str] = None
     picture_url: Optional[str] = None
-    created_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_login: Optional[datetime] = None
 
-    def __post_init__(self):
-        if not self.email:
-            raise ValueError("User email is required")
+    model_config = {
+        "from_attributes": True,
+        "validate_assignment": True,
+    }

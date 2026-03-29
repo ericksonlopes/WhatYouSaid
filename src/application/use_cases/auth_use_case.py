@@ -3,14 +3,19 @@ from typing import Optional, Dict, Any, Tuple
 from datetime import datetime, timezone
 
 from src.domain.entities.user import User as UserEntity
-from src.infrastructure.repositories.sql.user_repository import UserSQLRepository
+from src.domain.interfaces.repository.user_repository import IUserRepository
+from src.domain.exception.auth_exceptions import (
+    InvalidStateError,
+    GoogleAuthError,
+    UserNotCreatedError,
+)
 from src.infrastructure.services.auth_service import AuthService
 
 
 class AuthUseCase:
     def __init__(
         self,
-        user_repo: UserSQLRepository,
+        user_repo: IUserRepository,
         auth_service: AuthService,
     ):
         self._user_repo = user_repo
@@ -26,13 +31,13 @@ class AuthUseCase:
     ) -> Dict[str, Any]:
         # 0. Validate state
         if not received_state or received_state != expected_state:
-            raise ValueError("Invalid authentication state (CSRF Protection)")
+            raise InvalidStateError("Invalid authentication state (CSRF Protection)")
 
         # 1. Exchange code for token
         tokens = await self._auth_service.exchange_code_for_token(code)
         access_token = tokens.get("access_token")
         if not access_token:
-            raise ValueError("Failed to obtain access token from Google")
+            raise GoogleAuthError("Failed to obtain access token from Google")
 
         # 2. Get user info from Google
         google_user = await self._auth_service.get_google_user_info(access_token)
@@ -41,7 +46,7 @@ class AuthUseCase:
         picture = google_user.get("picture")
 
         if not email or not name:
-            raise ValueError("Google user info missing email or name")
+            raise GoogleAuthError("Google user info missing email or name")
 
         # 3. Check if user exists, or create new
         user = self._user_repo.get_by_email(email)
@@ -58,7 +63,7 @@ class AuthUseCase:
             user = self._user_repo.update_last_login(user.id)
 
         if not user:
-            raise ValueError("Failed to create or retrieve user")
+            raise UserNotCreatedError("Failed to create or retrieve user")
 
         # 4. Create local JWT
         jwt_token = self._auth_service.create_access_token(user)

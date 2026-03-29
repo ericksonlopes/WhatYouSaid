@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock
 from src.application.use_cases.auth_use_case import AuthUseCase
 from src.domain.entities.user import User
+from src.domain.exception.auth_exceptions import InvalidStateError
 
 
 @pytest.fixture
@@ -65,7 +66,7 @@ class TestAuthUseCase:
     async def test_handle_google_callback_invalid_state(
         self, use_case, mock_repo, mock_service
     ):
-        with pytest.raises(ValueError, match="Invalid authentication state"):
+        with pytest.raises(InvalidStateError, match="Invalid authentication state"):
             await use_case.handle_google_callback("test_code", "received", "expected")
 
     @pytest.mark.asyncio

@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, Request
 
 from src.application.use_cases.auth_use_case import AuthUseCase
@@ -7,6 +8,7 @@ from src.presentation.api.dependencies import (
     get_current_user,
 )
 from src.config.settings import Settings
+from src.domain.exception.auth_exceptions import AuthDomainError
 from src.domain.entities.user import User
 
 router = APIRouter()
@@ -58,11 +60,13 @@ async def google_callback(
         raise HTTPException(status_code=400, detail="Missing authorization code")
 
     # Retrieve expected state from cookie
-    expected_state = request.cookies.get("oauth_state")
+    expected_state: Optional[str] = request.cookies.get("oauth_state")
 
     try:
         result = await auth_use_case.handle_google_callback(
-            code=code, received_state=state, expected_state=expected_state
+            code=code,
+            received_state=state or "",
+            expected_state=expected_state or "",
         )
 
         # Clear the state cookie
@@ -70,7 +74,11 @@ async def google_callback(
 
         # Frontend handles storing the token from the response
         return result
-    except Exception as e:
+    except AuthDomainError as e:
         # Also clear state cookie on failure
         response.delete_cookie(key="oauth_state")
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        # Also clear state cookie on failure
+        response.delete_cookie(key="oauth_state")
+        raise HTTPException(status_code=500, detail="Internal server error during auth")

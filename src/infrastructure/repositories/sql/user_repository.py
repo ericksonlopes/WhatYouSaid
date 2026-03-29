@@ -2,12 +2,13 @@ from typing import Optional
 from datetime import datetime, timezone
 
 from sqlalchemy import select
+from src.domain.interfaces.repository.user_repository import IUserRepository
 from src.infrastructure.repositories.sql.connector import Connector
 from src.infrastructure.repositories.sql.models.user import User as UserModel
 from src.domain.entities.user import User as UserEntity
 
 
-class UserSQLRepository:
+class UserSQLRepository(IUserRepository):
     def __init__(self, session_provider: Optional[Connector] = None):
         self._session_provider = session_provider or Connector()
 
