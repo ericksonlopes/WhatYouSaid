@@ -71,4 +71,7 @@ class AuthUseCase:
             return None
 
         user_id = payload.get("sub")
+        if not user_id or not isinstance(user_id, str):
+            return None
+            
         return self._user_repo.get_by_id(user_id)

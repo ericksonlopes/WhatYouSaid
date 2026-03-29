@@ -29,6 +29,7 @@ class AuthService:
             "prompt": "select_account",
         }
         from urllib.parse import urlencode
+
         query_string = urlencode(params)
         return f"{base_url}?{query_string}"
 

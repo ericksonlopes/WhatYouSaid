@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from src.infrastructure.services.auth_service import AuthService
 from src.domain.entities.user import User
-from src.config.settings import Settings, AuthConfig
+
 
 @pytest.fixture
 def auth_service():
@@ -15,23 +15,16 @@ def auth_service():
         mock_settings.auth.jwt_expire_minutes = 60
         yield AuthService()
 
+
 class TestAuthService:
     def test_create_access_token(self, auth_service):
-        user = User(
-            id="user123",
-            email="test@example.com",
-            full_name="Test User"
-        )
+        user = User(id="user123", email="test@example.com", full_name="Test User")
         token = auth_service.create_access_token(user)
         assert isinstance(token, str)
         assert len(token) > 0
 
     def test_verify_token_success(self, auth_service):
-        user = User(
-            id="user123",
-            email="test@example.com",
-            full_name="Test User"
-        )
+        user = User(id="user123", email="test@example.com", full_name="Test User")
         token = auth_service.create_access_token(user)
         payload = auth_service.verify_token(token)
         assert payload is not None
@@ -57,11 +50,11 @@ class TestAuthService:
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "access_token": "google_access_token",
-            "id_token": "google_id_token"
+            "id_token": "google_id_token",
         }
         mock_post.return_value = mock_response
-        
+
         tokens = await auth_service.exchange_code_for_token("test_code")
-        
+
         assert tokens["access_token"] == "google_access_token"
         mock_post.assert_called_once()

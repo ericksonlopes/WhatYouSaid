@@ -778,11 +778,17 @@ class YoutubeIngestionUseCase:
     def _extract_video_id_from_url(cls, url: str) -> Optional[str]:
         if not url:
             return None
+
+        # 1. Quick check for plain 11-char ID
+        if len(url) == 11 and re.match(r"^[A-Za-z0-9_-]{11}$", url):
+            return url
+
         parsed = urlparse(url)
         netloc = parsed.netloc.lower()
         if "youtu.be" in netloc:
             vid = parsed.path.lstrip("/")
             return vid or None
+
         if "youtube" in netloc:
             q = parse_qs(parsed.query)
             if "v" in q:
@@ -792,7 +798,7 @@ class YoutubeIngestionUseCase:
 
             path_parts = [p for p in parsed.path.split("/") if p]
             for i, part in enumerate(path_parts):
-                if part in ("embed", "v") and i + 1 < len(path_parts):
+                if part in ("embed", "v", "shorts") and i + 1 < len(path_parts):
                     vid = path_parts[i + 1]
                     if len(vid) == 11:
                         return vid
@@ -809,10 +815,14 @@ class YoutubeIngestionUseCase:
                 ):
                     return potential_id
 
-        # Stricter regex for 11-character IDs in common YouTube URL patterns
-        m = re.search(r"(?:v=|be/|embed/|shorts/)([A-Za-z0-9_-]{11})", url)
+        # 2. Broader search: look for 11-char ID preceded by common prefixes or non-alphanumerics
+        m = re.search(
+            r"(?:v=|be/|embed/|shorts/|/|^|[^A-Za-z0-9_-])([A-Za-z0-9_-]{11})(?:$|[^A-Za-z0-9_-])",
+            url,
+        )
         if m:
             return m.group(1)
+
         return None
 
     def _resolve_subject(self, cmd: IngestYoutubeCommand):
