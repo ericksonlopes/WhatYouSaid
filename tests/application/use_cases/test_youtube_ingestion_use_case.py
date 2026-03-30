@@ -172,6 +172,11 @@ def test_ingest_single_url_processes_chunks(monkeypatch):
     monkeypatch.setattr(
         use_case, "_extract_video_id_from_url", lambda url: "dQw4w9WgXcQ"
     )
+    from src.infrastructure.extractors.youtube_extractor import YoutubeExtractor
+
+    monkeypatch.setattr(
+        YoutubeExtractor, "extract_metadata", lambda *args, **kwargs: MockMetadata()
+    )
     monkeypatch.setattr(
         use_case, "_extract_and_split", lambda cmd, video_id, yt_extractor=None: docs
     )
@@ -247,6 +252,11 @@ def test_ingest_multi_video_one_fails_others_continue(monkeypatch):
     monkeypatch.setattr(use_case, "_extract_video_id_from_url", mock_extract_id)
     monkeypatch.setattr(
         use_case, "_extract_and_split", lambda *args, **kwargs: [DummyDoc("content")]
+    )
+    from src.infrastructure.extractors.youtube_extractor import YoutubeExtractor
+
+    monkeypatch.setattr(
+        YoutubeExtractor, "extract_metadata", lambda *args, **kwargs: MockMetadata()
     )
 
     cmd = IngestYoutubeCommand(
@@ -612,7 +622,7 @@ def test_execute_no_urls():
         ks, None, None, None, None, None, None, "weaviate", MagicMock()
     )
     cmd = IngestYoutubeCommand(video_url=None, video_urls=[], subject_name="s")
-    with pytest.raises(ValueError, match=r"No video_url\(s\) provided"):
+    with pytest.raises(ValueError, match="No video_url.*s.* provided"):
         use_case.execute(cmd)
 
 

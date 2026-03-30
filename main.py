@@ -41,21 +41,6 @@ async def lifespan(app: FastAPI):
         logger.info("Initializing Settings...")
         _settings = Settings()
 
-        if _settings.app.use_ngrok:
-            logger.info("Initializing Ngrok tunnel...")
-            try:
-                from pyngrok import ngrok
-
-                if _settings.app.ngrok_authtoken:
-                    ngrok.set_auth_token(_settings.app.ngrok_authtoken)
-                tunnel = ngrok.connect(str(_settings.app.port))
-                logger.info(
-                    "Ngrok tunnel established",
-                    context={"public_url": tunnel.public_url},
-                )
-            except Exception as e:
-                logger.error(e, context={"action": "start_ngrok_tunnel"})
-
         # Initialize Redis Event Bus
         logger.info("Initializing RedisEventBus...")
         app.state.event_bus = RedisEventBus()
@@ -101,17 +86,6 @@ async def lifespan(app: FastAPI):
 
     if hasattr(app.state, "task_queue") and app.state.task_queue:
         app.state.task_queue.stop()
-
-    try:
-        from src.config.settings import settings
-
-        if settings.app.use_ngrok:
-            from pyngrok import ngrok
-
-            logger.info("Shutting down Ngrok tunnel...")
-            ngrok.kill()
-    except Exception as e:
-        logger.error(e, context={"action": "shutdown_ngrok_tunnel"})
 
     logger.info("Shutting down WhatYouSaid API...")
 

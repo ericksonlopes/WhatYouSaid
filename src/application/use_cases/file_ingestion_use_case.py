@@ -192,7 +192,10 @@ class FileIngestionUseCase:
                     sid = source.id
                     logger.info(
                         "REPROCESSING: Performing pre-ingestion cleanup",
-                        context={"source_id": str(sid), "filename": getattr(cmd, "filename", "unknown")},
+                        context={
+                            "source_id": str(sid),
+                            "filename": getattr(cmd, "filename", "unknown"),
+                        },
                     )
                     try:
                         sql_del = self.chunk_service.delete_by_content_source(sid)

@@ -128,11 +128,7 @@ class App(BaseSettings):
         description="Application environment (e.g., 'development', 'production', "
         "'testing')",
     )
-    use_ngrok: bool = Field(
-        default=False, description="Enable Ngrok tunnel for local development"
-    )
     port: int = Field(default=5000, description="Application port")
-    ngrok_authtoken: Optional[str] = Field(default=None, description="Ngrok authtoken")
 
     @field_validator("env")
     @classmethod
@@ -235,6 +231,9 @@ class YoutubeConfig(BaseSettings):
     )
 
     # Proxy configurations
+    proxy_enabled: bool = Field(
+        default=False, description="Enable or disable proxy usage for YouTube"
+    )
     proxy_url: Optional[str] = Field(
         default=None,
         description="Generic proxy URL (e.g. http://user:pass@host:port)",

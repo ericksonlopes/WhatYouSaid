@@ -1,4 +1,5 @@
 import time
+
 from youtube_transcript_api import (
     YouTubeTranscriptApi,
     FetchedTranscript,
@@ -8,9 +9,8 @@ from youtube_transcript_api import (
 from youtube_transcript_api.proxies import GenericProxyConfig, WebshareProxyConfig
 from yt_dlp import YoutubeDL
 
-from src.config.settings import settings
-
 from src.config.logger import Logger
+from src.config.settings import settings
 from src.domain.exception.youtube_exceptions import (
     YoutubeTranscriptNotFoundException,
     YoutubeTranscriptsDisabledException,
@@ -41,20 +41,34 @@ class YoutubeExtractor(IYoutubeExtractor):
         ydl_opts: dict = {"logger": logger}
 
         # Handle Proxy for yt-dlp
-        proxy = settings.youtube.proxy_url
-        if (
-            not proxy
-            and settings.youtube.webshare_username
-            and settings.youtube.webshare_password
-        ):
-            # Fallback construct webshare proxy URL for yt-dlp
-            proxy = f"http://{settings.youtube.webshare_username}:{settings.youtube.webshare_password}@p.webshare.io:80"
+        if not settings.youtube.proxy_enabled:
+            logger.debug("Proxy usage is disabled in settings.")
+        else:
+            proxy = settings.youtube.proxy_url
+            if (
+                not proxy
+                and settings.youtube.webshare_username
+                and settings.youtube.webshare_username.strip()
+                and settings.youtube.webshare_password
+                and settings.youtube.webshare_password.strip()
+            ):
+                # Fallback construct webshare proxy URL for yt-dlp
+                proxy = f"http://{settings.youtube.webshare_username}:{settings.youtube.webshare_password}@p.webshare.io:80"
 
-        if proxy:
-            ydl_opts["proxy"] = proxy
-            logger.debug(
-                "Using proxy for metadata extraction", context={"proxy": proxy}
-            )
+            if proxy:
+                ydl_opts["proxy"] = proxy
+                # Mask password for logging
+                masked_proxy = proxy
+                if "@" in proxy:
+                    parts = proxy.split("@")
+                    if ":" in parts[0]:
+                        creds = parts[0].split(":")
+                        if len(creds) >= 2:
+                            masked_proxy = f"{creds[0]}:****@{parts[1]}"
+                logger.debug(
+                    "Using proxy for metadata extraction",
+                    context={"proxy": masked_proxy},
+                )
 
         try:
             with YoutubeDL(ydl_opts) as ydl:
@@ -70,6 +84,16 @@ class YoutubeExtractor(IYoutubeExtractor):
 
         except Exception as e:
             error_msg = str(e)
+            if "Proxy Authentication Required" in error_msg:
+                logger.error(
+                    "Proxy Authentication Failed (407). Check your credentials.",
+                    context={"video_id": self.video_id, "action": "extract_metadata"},
+                )
+                raise YoutubeNetworkException(
+                    self.video_id,
+                    "Proxy authentication failed. Verify YOUTUBE__WEBSHARE settings.",
+                )
+
             if "This video is private" in error_msg:
                 raise YoutubeVideoPrivateException(self.video_id)
             if "unplayable" in error_msg.lower():
@@ -77,6 +101,7 @@ class YoutubeExtractor(IYoutubeExtractor):
             if (
                 "getaddrinfo failed" in error_msg
                 or "Failed to establish a new connection" in error_msg
+                or "Tunnel connection failed" in error_msg
             ):
                 raise YoutubeNetworkException(self.video_id, error_msg)
 
@@ -160,21 +185,29 @@ class YoutubeExtractor(IYoutubeExtractor):
         # Setup Proxy for YouTubeTranscriptApi
         proxy_config = None
 
-        if settings.youtube.proxy_url:
-            logger.debug(
-                "Using GenericProxyConfig for transcript fetch",
-                context={"proxy": settings.youtube.proxy_url},
-            )
-            proxy_config = GenericProxyConfig(
-                http_url=settings.youtube.proxy_url,
-                https_url=settings.youtube.proxy_url,
-            )
-        elif settings.youtube.webshare_username and settings.youtube.webshare_password:
-            logger.debug("Using WebshareProxyConfig for transcript fetch")
-            proxy_config = WebshareProxyConfig(
-                proxy_username=settings.youtube.webshare_username,
-                proxy_password=settings.youtube.webshare_password,
-            )
+        if settings.youtube.proxy_enabled:
+            if settings.youtube.proxy_url:
+                logger.debug(
+                    "Using GenericProxyConfig for transcript fetch",
+                    context={"proxy": settings.youtube.proxy_url},
+                )
+                proxy_config = GenericProxyConfig(
+                    http_url=settings.youtube.proxy_url,
+                    https_url=settings.youtube.proxy_url,
+                )
+            elif (
+                settings.youtube.webshare_username
+                and settings.youtube.webshare_username.strip()
+                and settings.youtube.webshare_password
+                and settings.youtube.webshare_password.strip()
+            ):
+                logger.debug("Using WebshareProxyConfig for transcript fetch")
+                proxy_config = WebshareProxyConfig(
+                    proxy_username=settings.youtube.webshare_username,
+                    proxy_password=settings.youtube.webshare_password,
+                )
+        else:
+            logger.debug("Proxy usage is disabled in settings for transcript fetch.")
 
         retries = 3
         last_error = None
@@ -259,10 +292,12 @@ class YoutubeExtractor(IYoutubeExtractor):
                         self.video_id, reason=error_msg
                     )
 
-                # Connection/DNS errors
+                # Connection/DNS/Proxy errors
                 if (
                     "getaddrinfo failed" in error_msg
                     or "Failed to establish a new connection" in error_msg
+                    or "Proxy Authentication Required" in error_msg
+                    or "Tunnel connection failed" in error_msg
                 ):
                     logger.warning(
                         "Network error during transcript fetch. Retrying",

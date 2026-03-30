@@ -64,7 +64,7 @@ class TestYoutubeIngestionUseCaseEdgeCases:
             subject_id=str(uuid.uuid4()),
             data_type=YoutubeDataType.VIDEO,
         )
-        with pytest.raises(ValueError, match=r"No video_url\(s\) provided in command"):
+        with pytest.raises(ValueError, match="No video_url.*s.* provided"):
             use_case.execute(cmd)
 
     def test_execute_any_failed_with_ingestion(self, use_case, mock_services):

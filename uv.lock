@@ -2550,18 +2550,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pyngrok"
-version = "7.5.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyyaml" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/9e/8b/a254d57f6d5ec8797daa57510abd8e82eb7f7992fc1c455677f28e805893/pyngrok-7.5.1.tar.gz", hash = "sha256:934ec8a899ace8ec61c39120a27a8212aeb40293cad2f4ffc8a3d1a4bb6a8d6c", size = 43307, upload-time = "2026-03-06T18:03:44.774Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e0/c3/c73d882109bb19804383c375b42bbbdcbf3838fc3305217d9ba1bb051cfa/pyngrok-7.5.1-py3-none-any.whl", hash = "sha256:88f1ffb0ccc8dbc7810a29136eb9db3abb46b62436da438e277dfc1e70cf76ae", size = 24801, upload-time = "2026-03-06T18:03:43.746Z" },
-]
-
-[[package]]
 name = "pyobjc-core"
 version = "12.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3874,7 +3862,6 @@ dependencies = [
     { name = "playwright" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
-    { name = "pyngrok" },
     { name = "python-jose", extra = ["cryptography"] },
     { name = "python-multipart" },
     { name = "rank-bm25" },
@@ -3954,7 +3941,6 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.7.0" },
     { name = "pymysql", marker = "extra == 'mariadb'", specifier = ">=1.1.1" },
     { name = "pymysql", marker = "extra == 'mysql'", specifier = ">=1.1.1" },
-    { name = "pyngrok", specifier = ">=7.1.2" },
     { name = "python-jose", extras = ["cryptography"], specifier = ">=3.5.0" },
     { name = "python-multipart", specifier = ">=0.0.22" },
     { name = "python-tds", marker = "extra == 'mssql'", specifier = ">=1.15.0" },
