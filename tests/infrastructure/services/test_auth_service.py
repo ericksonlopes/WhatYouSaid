@@ -37,7 +37,7 @@ class TestAuthService:
 
     @pytest.mark.asyncio
     async def test_get_google_auth_url(self, auth_service):
-        url = await auth_service.get_google_auth_url()
+        url = auth_service.get_google_auth_url()
         assert "accounts.google.com" in url
         assert "client_id=test_id" in url
         assert "response_type=code" in url

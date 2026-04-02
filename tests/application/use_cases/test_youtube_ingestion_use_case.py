@@ -651,7 +651,9 @@ def test_process_single_video_reprocess(monkeypatch):
         lambda **kwargs: deleted.update({"sql": True}) or 1,
     )
     monkeypatch.setattr(
-        vec_svc, "delete_by_video_id", lambda **kwargs: deleted.update({"vec": True}) or 1
+        vec_svc,
+        "delete_by_video_id",
+        lambda **kwargs: deleted.update({"vec": True}) or 1,
     )
 
     use_case = YoutubeIngestionUseCase(
@@ -700,7 +702,9 @@ def test_process_single_video_rollback_on_fail(monkeypatch):
         lambda **kwargs: rolled_back.update({"sql": True}) or 1,
     )
     monkeypatch.setattr(
-        vec_svc, "delete_by_job_id", lambda **kwargs: rolled_back.update({"vec": True}) or 1
+        vec_svc,
+        "delete_by_job_id",
+        lambda **kwargs: rolled_back.update({"vec": True}) or 1,
     )
 
     use_case = YoutubeIngestionUseCase(

@@ -52,9 +52,7 @@ class TestYoutubeIngestionUseCaseEdgeCases:
             subject_id=str(uuid.uuid4()),
             data_type=YoutubeDataType.PLAYLIST,
         )
-        with pytest.raises(
-            ValueError, match="No video_url provided for playlist"
-        ):
+        with pytest.raises(ValueError, match="No video_url provided for playlist"):
             use_case.execute(cmd)
 
     def test_execute_no_video_urls(self, use_case):

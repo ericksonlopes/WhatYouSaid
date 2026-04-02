@@ -23,7 +23,7 @@ class AuthUseCase:
 
     async def get_login_url(self) -> Tuple[str, str]:
         state = secrets.token_urlsafe(32)
-        url = await self._auth_service.get_google_auth_url(state=state)
+        url = self._auth_service.get_google_auth_url(state=state)
         return url, state
 
     async def handle_google_callback(

@@ -31,9 +31,7 @@ class RedisEventBus(IEventBus):
             try:
                 self._redis.publish(channel, str(message))
             except Exception as e2:
-                logger.error(
-                    "Fallback publish also failed: %s", e2, exc_info=True
-                )
+                logger.error("Fallback publish also failed: %s", e2, exc_info=True)
 
     def subscribe(self, channel: str):
         """Subscribes to a Redis channel and yields messages as they arrive."""

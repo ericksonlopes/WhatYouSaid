@@ -1,7 +1,6 @@
 import os
 import shutil
 import sys
-from typing import Any
 
 # Add project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -15,6 +14,7 @@ logger = Logger()
 
 def _cleanup_chroma(settings: Settings, collection_name: str):
     import chromadb
+
     client = chromadb.HttpClient(
         host=settings.vector.chroma_host, port=settings.vector.chroma_port
     )
@@ -27,7 +27,10 @@ def _cleanup_chroma(settings: Settings, collection_name: str):
 
 
 def _cleanup_weaviate(settings: Settings, collection_name: str):
-    from src.infrastructure.repositories.vector.weaviate.weaviate_client import WeaviateClient
+    from src.infrastructure.repositories.vector.weaviate.weaviate_client import (
+        WeaviateClient,
+    )
+
     wv_client_wrapper = WeaviateClient(settings.vector)
     with wv_client_wrapper as client:
         collections = client.collections.list_all()
@@ -35,7 +38,9 @@ def _cleanup_weaviate(settings: Settings, collection_name: str):
             # Weaviate often capitalizes, but we check both base and lower/upper match
             name_cap = name.capitalize()
             col_cap = collection_name.capitalize()
-            if name_cap.startswith(col_cap) or name.lower().startswith(collection_name.lower()):
+            if name_cap.startswith(col_cap) or name.lower().startswith(
+                collection_name.lower()
+            ):
                 logger.debug(f"Deleting Weaviate collection: {name}")
                 client.collections.delete(name)
     logger.info("Weaviate cleanup completed.")
@@ -43,6 +48,7 @@ def _cleanup_weaviate(settings: Settings, collection_name: str):
 
 def _cleanup_qdrant(settings: Settings, collection_name: str):
     from qdrant_client import QdrantClient
+
     client = QdrantClient(
         host=settings.vector.qdrant_host,
         port=settings.vector.qdrant_port,
@@ -88,7 +94,9 @@ def clear_vector_db():
         elif store_type == VectorStoreType.FAISS:
             _cleanup_faiss(settings)
         else:
-            logger.warning(f"Cleanup not implemented for vector store type: {store_type}")
+            logger.warning(
+                f"Cleanup not implemented for vector store type: {store_type}"
+            )
 
     except Exception as e:
         logger.error(f"Error during Vector database cleanup: {e}")

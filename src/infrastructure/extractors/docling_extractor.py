@@ -71,7 +71,7 @@ class DoclingExtractor:
 
             # 2. Metadata & Stats
             global_metadata = self._extract_metadata(result, file_path)
-            
+
             # 3. Content
             raw_markdown = result.document.export_to_markdown()
             content = self._clean_text(raw_markdown)
@@ -98,7 +98,7 @@ class DoclingExtractor:
 
     def _extract_metadata(self, result: Any, file_path: str) -> dict:
         from docling_core.types.doc import PictureItem
-        
+
         docling_source_type = "unknown"
         if hasattr(result, "input") and hasattr(result.input, "format"):
             docling_source_type = result.input.format.value
@@ -118,12 +118,12 @@ class DoclingExtractor:
             "docling_source_type": docling_source_type,
             "image_count": image_count,
             "is_structural_chunk": False,
-            **self._get_document_stats(result.document)
+            **self._get_document_stats(result.document),
         }
 
         # Doc-level metadata (title, authors, etc.)
         self._enrich_with_doc_meta(result, metadata)
-        
+
         return metadata
 
     def _get_origin_filename(self, result: Any, file_path: str) -> str:
@@ -142,21 +142,32 @@ class DoclingExtractor:
     def _get_document_stats(self, document: Any) -> dict:
         return {
             "num_pages": len(document.pages) if hasattr(document, "pages") else 0,
-            "num_pictures": len(document.pictures) if hasattr(document, "pictures") else 0,
+            "num_pictures": len(document.pictures)
+            if hasattr(document, "pictures")
+            else 0,
             "num_tables": len(document.tables) if hasattr(document, "tables") else 0,
             "num_groups": len(document.groups) if hasattr(document, "groups") else 0,
             "texts_count": len(document.texts) if hasattr(document, "texts") else 0,
-            "key_value_items_count": len(document.key_value_items) if hasattr(document, "key_value_items") else 0,
-            "form_items_count": len(document.form_items) if hasattr(document, "form_items") else 0,
-            "field_items_count": len(document.field_items) if hasattr(document, "field_items") else 0,
+            "key_value_items_count": len(document.key_value_items)
+            if hasattr(document, "key_value_items")
+            else 0,
+            "form_items_count": len(document.form_items)
+            if hasattr(document, "form_items")
+            else 0,
+            "field_items_count": len(document.field_items)
+            if hasattr(document, "field_items")
+            else 0,
         }
 
     def _enrich_with_doc_meta(self, result: Any, metadata: dict) -> None:
         doc_meta = None
         if hasattr(result.document, "meta"):
             doc_meta = result.document.meta
-        elif (hasattr(result, "input") and hasattr(result.input, "document") and 
-              hasattr(result.input.document, "meta")):
+        elif (
+            hasattr(result, "input")
+            and hasattr(result.input, "document")
+            and hasattr(result.input.document, "meta")
+        ):
             doc_meta = result.input.document.meta
 
         if doc_meta:
@@ -176,21 +187,34 @@ class DoclingExtractor:
 
         # 2. Regex for common decomposed patterns
         replacements = [
-            (r"c\s*¸", "ç"), (r"¸\s*c", "ç"),
-            (r"a\s*˜", "ã"), (r"˜\s*a", "ã"),
-            (r"o\s*˜", "õ"), (r"˜\s*o", "õ"),
-            (r"´\s*a", "á"), (r"a\s*´", "á"),
-            (r"´\s*e", "é"), (r"e\s*´", "é"),
-            (r"´\s*i", "í"), (r"i\s*´", "í"),
-            (r"´\s*o", "ó"), (r"o\s*´", "ó"),
-            (r"´\s*u", "ú"), (r"u\s*´", "ú"),
-            (r"ˆ\s*a", "â"), (r"a\s*ˆ", "â"),
-            (r"ˆ\s*e", "ê"), (r"e\s*ˆ", "ê"),
-            (r"ˆ\s*o", "ô"), (r"o\s*ˆ", "ô"),
-            (r"`\s*a", "à"), (r"a\s*`", "à"),
+            (r"c\s*¸", "ç"),
+            (r"¸\s*c", "ç"),
+            (r"a\s*˜", "ã"),
+            (r"˜\s*a", "ã"),
+            (r"o\s*˜", "õ"),
+            (r"˜\s*o", "õ"),
+            (r"´\s*a", "á"),
+            (r"a\s*´", "á"),
+            (r"´\s*e", "é"),
+            (r"e\s*´", "é"),
+            (r"´\s*i", "í"),
+            (r"i\s*´", "í"),
+            (r"´\s*o", "ó"),
+            (r"o\s*´", "ó"),
+            (r"´\s*u", "ú"),
+            (r"u\s*´", "ú"),
+            (r"ˆ\s*a", "â"),
+            (r"a\s*ˆ", "â"),
+            (r"ˆ\s*e", "ê"),
+            (r"e\s*ˆ", "ê"),
+            (r"ˆ\s*o", "ô"),
+            (r"o\s*ˆ", "ô"),
+            (r"`\s*a", "à"),
+            (r"a\s*`", "à"),
         ]
 
         for pattern, replacement in replacements:
+
             def fix_case(match, r=replacement):
                 return r.upper() if match.group(0).isupper() else r.lower()
 
@@ -207,6 +231,7 @@ class DoclingExtractor:
             return True
 
         import re
+
         toc_pattern = re.findall(r"\.\s*\.\s*\.\s*\d+\s*$", content, re.MULTILINE)
         return len(toc_pattern) > 3
 

@@ -486,7 +486,9 @@ class YoutubeIngestionUseCase:
             context={"source_id": str(source.id), "video_id": video_id},
         )
         try:
-            sql_del = self.chunk_service.delete_by_content_source(content_source_id=source.id)
+            sql_del = self.chunk_service.delete_by_content_source(
+                content_source_id=source.id
+            )
             vec_del = self.vector_service.delete_by_video_id(video_id=video_id)
 
             # Mark previous jobs as REPROCESSED

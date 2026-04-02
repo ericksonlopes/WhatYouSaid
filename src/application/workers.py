@@ -28,9 +28,7 @@ def _get_correlation_id(cmd: Any, fallback: str) -> str:
 
 def run_file_ingestion_worker(cmd: IngestFileCommand):
     """Background worker function for file ingestion."""
-    set_global_context(
-        {"correlation_id": _get_correlation_id(cmd, "worker-file")}
-    )
+    set_global_context({"correlation_id": _get_correlation_id(cmd, "worker-file")})
 
     app = _get_app()
     if not app:
@@ -76,9 +74,7 @@ def run_file_ingestion_worker(cmd: IngestFileCommand):
 
 def run_youtube_ingestion_worker(cmd: IngestYoutubeCommand):
     """Background worker function for YouTube ingestion."""
-    set_global_context(
-        {"correlation_id": _get_correlation_id(cmd, "worker-youtube")}
-    )
+    set_global_context({"correlation_id": _get_correlation_id(cmd, "worker-youtube")})
 
     app = _get_app()
     if not app:
@@ -124,9 +120,7 @@ def run_youtube_ingestion_worker(cmd: IngestYoutubeCommand):
 
 def run_web_ingestion_worker(cmd: Any):
     """Background worker function for Web Scraping ingestion."""
-    set_global_context(
-        {"correlation_id": _get_correlation_id(cmd, "worker-web")}
-    )
+    set_global_context({"correlation_id": _get_correlation_id(cmd, "worker-web")})
 
     import asyncio
 

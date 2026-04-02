@@ -6,7 +6,6 @@ from typing import Callable, Dict, Optional
 from uuid import UUID
 
 from src.config.logger import Logger
-from src.config.settings import settings
 from src.domain.interfaces.services.i_task_queue import ITaskQueue
 from src.infrastructure.redis_connector import RedisConnector
 

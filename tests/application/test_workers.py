@@ -28,12 +28,8 @@ class TestWorkers:
             patch(
                 "src.presentation.api.dependencies.resolve_ingestion_context"
             ) as mock_ctx,
-            patch(
-                "src.presentation.api.dependencies.resolve_vector_repository"
-            ),
-            patch(
-                "src.presentation.api.dependencies.resolve_rerank_service"
-            ),
+            patch("src.presentation.api.dependencies.resolve_vector_repository"),
+            patch("src.presentation.api.dependencies.resolve_rerank_service"),
             patch(
                 "src.infrastructure.services.chunk_vector_service.ChunkVectorService"
             ),
@@ -77,9 +73,7 @@ class TestWorkers:
             patch(
                 "src.presentation.api.dependencies.resolve_ingestion_context"
             ) as mock_ctx,
-            patch(
-                "src.presentation.api.dependencies.resolve_vector_repository"
-            ),
+            patch("src.presentation.api.dependencies.resolve_vector_repository"),
             patch(
                 "src.infrastructure.services.youtube_vector_service.YouTubeVectorService"
             ),
@@ -128,18 +122,12 @@ class TestWorkers:
             patch(
                 "src.presentation.api.dependencies.resolve_ingestion_context"
             ) as mock_ctx,
-            patch(
-                "src.presentation.api.dependencies.resolve_vector_repository"
-            ),
-            patch(
-                "src.presentation.api.dependencies.resolve_rerank_service"
-            ),
+            patch("src.presentation.api.dependencies.resolve_vector_repository"),
+            patch("src.presentation.api.dependencies.resolve_rerank_service"),
             patch(
                 "src.infrastructure.services.chunk_vector_service.ChunkVectorService"
             ),
-            patch(
-                "src.presentation.api.dependencies.get_web_extractor"
-            ),
+            patch("src.presentation.api.dependencies.get_web_extractor"),
             patch(
                 "src.application.use_cases.web_scraping_use_case.WebScrapingUseCase"
             ) as mock_use_case_cls,

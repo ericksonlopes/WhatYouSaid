@@ -3,9 +3,7 @@ import sys
 from typing import Optional
 
 
-def docker_host_fallback(
-    host: str, docker_names: set[str]
-) -> str:
+def docker_host_fallback(host: str, docker_names: set[str]) -> str:
     """Fallback to localhost if docker service names are used on Windows/non-docker."""
     if (
         host in docker_names

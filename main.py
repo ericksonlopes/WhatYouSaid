@@ -183,5 +183,9 @@ if __name__ == "__main__":
     from src.config.settings import settings
 
     uvicorn.run(
-        "main:app", host="127.0.0.1", port=settings.app.port, reload=True, log_config=None
+        "main:app",
+        host="127.0.0.1",
+        port=settings.app.port,
+        reload=True,
+        log_config=None,
     )

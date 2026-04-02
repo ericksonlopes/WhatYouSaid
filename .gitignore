@@ -3,7 +3,7 @@ __pycache__/
 *.py[codz]
 *$py.class
 *.sqlite
-
+.claude
 # C extensions
 *.so
 data/*

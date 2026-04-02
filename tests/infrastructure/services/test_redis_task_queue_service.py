@@ -6,8 +6,6 @@ import pytest
 from src.infrastructure.services.redis_task_queue_service import (
     RedisTaskQueueService,
     register_task,
-    get_task_registry,
-    _json_serial,
 )
 
 
