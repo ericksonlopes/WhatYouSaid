@@ -31,7 +31,7 @@ async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
 async def google_login(
     auth_use_case: Annotated[AuthUseCase, Depends(get_auth_use_case)],
 ):
-    url, state = await auth_use_case.get_login_url()
+    url, state = auth_use_case.get_login_url()
     return {"url": url, "state": state}
 
 

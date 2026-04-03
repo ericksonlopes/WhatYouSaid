@@ -21,7 +21,7 @@ class AuthUseCase:
         self._user_repo = user_repo
         self._auth_service = auth_service
 
-    async def get_login_url(self) -> Tuple[str, str]:
+    def get_login_url(self) -> Tuple[str, str]:
         state = secrets.token_urlsafe(32)
         url = self._auth_service.get_google_auth_url(state=state)
         return url, state

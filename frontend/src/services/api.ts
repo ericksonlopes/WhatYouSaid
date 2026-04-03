@@ -48,7 +48,7 @@ export const api = {
   }): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/ingest/file-url`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify(data)
     });
     await handleResponseError(response, 'File URL ingestion failed');
