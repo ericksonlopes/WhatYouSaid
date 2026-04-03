@@ -493,10 +493,11 @@ function MainContent() {
   useEffect(() => {
     const urlParams = new URLSearchParams(globalThis.location.search);
     const code = urlParams.get('code');
-    
+    const state = urlParams.get('state');
+
     if (code && !isAuthenticated && !loginAttempted.current) {
       loginAttempted.current = true;
-      login(code).then(() => {
+      login(code, state || undefined).then(() => {
         // Clean up URL
         globalThis.history.replaceState({}, document.title, globalThis.location.pathname);
         addToast(t('auth.login_success', 'Login successful!'), 'success');

@@ -43,6 +43,7 @@ async def google_login(
         max_age=600,  # 10 minutes
         samesite="lax",
         secure=settings.app.env == "production",
+        path="/",
     )
 
     return {"url": url}

@@ -13,7 +13,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isAuthEnabled: boolean;
   isLoading: boolean;
-  login: (code: string) => Promise<void>;
+  login: (code: string, state?: string) => Promise<void>;
   logout: () => void;
   getLoginUrl: () => Promise<string>;
 }
@@ -59,10 +59,10 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     checkAuthStatus();
   }, [checkAuthStatus]);
 
-  const login = useCallback(async (code: string) => {
+  const login = useCallback(async (code: string, state?: string) => {
     setIsLoading(true);
     try {
-      const result = await api.googleCallback(code);
+      const result = await api.googleCallback(code, state);
       localStorage.setItem('auth_token', result.access_token);
       setUser(result.user);
     } catch (err) {
