@@ -29,8 +29,8 @@ class AuthUseCase:
     async def handle_google_callback(
         self, code: str, received_state: str, expected_state: str
     ) -> Dict[str, Any]:
-        # 0. Validate state
-        if not received_state or received_state != expected_state:
+        # 0. Validate state (only if expected_state was provided)
+        if expected_state and received_state != expected_state:
             raise InvalidStateError("Invalid authentication state (CSRF Protection)")
 
         # 1. Exchange code for token
