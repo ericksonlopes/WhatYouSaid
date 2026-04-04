@@ -27,7 +27,7 @@ async def events(
         }
 
         loop = asyncio.get_event_loop()
-        pubsub = event_bus._redis.pubsub()
+        pubsub = event_bus.get_pubsub()
         pubsub.subscribe("ingestion_status")
 
         try:
