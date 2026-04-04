@@ -75,6 +75,8 @@ services:
   minio:
     image: minio/minio:latest
     container_name: minio_server
+    profiles:
+      - minio
     ports:
       - "9000:9000"
       - "9001:9001"
