@@ -10,6 +10,18 @@ from src.infrastructure.utils.audio_utils import load_whisperx_audio, get_best_d
 
 logger = logging.getLogger(__name__)
 
+# Global torch configuration to avoid RuntimeError: "set_num_threads is not allowed after parallel work has started"
+_device_type = get_best_device()
+if _device_type == "cpu":
+    _cpu_count = os.cpu_count() or 4
+    try:
+        torch.set_num_threads(_cpu_count)
+        torch.set_num_interop_threads(max(1, _cpu_count // 2))
+        logger.info("Global torch CPU config: threads=%d", _cpu_count)
+    except RuntimeError:
+        # Already set or parallel work started
+        pass
+
 
 class AudioDiarizer:
     def __init__(
@@ -20,17 +32,13 @@ class AudioDiarizer:
     ):
         self.hf_token = hf_token
         self.model_size = model_size
-        self._device = get_best_device()
+        self._device = _device_type
         self._compute_type = "float16" if self._device == "cuda" else "int8"
 
         if self._device == "cpu":
-            # Use all CPU cores for torch operations
-            cpu_count = os.cpu_count() or 4
-            torch.set_num_threads(cpu_count)
-            torch.set_num_interop_threads(max(1, cpu_count // 2))
             # batch_size=1 is more efficient on CPU (avoids memory thrashing)
             self.batch_size = 1
-            logger.info("CPU mode: threads=%d, batch_size=1", cpu_count)
+            logger.info("CPU mode enabled: batch_size=1")
         else:
             self.batch_size = batch_size
 
