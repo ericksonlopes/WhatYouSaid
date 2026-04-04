@@ -33,4 +33,4 @@ class DiarizationRecord(Base):
     error_message = Column(String, nullable=True)
     status_message = Column(String, nullable=True)
     source_metadata = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.UTC))

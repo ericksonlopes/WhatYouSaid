@@ -115,7 +115,7 @@ class VoiceDB:
                 name=name,
                 embedding=new_embedding.tolist(),
                 audios_path=audios_path,
-                created_at=datetime.datetime.utcnow(),
+                created_at=datetime.datetime.now(datetime.UTC),
             )
             self.db.add(new_voice)
             self.db.commit()

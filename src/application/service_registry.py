@@ -10,13 +10,11 @@ class ServiceRegistry:
             cls._instance = super(ServiceRegistry, cls).__new__(cls)
         return cls._instance
 
-    @classmethod
-    def register(cls, name: str, service: Any):
-        cls._services[name] = service
+    def register(self, name: str, service: Any):
+        self._services[name] = service
 
-    @classmethod
-    def get(cls, name: str) -> Optional[Any]:
-        return cls._services.get(name)
+    def get(self, name: str) -> Optional[Any]:
+        return self._services.get(name)
 
 
 registry = ServiceRegistry()

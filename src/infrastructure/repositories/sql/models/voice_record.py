@@ -23,4 +23,4 @@ class VoiceRecord(Base):
     audios_path = Column(
         String
     )  # S3 directory prefix where audio samples are stored (e.g. "voices/{id}/")
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.datetime.now(datetime.UTC))

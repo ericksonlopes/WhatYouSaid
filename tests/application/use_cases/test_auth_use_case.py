@@ -2,7 +2,11 @@ import pytest
 from unittest.mock import MagicMock, AsyncMock
 from src.application.use_cases.auth_use_case import AuthUseCase
 from src.domain.entities.user import User
-from src.domain.exception.auth_exceptions import InvalidStateError
+from src.domain.exception.auth_exceptions import (
+    InvalidStateError,
+    GoogleAuthError,
+    UserNotCreatedError,
+)
 
 
 @pytest.fixture
@@ -106,3 +110,41 @@ class TestAuthUseCase:
         assert user is not None
         assert user.id == "u123"
         mock_repo.get_by_id.assert_called_with("u123")
+
+    @pytest.mark.asyncio
+    async def test_handle_google_callback_no_access_token(self, use_case, mock_service):
+        mock_service.exchange_code_for_token = AsyncMock(return_value={})
+        with pytest.raises(GoogleAuthError, match="Failed to obtain access token"):
+            await use_case.handle_google_callback("code", "s", "s")
+
+    @pytest.mark.asyncio
+    async def test_handle_google_callback_missing_info(self, use_case, mock_service):
+        mock_service.exchange_code_for_token = AsyncMock(
+            return_value={"access_token": "abc"}
+        )
+        mock_service.get_google_user_info = AsyncMock(return_value={"email": "e@e.c"})
+        with pytest.raises(GoogleAuthError, match="Google user info missing"):
+            await use_case.handle_google_callback("code", "s", "s")
+
+    @pytest.mark.asyncio
+    async def test_handle_google_callback_user_not_created(
+        self, use_case, mock_repo, mock_service
+    ):
+        mock_service.exchange_code_for_token = AsyncMock(
+            return_value={"access_token": "abc"}
+        )
+        mock_service.get_google_user_info = AsyncMock(
+            return_value={"email": "e@e.c", "name": "N"}
+        )
+        mock_repo.get_by_email.return_value = None
+        mock_repo.create.return_value = None
+        with pytest.raises(UserNotCreatedError, match="Failed to create or retrieve"):
+            await use_case.handle_google_callback("code", "s", "s")
+
+    def test_verify_session_invalid_token(self, use_case, mock_service):
+        mock_service.verify_token.return_value = None
+        assert use_case.verify_session("invalid") is None
+
+    def test_verify_session_no_sub(self, use_case, mock_service):
+        mock_service.verify_token.return_value = {"other": "data"}
+        assert use_case.verify_session("token") is None

@@ -1,3 +1,5 @@
+import os
+import tempfile
 from typing import List
 from flashrank import Ranker, RerankRequest
 from src.config.logger import Logger
@@ -12,9 +14,8 @@ class ReRankService:
     def __init__(self, model_name: str = "ms-marco-MiniLM-L-12-v2"):
         try:
             logger.info("Initializing FlashRank", context={"model_name": model_name})
-            self._ranker = Ranker(
-                model_name=model_name, cache_dir="/tmp/flashrank_cache"
-            )
+            cache_dir = os.path.join(tempfile.gettempdir(), "flashrank_cache")
+            self._ranker = Ranker(model_name=model_name, cache_dir=cache_dir)
         except Exception as e:
             logger.error(e, context={"action": "initialize_flashrank"})
             self._ranker = None

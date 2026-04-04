@@ -72,6 +72,20 @@ class TestAudioRecognitionUseCases:
             result = use_case.execute("1", "S0")
             assert result["url"] == "http://p"
 
+    def test_generate_speaker_url_not_found(self, sqlite_memory):
+        use_case = GenerateSpeakerAudioAccessUrlUseCase(sqlite_memory)
+        with pytest.raises(ValueError, match="Diarization not found"):
+            use_case.execute("non-existent", "S0")
+
+    def test_generate_speaker_url_no_storage_path(self, sqlite_memory):
+        record = DiarizationRecord(id="2", title="T", storage_path=None, segments=[])
+        sqlite_memory.add(record)
+        sqlite_memory.commit()
+
+        use_case = GenerateSpeakerAudioAccessUrlUseCase(sqlite_memory)
+        with pytest.raises(ValueError, match="No storage path found"):
+            use_case.execute("2", "S0")
+
     def test_list_s3_files(self, sqlite_memory):
         record = DiarizationRecord(id="1", title="T", storage_path="p", segments=[])
         sqlite_memory.add(record)
@@ -119,6 +133,68 @@ class TestAudioRecognitionUseCases:
             use_case = IdentifySpeakersInProcessedAudioUseCase(sqlite_memory)
             res = use_case.execute("1")
             assert res["mapping"]["S0"] == "N"
+
+    def test_identify_speakers_not_found(self, sqlite_memory):
+        use_case = IdentifySpeakersInProcessedAudioUseCase(sqlite_memory)
+        with pytest.raises(ValueError, match="Diarization not found"):
+            use_case.execute("non-existent")
+
+    def test_identify_speakers_empty_db(self, sqlite_memory):
+        record = DiarizationRecord(id="3", title="T", storage_path="p", segments=[])
+        sqlite_memory.add(record)
+        sqlite_memory.commit()
+
+        with patch(
+            "src.application.use_cases.identify_speakers_in_processed_audio.VoiceDB"
+        ) as mock_db_cls:
+            mock_db = mock_db_cls.return_value
+            mock_db.__len__.return_value = 0
+            use_case = IdentifySpeakersInProcessedAudioUseCase(sqlite_memory)
+            with pytest.raises(ValueError, match="Voice database is empty"):
+                use_case.execute("3")
+
+    def test_identify_speakers_no_storage_path(self, sqlite_memory):
+        record = DiarizationRecord(id="4", title="T", storage_path=None, segments=[])
+        sqlite_memory.add(record)
+        sqlite_memory.commit()
+
+        with patch(
+            "src.application.use_cases.identify_speakers_in_processed_audio.VoiceDB"
+        ) as mock_db_cls:
+            mock_db = mock_db_cls.return_value
+            mock_db.__len__.return_value = 1
+            use_case = IdentifySpeakersInProcessedAudioUseCase(sqlite_memory)
+            with pytest.raises(ValueError, match="No storage path found"):
+                use_case.execute("4")
+
+    @patch("shutil.rmtree")
+    def test_identify_speakers_cleanup_error(self, mock_rm, sqlite_memory):
+        record = DiarizationRecord(id="5", title="T", storage_path="p", segments=[])
+        sqlite_memory.add(record)
+        sqlite_memory.commit()
+        mock_rm.side_effect = Exception("Cleanup failed")
+
+        with (
+            patch(
+                "src.application.use_cases.identify_speakers_in_processed_audio.VoiceDB"
+            ) as mock_db_cls,
+            patch(
+                "src.application.use_cases.identify_speakers_in_processed_audio.VoiceRecognizer"
+            ) as mock_rec_cls,
+            patch(
+                "src.application.use_cases.identify_speakers_in_processed_audio.logger"
+            ) as mock_logger,
+        ):
+            mock_db = mock_db_cls.return_value
+            mock_db.__len__.return_value = 1
+            mock_rec = mock_rec_cls.return_value
+            mock_rec.identify_dir.return_value = MagicMock(
+                mapping={"S0": "N"}, id_mapping={"S0": "id"}, results={}
+            )
+
+            use_case = IdentifySpeakersInProcessedAudioUseCase(sqlite_memory)
+            use_case.execute("5")
+            mock_logger.warning.assert_called()
 
     def test_delete_voice_profile(self, sqlite_memory):
         with patch(
