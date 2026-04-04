@@ -55,10 +55,14 @@ class TestVoiceDB:
             id="1",
             name="Test",
             embedding=[0.1],
-            audio_source="s3://bucket/voices/test.wav",
+            audios_path="voices/1/",
         )
         sqlite_memory.add(v)
         sqlite_memory.commit()
+
+        self.mock_storage.list_files.return_value = [
+            {"key": "voices/1/reference_1.wav"}
+        ]
 
         db_service = VoiceDB(sqlite_memory, hf_token="fake")
         db_service.remove("Test")
@@ -81,7 +85,6 @@ class TestVoiceDB:
                     "src.infrastructure.utils.audio_utils.load_audio_tensor",
                     return_value={},
                 ):
-                    # For recursive call, we need to ensure local file path works
                     self.mock_storage.download_file.return_value = "local_tmp.wav"
                     self.mock_storage.upload_file.return_value = "voices/test.wav"
 
@@ -95,7 +98,10 @@ class TestVoiceDB:
         from src.infrastructure.repositories.sql.models.voice_record import VoiceRecord
 
         v = VoiceRecord(
-            id="exists-123", name="Exists", embedding=[0.1, 0.1], audio_source="s3"
+            id="exists-123",
+            name="Exists",
+            embedding=[0.1, 0.1],
+            audios_path="voices/exists-123/",
         )
         sqlite_memory.add(v)
         sqlite_memory.commit()

@@ -1,4 +1,5 @@
 import os
+from typing import cast
 
 from sqlalchemy.orm import Session
 
@@ -30,16 +31,51 @@ class ListRegisteredVoiceProfilesUseCase:
     def execute(self) -> list[dict]:
         from src.infrastructure.repositories.sql.models.voice_record import VoiceRecord
 
+        storage = StorageService()
         records = self.db.query(VoiceRecord).all()
-        return [
-            {
-                "id": r.id,
-                "name": r.name,
-                "audio_source": r.audio_source,
-                "created_at": r.created_at.isoformat() if r.created_at else None,
-            }
-            for r in records
-        ]
+
+        result = []
+        for r in records:
+            samples_count = 0
+            if r.audios_path:
+                try:
+                    files = storage.list_files(
+                        prefix=cast(str, r.audios_path), extension=".wav"
+                    )
+                    samples_count = len(files)
+                except Exception:
+                    pass
+
+            result.append(
+                {
+                    "id": r.id,
+                    "name": r.name,
+                    "audios_path": r.audios_path,
+                    "created_at": r.created_at.isoformat() if r.created_at else None,
+                    "samples_count": samples_count,
+                }
+            )
+        return result
+
+
+class ListVoiceAudioFilesUseCase:
+    def __init__(self, db: Session):
+        self.db = db
+
+    def execute(self, voice_id: str) -> list[dict]:
+        hf_token = settings.auth.hf_token or ""
+        voice_db = VoiceDB(db=self.db, hf_token=hf_token)
+        return voice_db.list_audio_files(voice_id)
+
+
+class DeleteVoiceAudioFileUseCase:
+    def __init__(self, db: Session):
+        self.db = db
+
+    def execute(self, s3_key: str) -> None:
+        hf_token = settings.auth.hf_token or ""
+        voice_db = VoiceDB(db=self.db, hf_token=hf_token)
+        voice_db.delete_audio_file(s3_key)
 
 
 class DeleteVoiceProfileUseCase:
@@ -74,7 +110,6 @@ class TrainVoiceProfileFromSpeakerSegmentUseCase:
 
         s3_key = f"{record.storage_path}/{speaker_label}.wav"
 
-        # Download speaker audio to temp
         audio_cfg = settings.audio
         local_path = os.path.join(
             audio_cfg.temp_download_dir, f"train_{diarization_id}_{speaker_label}.wav"

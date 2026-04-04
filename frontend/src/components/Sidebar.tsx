@@ -48,6 +48,7 @@ export function Sidebar() {
       label: t('sidebar.groups.tools', 'Tools'),
       items: [
         {id: 'diarization', label: t('sidebar.operations.diarization', 'Reconhecimento de Fala'), icon: Mic},
+        {id: 'voice_profiles', label: t('voices.title', 'Vozes Reconhecidas'), icon: User},
       ]
     },
     {

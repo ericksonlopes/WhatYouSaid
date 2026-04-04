@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy import create_engine
@@ -16,7 +16,20 @@ def setup_app_state():
         app.state.model_loader = MagicMock()
     if not hasattr(app.state, "rerank_service"):
         app.state.rerank_service = MagicMock()
+    if not hasattr(app.state, "task_queue"):
+        app.state.task_queue = MagicMock()
+    if not hasattr(app.state, "event_bus"):
+        app.state.event_bus = MagicMock()
     yield
+
+
+@pytest.fixture(autouse=True)
+def mock_infrastructure():
+    """Mock heavy infrastructure components globally."""
+    with (
+        patch("src.infrastructure.repositories.storage.storage.StorageService"),
+    ):
+        yield
 
 
 @pytest.fixture(autouse=True)

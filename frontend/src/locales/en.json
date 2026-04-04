@@ -16,7 +16,9 @@
       "delete": "Delete",
       "view_details": "View Details",
       "go_to_source": "Go to Source",
-      "upload": "Upload"
+      "upload": "Upload",
+      "none_found": "No results found",
+      "clear_filters": "Try adjusting your search or clear filters"
     },
     "status": {
       "pending": "PENDING",
@@ -35,9 +37,8 @@
       "reprocessed": "REPROCESSED",
       "na": "n/a"
     },
-    "time": {
-      "now": "just now",
-      "ago": "ago"
+    "labels": {
+      "preview": "Preview"
     }
   },
   "sidebar": {
@@ -59,6 +60,7 @@
       "chat": "RAG Chat (Locked)",
       "search": "Semantic Search",
       "diarization": "Diarization",
+      "voices": "Voice Profiles",
       "sources": "Content Sources",
       "chunks": "Sources > Chunks",
       "activity": "Activity Monitor",
@@ -480,8 +482,8 @@
     "login_success": "Welcome back! Login successful.",
     "login_error": "Authentication failed. Please check your credentials and try again.",
     "login_description_short": "Please sign in to access your vectorized knowledge hub."
-    },
-    "diarization": {
+  },
+  "diarization": {
     "title": "Diarization",
     "subtitle": "Manage your transcriptions and voice identifications.",
     "new_btn": "New Diarization",
@@ -529,6 +531,7 @@
       "auto_identify": "Auto-Identify",
       "voice_label": "Voice {{index}}",
       "confidence": "Confidence",
+      "unknown_speaker": "Unknown",
       "speaker_placeholder": "Speaker name",
       "train_voice": "Train this voice",
       "reinforce_voice": "Reinforce this voice",
@@ -589,5 +592,34 @@
       "audio_fetch_error": "Failed to fetch speaker audio",
       "load_error": "Failed to load diarizations"
     }
+  },
+  "voices": {
+    "title": "Recognized Voices",
+    "subtitle": "Manage vocal identities trained by the system.",
+    "new_btn": "New Identity",
+    "loading": "Loading voices...",
+    "error_title": "Failed to load",
+    "retry": "Try Again",
+    "empty_title": "No voice profiles",
+    "empty_subtitle": "Train voice profiles from the diarization view to recognize speakers automatically.",
+    "modal": {
+      "title": "Voice Profile",
+      "audio_files_title": "Audio Samples",
+      "loading": "Loading samples...",
+      "delete_file": "Delete sample",
+      "no_files": "No samples found"
+    },
+    "notifications": {
+      "delete_success": "Voice profile deleted successfully",
+      "delete_error": "Failed to delete voice profile",
+      "delete_file_success": "Audio sample deleted",
+      "delete_file_error": "Failed to delete audio sample"
+    },
+    "status": {
+      "samples": "{{count}} audio files"
+    },
+    "card": {
+      "created_at": "Created"
     }
-    }
+  }
+}
