@@ -61,9 +61,16 @@ class YoutubeExtractor(IYoutubeExtractor):
             "retries": 10,
             "fragment_retries": 10,
             "retry_sleep_functions": {"http": lambda n: 5 * 2**n},
-            # Mimic web-based player
-            "extractor_args": {"youtube": {"player_client": ["web"]}},
+            # Use multiple clients to avoid "Sign in to confirm you're not a bot"
+            # mediaconnect is often more resilient for servers
+            "extractor_args": {"youtube": {"player_client": ["mediaconnect", "web", "mweb", "android"]}},
         }
+
+        # Use cookies if provided by user in data/cookies.txt
+        cookie_path = Path("data/cookies.txt")
+        if cookie_path.exists():
+            opts["cookiefile"] = str(cookie_path)
+            logger.info(f"Using YouTube cookies from {cookie_path}")
 
         if settings.youtube.proxy_enabled:
             proxy = settings.youtube.proxy_url
