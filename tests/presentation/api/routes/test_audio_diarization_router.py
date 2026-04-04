@@ -2,7 +2,12 @@ import pytest
 from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 from main import app
-from src.presentation.api.dependencies import get_db, get_task_queue_service
+from src.presentation.api.dependencies import (
+    get_db, 
+    get_task_queue_service,
+    get_identify_speakers_use_case,
+    get_retrieve_history_use_case
+)
 from src.infrastructure.repositories.sql.models.diarization_record import (
     DiarizationRecord,
 )
@@ -77,29 +82,27 @@ class TestAudioDiarizationRouter:
 
     def test_identify_speakers_existing(self, mock_db):
         app.dependency_overrides[get_db] = lambda: mock_db
+        mock_use_case = MagicMock()
+        app.dependency_overrides[get_identify_speakers_use_case] = lambda: mock_use_case
 
-        with patch(
-            "src.application.use_cases.identify_speakers_in_processed_audio.IdentifySpeakersInProcessedAudioUseCase.execute"
-        ) as mock_exec:
-            mock_exec.return_value = {"mapping": {"S1": "User"}}
-            response = client.post("/rest/audio/123/recognize")
+        mock_use_case.execute.return_value = {"mapping": {"S1": "User"}}
+        response = client.post("/rest/audio/123/recognize")
 
-            assert response.status_code == 200
-            assert response.json()["mapping"]["S1"] == "User"
+        assert response.status_code == 200
+        assert response.json()["mapping"]["S1"] == "User"
 
         app.dependency_overrides.clear()
 
     def test_retrieve_history(self, mock_db):
         app.dependency_overrides[get_db] = lambda: mock_db
+        mock_use_case = MagicMock()
+        app.dependency_overrides[get_retrieve_history_use_case] = lambda: mock_use_case
 
-        with patch(
-            "src.application.use_cases.retrieve_processed_audio_history.RetrieveProcessedAudioHistoryUseCase.execute"
-        ) as mock_exec:
-            mock_exec.return_value = [{"id": "1", "title": "Test"}]
-            response = client.get("/rest/audio?limit=5")
+        mock_use_case.execute.return_value = [{"id": "1", "title": "Test"}]
+        response = client.get("/rest/audio?limit=5")
 
-            assert response.status_code == 200
-            assert len(response.json()) == 1
+        assert response.status_code == 200
+        assert len(response.json()) == 1
 
         app.dependency_overrides.clear()
 

@@ -33,9 +33,9 @@ class TestAudioRecognitionUseCases:
         assert history[0]["title"] == "Test"
 
     @patch(
-        "src.infrastructure.repositories.storage.storage.StorageService.get_presigned_url"
+        "src.application.use_cases.generate_speaker_audio_access_url.StorageService"
     )
-    def test_generate_speaker_url(self, mock_url, sqlite_memory):
+    def test_generate_speaker_url(self, mock_storage_cls, sqlite_memory):
         # Setup: add a record with storage path
         record = DiarizationRecord(
             id="1", title="Test", storage_path="path/to/dir", segments=[]
@@ -43,7 +43,8 @@ class TestAudioRecognitionUseCases:
         sqlite_memory.add(record)
         sqlite_memory.commit()
 
-        mock_url.return_value = "http://presigned"
+        mock_storage = mock_storage_cls.return_value
+        mock_storage.get_presigned_url.return_value = "http://presigned"
 
         use_case = GenerateSpeakerAudioAccessUrlUseCase(sqlite_memory)
         result = use_case.execute("1", "SPEAKER_00")
@@ -51,8 +52,8 @@ class TestAudioRecognitionUseCases:
         assert result["url"] == "http://presigned"
         assert result["speaker"] == "SPEAKER_00"
 
-    @patch("src.infrastructure.repositories.storage.storage.StorageService.list_files")
-    def test_list_s3_files(self, mock_list, sqlite_memory):
+    @patch("src.application.use_cases.list_s3_audio_files.StorageService")
+    def test_list_s3_files(self, mock_storage_cls, sqlite_memory):
         # Setup: add a record
         record = DiarizationRecord(
             id="1", title="Test", storage_path="path/to/dir", segments=[]
@@ -60,7 +61,8 @@ class TestAudioRecognitionUseCases:
         sqlite_memory.add(record)
         sqlite_memory.commit()
 
-        mock_list.return_value = [{"key": "file1.wav"}]
+        mock_storage = mock_storage_cls.return_value
+        mock_storage.list_files.return_value = [{"key": "file1.wav"}]
 
         use_case = ListS3AudioFilesUseCase(sqlite_memory)
         files = use_case.execute("1")
@@ -68,8 +70,9 @@ class TestAudioRecognitionUseCases:
         assert len(files) == 1
         assert files[0]["key"] == "file1.wav"
 
+    @patch("src.infrastructure.services.voice_profile_service.StorageService")
     @patch("src.infrastructure.services.voice_profile_service.VoiceDB.add")
-    def test_register_voice_profile(self, mock_add, sqlite_memory):
+    def test_register_voice_profile(self, mock_add, mock_storage, sqlite_memory):
         mock_add.return_value = "voice-uuid"
 
         use_case = RegisterNewVoiceProfileUseCase(sqlite_memory)

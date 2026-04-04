@@ -24,17 +24,18 @@ class TestVoiceDB:
                 ):
                     with patch("os.path.exists", return_value=True):
                         with patch(
-                            "src.infrastructure.repositories.storage.storage.StorageService.upload_file",
-                            return_value="voices/test.wav",
-                        ):
+                            "src.infrastructure.services.voice_profile_service.StorageService"
+                        ) as mock_storage_cls:
+                            mock_storage = mock_storage_cls.return_value
+                            mock_storage.upload_file.return_value = "voices/test.wav"
+                            
                             db_service = VoiceDB(sqlite_memory, hf_token="fake")
                             voice_id = db_service.add("Test User", "local.wav")
 
                             assert voice_id is not None
-                            assert (
-                                db_service.list_voices()["Test User"]
-                                == "voices/test.wav"
-                            )
+                            # voices property returns {name: info_dict}
+                            voices = db_service.voices
+                            assert "Test User" in voices
 
     def test_remove_voice(self, sqlite_memory):
         # Setup: add a voice first
@@ -44,9 +45,10 @@ class TestVoiceDB:
         sqlite_memory.add(v)
         sqlite_memory.commit()
 
-        db_service = VoiceDB(sqlite_memory, hf_token="fake")
         with patch(
-            "src.infrastructure.repositories.storage.storage.StorageService.delete_file"
-        ):
+            "src.infrastructure.services.voice_profile_service.StorageService"
+        ) as mock_storage_cls:
+            db_service = VoiceDB(sqlite_memory, hf_token="fake")
             db_service.remove("Test")
             assert db_service.__len__() == 0
+            assert mock_storage_cls.return_value.delete_file.called

@@ -2,19 +2,35 @@ from typing import Any, Generator, Optional
 
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session
+
 from src.application.ingestion_context import IngestionContext
 from src.application.use_cases.auth_use_case import AuthUseCase
 from src.application.use_cases.content_source_use_case import ContentSourceUseCase
-from src.application.use_cases.file_ingestion_use_case import FileIngestionUseCase
-from src.application.use_cases.knowledge_subject_use_case import KnowledgeSubjectUseCase
-from src.application.use_cases.search_use_case import SearchUseCase
-from src.application.use_cases.web_scraping_use_case import WebScrapingUseCase
-from src.application.use_cases.youtube_ingestion_use_case import YoutubeIngestionUseCase
 from src.application.use_cases.diarization_ingestion_use_case import (
     DiarizationIngestionUseCase,
 )
+from src.application.use_cases.file_ingestion_use_case import FileIngestionUseCase
+from src.application.use_cases.generate_speaker_audio_access_url import (
+    GenerateSpeakerAudioAccessUrlUseCase,
+)
+from src.application.use_cases.identify_speakers_in_processed_audio import (
+    IdentifySpeakersInProcessedAudioUseCase,
+)
+from src.application.use_cases.knowledge_subject_use_case import KnowledgeSubjectUseCase
+from src.application.use_cases.list_s3_audio_files import ListS3AudioFilesUseCase
+from src.application.use_cases.manage_voice_profiles import (
+    RegisterNewVoiceProfileUseCase,
+    TrainVoiceProfileFromSpeakerSegmentUseCase,
+    ListRegisteredVoiceProfilesUseCase,
+    DeleteVoiceProfileUseCase,
+)
+from src.application.use_cases.retrieve_processed_audio_history import (
+    RetrieveProcessedAudioHistoryUseCase,
+)
+from src.application.use_cases.search_use_case import SearchUseCase
+from src.application.use_cases.web_scraping_use_case import WebScrapingUseCase
+from src.application.use_cases.youtube_ingestion_use_case import YoutubeIngestionUseCase
 from src.config.settings import Settings
-
 # Import services and repositories
 from src.domain.entities.enums.vector_store_type_enum import VectorStoreType
 from src.domain.interfaces.repository.retriver_repository import IVectorRepository
@@ -440,6 +456,54 @@ def get_diarization_ingestion_use_case(
         vector_store_type=settings.vector.store_type.value,
         event_bus=event_bus,
     )
+
+
+def get_identify_speakers_use_case(
+        db: Session = Depends(get_db),
+) -> IdentifySpeakersInProcessedAudioUseCase:
+    return IdentifySpeakersInProcessedAudioUseCase(db)
+
+
+def get_retrieve_history_use_case(
+        db: Session = Depends(get_db),
+) -> RetrieveProcessedAudioHistoryUseCase:
+    return RetrieveProcessedAudioHistoryUseCase(db)
+
+
+def get_list_s3_files_use_case(
+        db: Session = Depends(get_db),
+) -> ListS3AudioFilesUseCase:
+    return ListS3AudioFilesUseCase(db)
+
+
+def get_generate_speaker_url_use_case(
+        db: Session = Depends(get_db),
+) -> GenerateSpeakerAudioAccessUrlUseCase:
+    return GenerateSpeakerAudioAccessUrlUseCase(db)
+
+
+def get_register_voice_profile_use_case(
+        db: Session = Depends(get_db),
+) -> RegisterNewVoiceProfileUseCase:
+    return RegisterNewVoiceProfileUseCase(db)
+
+
+def get_train_voice_from_speaker_use_case(
+        db: Session = Depends(get_db),
+) -> TrainVoiceProfileFromSpeakerSegmentUseCase:
+    return TrainVoiceProfileFromSpeakerSegmentUseCase(db)
+
+
+def get_list_voice_profiles_use_case(
+        db: Session = Depends(get_db),
+) -> ListRegisteredVoiceProfilesUseCase:
+    return ListRegisteredVoiceProfilesUseCase(db)
+
+
+def get_delete_voice_profile_use_case(
+        db: Session = Depends(get_db),
+) -> DeleteVoiceProfileUseCase:
+    return DeleteVoiceProfileUseCase(db)
 
 
 # --- Worker context resolution (no HTTP Request required) ---

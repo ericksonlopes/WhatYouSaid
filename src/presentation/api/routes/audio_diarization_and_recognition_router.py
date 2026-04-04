@@ -18,7 +18,14 @@ from src.application.use_cases.retrieve_processed_audio_history import (
 )
 from src.application.workers import run_audio_diarization_worker
 from src.domain.interfaces.services.i_task_queue import ITaskQueue
-from src.presentation.api.dependencies import get_db, get_task_queue_service
+from src.presentation.api.dependencies import (
+    get_db,
+    get_task_queue_service,
+    get_generate_speaker_url_use_case,
+    get_identify_speakers_use_case,
+    get_list_s3_files_use_case,
+    get_retrieve_history_use_case,
+)
 from src.presentation.api.schemas.audio_processing_requests import (
     AudioProcessingRequest,
     UpdateDiarizationRequest,
@@ -132,11 +139,13 @@ async def start_audio_processing_pipeline(
     },
 )
 async def identify_speakers_in_existing_diarization(
-    diarization_id: str, db: Annotated[Session, Depends(get_db)]
+        diarization_id: str,
+        use_case: Annotated[
+            IdentifySpeakersInProcessedAudioUseCase, Depends(get_identify_speakers_use_case)
+        ],
 ):
     logger.info("Speaker recognition request for diarization_id=%s", diarization_id)
     try:
-        use_case = IdentifySpeakersInProcessedAudioUseCase(db)
         return use_case.execute(diarization_id)
     except ValueError as e:
         logger.warning("Recognition failed (ValueError): %s", str(e))
@@ -157,14 +166,13 @@ async def identify_speakers_in_existing_diarization(
 )
 async def list_available_s3_files_for_recognition(
     diarization_id: str,
-    db: Annotated[Session, Depends(get_db)],
+        use_case: Annotated[ListS3AudioFilesUseCase, Depends(get_list_s3_files_use_case)],
     extension: str | None = None,
 ):
     """
     Lista os arquivos de áudio disponíveis no S3 para um diarization_id específico.
     """
     try:
-        use_case = ListS3AudioFilesUseCase(db)
         return use_case.execute(diarization_id=diarization_id, extension=extension)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -181,10 +189,13 @@ async def list_available_s3_files_for_recognition(
     },
 )
 async def generate_signed_url_for_speaker_audio(
-    diarization_id: str, speaker_label: str, db: Annotated[Session, Depends(get_db)]
+        diarization_id: str,
+        speaker_label: str,
+        use_case: Annotated[
+            GenerateSpeakerAudioAccessUrlUseCase, Depends(get_generate_speaker_url_use_case)
+        ],
 ):
     try:
-        use_case = GenerateSpeakerAudioAccessUrlUseCase(db)
         return use_case.execute(diarization_id, speaker_label)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -197,9 +208,12 @@ async def generate_signed_url_for_speaker_audio(
 
 @router.get("")
 async def retrieve_all_processed_audio_history(
-    db: Annotated[Session, Depends(get_db)], limit: int = 10, offset: int = 0
+        use_case: Annotated[
+            RetrieveProcessedAudioHistoryUseCase, Depends(get_retrieve_history_use_case)
+        ],
+        limit: int = 10,
+        offset: int = 0,
 ):
-    use_case = RetrieveProcessedAudioHistoryUseCase(db)
     return use_case.execute(limit=limit, offset=offset)
 
 
