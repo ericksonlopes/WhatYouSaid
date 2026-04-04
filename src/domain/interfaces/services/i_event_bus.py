@@ -14,3 +14,8 @@ class IEventBus(ABC):
     def subscribe(self, channel: str):
         """Returns a generator that yields messages from a channel."""
         pass
+
+    @abstractmethod
+    def get_pubsub(self) -> Any:
+        """Returns a pubsub object for direct message polling."""
+        pass

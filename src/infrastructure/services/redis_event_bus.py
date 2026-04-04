@@ -41,3 +41,7 @@ class RedisEventBus(IEventBus):
         for message in pubsub.listen():
             if message["type"] == "message":
                 yield json.loads(message["data"])
+
+    def get_pubsub(self) -> Any:
+        """Returns a pubsub object for direct message polling."""
+        return self._redis.pubsub()
