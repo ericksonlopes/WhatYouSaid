@@ -16,7 +16,9 @@
       "delete": "Excluir",
       "view_details": "Ver detalhes",
       "go_to_source": "Ver na fonte",
-      "upload": "Fazer Upload"
+      "upload": "Fazer Upload",
+      "none_found": "Nenhum resultado encontrado",
+      "clear_filters": "Tente ajustar sua busca ou limpar os filtros"
     },
     "status": {
       "pending": "PENDENTE",
@@ -35,9 +37,8 @@
       "reprocessed": "REPROCESSADO",
       "na": "n/d"
     },
-    "time": {
-      "now": "agora mesmo",
-      "ago": "atrás"
+    "labels": {
+      "preview": "Prévia"
     }
   },
   "sidebar": {
@@ -59,6 +60,7 @@
       "chat": "Chat RAG (Bloqueado)",
       "search": "Busca Semântica",
       "diarization": "Diarização",
+      "voices": "Perfis de Voz",
       "sources": "Fontes de Conteúdo",
       "chunks": "Fontes > Chunks",
       "activity": "Monitor de Atividade",
@@ -202,7 +204,7 @@
     },
     "pipeline_optimized": "Pipeline otimizada",
     "reprocessed_message": "Substituído por uma nova versão",
-    "phase": "Fase",
+    "phase": "Phase",
     "duration": "duração"
   },
   "settings": {
@@ -447,7 +449,7 @@
   "chat": {
     "locked": {
       "title": "O Chat RAG está chegando!",
-      "description": "Enquanto preparamos a experiência de chat, que tal alimentar sua base de conhecimento? Adicione novos dados para tornar suas buscas ainda mais poderosas."
+      "description": "Enquanto preparamos a experiẽncia de chat, que tal alimentar sua base de conhecimento? Adicione novos dados para tornar suas buscas ainda mais poderosas."
     }
   },
   "knowledge_contexts": {
@@ -479,8 +481,8 @@
     "login_success": "Bem-vindo de volta! Login realizado com sucesso.",
     "login_error": "Falha na autenticação. Por favor, verifique suas credenciais e tente novamente.",
     "login_description_short": "Por favor, faça login para acessar seu hub de conhecimento vetorizado."
-    },
-    "diarization": {
+  },
+  "diarization": {
     "title": "Diarização",
     "subtitle": "Gerencie suas transcrições e identificações de voz.",
     "new_btn": "Nova Diarização",
@@ -528,6 +530,7 @@
       "auto_identify": "Auto-Identificar",
       "voice_label": "Voz {{index}}",
       "confidence": "Confiança",
+      "unknown_speaker": "Desconhecido",
       "speaker_placeholder": "Nome do locutor",
       "train_voice": "Treinar esta voz",
       "reinforce_voice": "Reforçar esta voz",
@@ -588,5 +591,34 @@
       "audio_fetch_error": "Falha ao obter áudio do locutor",
       "load_error": "Falha ao carregar diarizações"
     }
+  },
+  "voices": {
+    "title": "Vozes Reconhecidas",
+    "subtitle": "Gerencie as identidades vocais treinadas pelo sistema.",
+    "new_btn": "Nova Identidade",
+    "loading": "Carregando vozes...",
+    "error_title": "Erro ao carregar",
+    "retry": "Tentar Novamente",
+    "empty_title": "Nenhum perfil de voz",
+    "empty_subtitle": "Treine perfis de voz a partir da diarização para reconhecer falantes automaticamente.",
+    "modal": {
+      "title": "Perfil de Voz",
+      "audio_files_title": "Amostras de Áudio",
+      "loading": "Carregando amostras...",
+      "delete_file": "Excluir amostra",
+      "no_files": "Nenhuma amostra encontrada"
+    },
+    "notifications": {
+      "delete_success": "Perfil de voz excluído com sucesso",
+      "delete_error": "Falha ao excluir perfil de voz",
+      "delete_file_success": "Amostra de áudio excluída",
+      "delete_file_error": "Falha ao excluir amostra de áudio"
+    },
+    "status": {
+      "samples": "{{count}} arquivos de áudio"
+    },
+    "card": {
+      "created_at": "Criado em"
     }
-    }
+  }
+}

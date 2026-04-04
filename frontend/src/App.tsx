@@ -27,6 +27,7 @@ import {ChunksViewer} from './components/ChunksViewer';
 import {AddSubjectModal} from './components/AddSubjectModal';
 import {KnowledgeAdminView} from './components/KnowledgeAdminView';
 import {DiarizationView} from './components/DiarizationView';
+import {VoiceProfilesView} from './components/VoiceProfilesView';
 import {ErrorBoundary} from './components/ErrorBoundary';
 import {ContentSource} from './types';
 
@@ -578,6 +579,7 @@ function MainContent() {
           {currentView === 'database' && <ChunksViewer />}
           {currentView === 'knowledge_contexts' && <KnowledgeAdminView />}
           {currentView === 'diarization' && <DiarizationView/>}
+          {currentView === 'voice_profiles' && <VoiceProfilesView />}
         </ErrorBoundary>
       </main>
 

@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch, mock_open
 from fastapi.testclient import TestClient
 from main import app
 from src.presentation.api.dependencies import (
@@ -90,3 +90,37 @@ class TestVoiceProfileRouter:
         assert response.status_code == 404
 
         app.dependency_overrides.clear()
+
+    def test_upload_voice_profile_success(self):
+        app.dependency_overrides[get_db] = lambda: MagicMock()
+        mock_use_case = MagicMock()
+        app.dependency_overrides[get_register_voice_profile_use_case] = lambda: (
+            mock_use_case
+        )
+
+        mock_use_case.execute.return_value = "v-123"
+        
+        from io import BytesIO
+        file_content = b"fake audio content"
+        files = {"file": ("test.wav", BytesIO(file_content), "audio/wav")}
+        data = {"name": "Alice", "force": "false"}
+        
+        with patch("shutil.copyfileobj"), patch("tempfile.mkdtemp", return_value="/tmp/test"), patch("os.path.exists", return_value=True), patch("os.remove"), patch("os.rmdir"), patch("builtins.open", mock_open()):
+            response = client.post("/rest/voices/upload", data=data, files=files)
+            
+        assert response.status_code == 200
+        assert response.json()["voice_id"] == "v-123"
+
+        app.dependency_overrides.clear()
+
+    def test_get_voice_audio_url_success(self):
+        # Patch the StorageService class inside the router module
+        with patch("src.presentation.api.routes.voice_profile_management_router.StorageService") as mock_storage_cls:
+            mock_storage = mock_storage_cls.return_value
+            mock_storage.get_presigned_url.return_value = "http://presigned-url"
+
+            response = client.get("/rest/voices/audios/path/to/voice.wav")
+
+            assert response.status_code == 200
+            assert response.json()["url"] == "http://presigned-url"
+

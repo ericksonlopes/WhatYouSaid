@@ -20,5 +20,7 @@ class VoiceRecord(Base):
     id = Column(String, primary_key=True, default=_generate_uuid)
     name = Column(String, unique=True, index=True)
     embedding = Column(JSON)
-    audio_source = Column(String)
+    audios_path = Column(
+        String
+    )  # S3 directory prefix where audio samples are stored (e.g. "voices/{id}/")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

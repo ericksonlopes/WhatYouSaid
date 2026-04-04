@@ -17,6 +17,8 @@ from src.application.use_cases.manage_voice_profiles import (  # noqa: E402
     RegisterNewVoiceProfileUseCase,
     DeleteVoiceProfileUseCase,
     ListRegisteredVoiceProfilesUseCase,
+    ListVoiceAudioFilesUseCase,
+    DeleteVoiceAudioFileUseCase,
 )
 from src.infrastructure.repositories.sql.models.diarization_record import (  # noqa: E402
     DiarizationRecord,
@@ -139,3 +141,24 @@ class TestAudioRecognitionUseCases:
             use_case = RegisterNewVoiceProfileUseCase(sqlite_memory)
             with pytest.raises(ValueError, match="Name required"):
                 use_case.execute(name="", audio_path="a")
+
+    def test_list_voice_audio_files(self, sqlite_memory):
+        with patch(
+            "src.application.use_cases.manage_voice_profiles.VoiceDB"
+        ) as mock_vdb_cls:
+            mock_vdb = mock_vdb_cls.return_value
+            mock_vdb.list_audio_files.return_value = [{"key": "test.wav"}]
+
+            use_case = ListVoiceAudioFilesUseCase(sqlite_memory)
+            res = use_case.execute(voice_id="v-1")
+            assert len(res) == 1
+            assert res[0]["key"] == "test.wav"
+
+    def test_delete_voice_audio_file(self, sqlite_memory):
+        with patch(
+            "src.application.use_cases.manage_voice_profiles.VoiceDB"
+        ) as mock_vdb_cls:
+            mock_vdb = mock_vdb_cls.return_value
+            use_case = DeleteVoiceAudioFileUseCase(sqlite_memory)
+            use_case.execute(s3_key="path/test.wav")
+            mock_vdb.delete_audio_file.assert_called_with("path/test.wav")

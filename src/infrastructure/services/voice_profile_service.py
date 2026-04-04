@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import uuid
@@ -39,7 +40,6 @@ class VoiceDB:
         from src.infrastructure.utils.audio_utils import load_audio_tensor
 
         inference = self._get_inference()
-        # Pass loaded audio tensor instead of file path to bypass pyannote internal AudioDecoder issues
         audio_dict = load_audio_tensor(audio_path)
         embedding = inference(audio_dict)
         return embedding.tolist()
@@ -51,7 +51,6 @@ class VoiceDB:
         temp_download_dir = settings.audio.temp_download_dir
         local_temp_file = None
 
-        # Check if it's an S3-like path or if local file doesn't exist
         is_s3 = (
             audio_path.startswith("s3://")
             or audio_path.startswith("processed/")
@@ -59,7 +58,6 @@ class VoiceDB:
         )
 
         if is_s3 or not os.path.exists(audio_path):
-            # Clean possible prefix and unquote
             s3_key = unquote(audio_path.replace(f"s3://{self.storage.bucket}/", ""))
             local_temp_file = os.path.join(
                 temp_download_dir, f"tmp_voice_{uuid.uuid4()}.wav"
@@ -90,33 +88,34 @@ class VoiceDB:
 
             logger.info("Extracting embedding for voice: %s", name)
             new_embedding = np.array(self._extract_embedding(audio_path))
-            voice_id = str(uuid.uuid4())
 
             if existing:
                 logger.info("Reinforcing existing voice profile: %s", name)
-                # Combine embeddings (simple average)
                 old_emb = np.array(existing.embedding)
                 combined_emb = (old_emb + new_embedding) / 2.0
                 existing.embedding = combined_emb.tolist()
 
-                # Store additional audio sample in the voice's UUID folder
-                target_s3_key = f"voices/{existing.id}/sample_{voice_id}.wav"
+                sample_id = str(uuid.uuid4())
+                target_s3_key = f"{existing.audios_path}sample_{sample_id}.wav"
                 self.storage.upload_file(audio_path, target_s3_key)
 
                 self.db.commit()
                 return str(existing.id)
 
-            # Create new voice if doesn't exist
-            # Use voice_id (UUID) as the folder name
-            target_s3_key = f"voices/{voice_id}/reference_{voice_id}.wav"
+            # Create new voice
+            voice_id = str(uuid.uuid4())
+            audios_path = f"voices/{voice_id}/"
+
+            target_s3_key = f"{audios_path}reference_{voice_id}.wav"
             logger.info("Uploading reference audio to: %s", target_s3_key)
-            s3_url_key = self.storage.upload_file(audio_path, target_s3_key)
+            self.storage.upload_file(audio_path, target_s3_key)
 
             new_voice = VoiceRecord(
                 id=voice_id,
                 name=name,
                 embedding=new_embedding.tolist(),
-                audio_source=s3_url_key,
+                audios_path=audios_path,
+                created_at=datetime.datetime.utcnow(),
             )
             self.db.add(new_voice)
             self.db.commit()
@@ -131,18 +130,34 @@ class VoiceDB:
         if not voice:
             raise KeyError(f"'{name}' not found.")
 
-        s3_key = voice.audio_source.replace(f"s3://{self.storage.bucket}/", "")
-        try:
-            self.storage.delete_file(s3_key)
-        except Exception:
-            pass
+        # Delete all files under the voice's S3 directory
+        if voice.audios_path:
+            files = self.storage.list_files(prefix=cast(str, voice.audios_path))
+            for f in files:
+                try:
+                    self.storage.delete_file(f["key"])
+                except Exception:
+                    pass
 
         self.db.delete(voice)
         self.db.commit()
 
+    def list_audio_files(self, voice_id: str) -> list[dict]:
+        """List audio files from S3 for a given voice profile."""
+        voice = self.db.query(VoiceRecord).filter(VoiceRecord.id == voice_id).first()
+        if not voice or not voice.audios_path:
+            return []
+        return self.storage.list_files(
+            prefix=cast(str, voice.audios_path), extension=".wav"
+        )
+
+    def delete_audio_file(self, s3_key: str) -> None:
+        """Delete a specific audio file from S3."""
+        self.storage.delete_file(s3_key)
+
     def list_voices(self) -> dict[str, str]:
         voices = self.db.query(VoiceRecord).all()
-        return {cast(str, v.name): cast(str, v.audio_source) for v in voices}
+        return {cast(str, v.name): cast(str, v.audios_path) for v in voices}
 
     @property
     def voices(self) -> dict:

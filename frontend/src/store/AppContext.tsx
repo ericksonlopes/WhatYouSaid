@@ -70,7 +70,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
   const [isJobsLoaded, setIsJobsLoaded] = useState(false);
   const [currentView, setCurrentView] = useState<ViewState>(() => {
     const saved = localStorage.getItem('currentView') as ViewState;
-    const validViews: ViewState[] = ['chat', 'search', 'sources', 'activity', 'database', 'knowledge_contexts', 'diarization'];
+    const validViews: ViewState[] = ['chat', 'search', 'sources', 'activity', 'database', 'knowledge_contexts', 'diarization', 'voice_profiles'];
     const initial = validViews.includes(saved) ? saved : 'search';
     return initial;
   });

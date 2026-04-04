@@ -1,9 +1,8 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {AnimatePresence, motion} from 'motion/react';
 import {
     AlertCircle,
-    ArrowRight,
     Check,
     CheckCircle2,
     ChevronLeft,
@@ -22,6 +21,7 @@ import {
     Trash2,
     Upload,
     User,
+    UserPlus,
     Video,
     X,
     Youtube
@@ -287,28 +287,54 @@ export function DiarizationView() {
         return merged;
     };
 
-    const buildTranscriptFromSegments = (segments: any[], recognition?: any) => {
+    // Use speaker labels to assign consistent unique colors
+    const speakerColorMap = useMemo(() => {
+        const map: Record<string, number> = {};
+        speakers.forEach((s, idx) => {
+            map[s.assigned] = idx % 10; // Match with colors array length
+        });
+        return map;
+    }, [speakers]);
+
+    const buildTranscriptFromSegments = useCallback((segments: any[], mapping?: any) => {
         if (!segments || segments.length === 0) return '';
-        const merged = mergeSpeakerSegments(segments, recognition);
+        const merged = mergeSpeakerSegments(segments, mapping);
         return merged.map(seg => {
             return `[${seg.startTime} - ${seg.endTime}] ${seg.speakerName}: ${seg.text}`;
         }).join('\n');
-    };
+    }, []);
 
     const extractSpeakersFromSegments = (segments: any[], recognition?: any): Speaker[] => {
         const speakerLabels = [...new Set(segments.map((s: any) => s.speaker as string))].sort();
         const mapping = recognition?.mapping || {};
         const details = recognition?.details || {};
 
+        // Build reverse mapping (name -> label) to detect already-identified segments
+        const reverseMapping: Record<string, string> = {};
+        for (const [key, value] of Object.entries(mapping)) {
+            reverseMapping[value as string] = key;
+        }
+
         return speakerLabels.map((label, i) => {
             const identifiedName = mapping[label];
-            const confidence = details[label]?.score ? Math.round(details[label].score * 100) : (identifiedName ? 95 : 0);
+            // If the label itself is already an identified name (from a completed job),
+            // use it directly as the assigned name
+            const isAlreadyIdentified = !identifiedName && reverseMapping[label];
+            const originalLabel = isAlreadyIdentified ? reverseMapping[label] : label;
             
+            // BUG FIX: If not identified, use the label (e.g. SPEAKER_00) instead of "Unknown"
+            // to prevent merging all unknown speakers into one in the final transcript.
+            const assigned = identifiedName || (isAlreadyIdentified ? label : label);
+            
+            const confidence = details[originalLabel]?.score
+                ? Math.round(details[originalLabel].score * 100)
+                : (identifiedName ? 95 : 0);
+
             return {
                 id: String(i),
                 label,
                 original: label,
-                assigned: identifiedName || label,
+                assigned,
                 isPlaying: false,
                 confidence: confidence,
             };
@@ -321,17 +347,15 @@ export function DiarizationView() {
 
         if (job.status === 'completed') {
             console.log('Job is completed, setting up result step');
-            const text = buildTranscriptFromSegments(job.segments, job.recognitionResults);
-            setTranscript(text);
-            
+
             // Populate finalSegments from segments if it's already completed
             const merged = mergeSpeakerSegments(job.segments, job.recognitionResults);
             setFinalSegments(merged);
+            // Extract speakers so identification panel shows correctly
+            setSpeakers(extractSpeakersFromSegments(job.segments, job.recognitionResults));
             setStep('result');
         } else if (job.status === 'ready') {
             console.log('Job is ready or needs identification, setting up identification step');
-            const rawText = buildTranscriptFromSegments(job.segments);
-            setRawTranscript(rawText);
             setSpeakers(extractSpeakersFromSegments(job.segments, job.recognitionResults));
             setStep('identification');
         } else if (job.status === 'failed') {
@@ -543,13 +567,6 @@ export function DiarizationView() {
             });
 
             setFinalSegments(mergedSegmentsData);
-            
-            // Build transcript string for legacy purposes
-            const finalTranscript = mergedSegmentsData.map(seg => 
-                `[${seg.startTime} - ${seg.endTime}] ${seg.speakerName}: ${seg.text}`
-            ).join('\n');
-
-            setTranscript(finalTranscript);
             setStep('result');
 
             const updatedJob: DiarizationJob = {
@@ -577,13 +594,31 @@ export function DiarizationView() {
 
         setIsSaving(true);
         try {
+            // First, persist the current speaker names to the backend
+            if (activeJob) {
+                const speakerMapping = speakers.reduce((acc: any, s) => {
+                    acc[s.label] = s.assigned;
+                    return acc;
+                }, {});
+                
+                const mergedSegmentsData = mergeSpeakerSegments(activeJob.segments, speakerMapping);
+                
+                await api.updateDiarization(activeJob.id, {
+                    segments: mergedSegmentsData.map(s => ({
+                        start: Number(s.start),
+                        end: Number(s.end),
+                        text: String(s.text),
+                        speaker: String(s.speakerName)
+                    }))
+                });
+            }
+
+            // Then, trigger the ingestion
             const subjectId = selectedSubjects[0].id;
             const sourceMeta = activeJob?.sourceMetadata;
             const displayTitle = sourceMeta?.title || activeJob?.title || 'Midia';
             
-            // Generate content with timestamps for local UI feedback if needed
-            // but we now send the ID to the backend for direct ingestion
-            const result = await api.ingestDiarization({
+            await api.ingestDiarization({
                 diarization_id: activeJob!.id,
                 subject_id: subjectId,
                 title: displayTitle,
@@ -593,7 +628,7 @@ export function DiarizationView() {
                 reprocess: true
             });
 
-            addToast('Transcrição indexada na base com sucesso', 'success');
+            addToast('Transcrição salva e indexada com sucesso', 'success');
             refreshJobs();
         } catch (err) {
             console.error('Error saving transcript:', err);
@@ -607,35 +642,56 @@ export function DiarizationView() {
         if (!trainingSpeaker || !voiceProfileName.trim() || !activeJob) return;
         setIsTraining(true);
         try {
-            await api.trainVoiceFromSpeaker({
+            const name = voiceProfileName.trim();
+            const result = await api.trainVoiceFromSpeaker({
                 diarization_id: activeJob.id,
                 speaker_label: trainingSpeaker.label,
-                name: voiceProfileName.trim(),
+                name: name,
             });
-            addToast(`Perfil de voz "${voiceProfileName}" salvo com sucesso!`, 'success');
+            
+            addToast(t('diarization.notifications.train_success', { name }), 'success');
+            
+            // 1. First, refresh the list of available voices and WAIT for it
+            await loadAvailableVoices();
+            
+            // 2. Then update the speakers state. 
+            // Now the 'select' will find the new name in 'availableVoices' and display it correctly.
+            setSpeakers(prev => prev.map(s => 
+                s.label === trainingSpeaker.label ? { ...s, assigned: name, confidence: 100 } : s
+            ));
+            
             setTrainingSpeaker(null);
             setVoiceProfileName('');
-        } catch (err) {
+
+            // NEW: Automatically trigger auto-identification to refresh all speakers
+            handleRecognizeSpeakers();
+        } catch (err: any) {
             console.error('Failed to train voice:', err);
-            addToast('Falha ao treinar perfil de voz', 'error');
+            addToast(err.message || t('diarization.notifications.train_error'), 'error');
         } finally {
             setIsTraining(false);
         }
     };
 
-    const parseTranscript = (text: string) => {
-        if (!text) return [];
-        const lines = text.split('\n').filter(line => line.trim() !== '');
-        return lines.map((line, index) => {
-            const match = line.match(/^(.*?):\s*(.*)$/);
-            if (match) {
-                return {id: index, speaker: match[1], text: match[2]};
-            }
-            return {id: index, speaker: 'Desconhecido', text: line};
-        });
-    };
 
-    const parsedTranscript = parseTranscript(transcript);
+    // Live update for the transcript display
+    useEffect(() => {
+        if (activeJob && (step === 'identification' || step === 'result')) {
+            const speakerMapping = speakers.reduce((acc: any, s) => {
+                acc[s.label] = s.assigned;
+                return acc;
+            }, {});
+            
+            const merged = mergeSpeakerSegments(activeJob.segments, speakerMapping);
+            setFinalSegments(merged);
+            
+            const text = merged.map(seg => 
+                `[${seg.startTime} - ${seg.endTime}] ${seg.speakerName}: ${seg.text}`
+            ).join('\n');
+            
+            setTranscript(text);
+        }
+    }, [speakers, activeJob, step]);
 
     return (
         <div className="relative h-full">
@@ -826,111 +882,139 @@ export function DiarizationView() {
                 <motion.div
                     initial={{opacity: 0, y: 10}}
                     animate={{opacity: 1, y: 0}}
-                    className="p-8 max-w-5xl mx-auto h-full flex flex-col"
+                    className="p-8 max-w-7xl mx-auto flex flex-col"
                 >
-                    <div className="mb-8 flex items-center gap-4">
-                        <button
-                            onClick={handleBackToList}
-                            className="p-3 rounded-2xl bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors border border-white/5"
-                        >
-                            <ChevronLeft className="w-6 h-6"/>
-                        </button>
-                        <div
-                            className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                            <Mic className="w-7 h-7 text-emerald-400"/>
+                    {/* Header */}
+                    <div className="mb-6 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={handleBackToList}
+                                className="p-2.5 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 transition-colors border border-white/5"
+                            >
+                                <ChevronLeft className="w-5 h-5"/>
+                            </button>
+                            <div
+                                className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                                <Mic className="w-6 h-6 text-emerald-400"/>
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black text-white tracking-tight leading-none">
+                                    {activeJob?.title}
+                                </h2>
+                                <p className="text-zinc-500 text-xs mt-1.5 font-medium">
+                                    {activeJob?.status === 'completed' && t('diarization.detail.viewing_completed')}
+                                    {(activeJob?.status === 'pending' || activeJob?.status === 'processing') && t('diarization.detail.server_processing')}
+                                    {activeJob?.status === 'failed' && `${t('diarization.status.failed_msg')}: ${activeJob?.errorMessage || t('common.status.unknown')}`}
+                                    {activeJob?.status === 'ready' && t('diarization.detail.id_speakers_help')}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h2 className="text-3xl font-black text-white tracking-tight leading-none">
-                                {activeJob?.title}
-                            </h2>
-                            <p className="text-zinc-500 text-sm mt-2 font-medium">
-                                {activeJob?.status === 'completed' && t('diarization.detail.viewing_completed')}
-                                {(activeJob?.status === 'pending' || activeJob?.status === 'processing') && t('diarization.detail.server_processing')}
-                                {activeJob?.status === 'failed' && `${t('diarization.status.failed_msg')}: ${activeJob?.errorMessage || t('common.status.unknown')}`}
-                                {activeJob?.status === 'ready' && t('diarization.detail.id_speakers_help')}
-                            </p>
-                        </div>
+
+                        {(step === 'identification' || step === 'result') && (
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={handleRecognizeSpeakers}
+                                    disabled={isRecognizing}
+                                    className="flex items-center gap-2 px-4 py-2 text-sm font-bold bg-zinc-800 text-zinc-200 rounded-xl hover:bg-zinc-700 transition-colors border border-white/5 disabled:opacity-50"
+                                >
+                                    {isRecognizing ? <Loader2 className="w-4 h-4 animate-spin"/> : <RefreshCw className="w-4 h-4"/>}
+                                    {t('diarization.detail.auto_identify')}
+                                </button>
+                                <button
+                                    onClick={handleSaveToContext}
+                                    disabled={isSaving || selectedSubjects.length === 0}
+                                    className="flex items-center gap-2 px-6 py-2 bg-emerald-500 text-black text-sm font-bold rounded-xl hover:bg-emerald-400 transition-all shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                                >
+                                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Save className="w-4 h-4"/>}
+                                    {t('diarization.detail.index_base')}
+                                </button>
+                            </div>
+                        )}
                     </div>
 
-                    <div
-                        className="grid grid-cols-1 lg:grid-cols-12 grid-rows-[auto_1fr] lg:grid-rows-1 gap-6 flex-1 min-h-0">
-                        {/* Left Column: Job Details */}
-                        <div className="flex flex-col gap-6 lg:col-span-4">
-                            {activeJob && (
-                                <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-6 backdrop-blur-sm">
-                                    <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                                        <FileText className="w-5 h-5 text-emerald-400"/>
-                                        {t('diarization.detail.file_details')}
-                                    </h3>
-                                    <div className="space-y-5">
-                                        <div>
-                                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-1.5">{t('diarization.detail.original_name')}</p>
-                                            <p className="text-sm text-zinc-200 font-medium">{activeJob.title}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-1.5">{t('diarization.detail.process_date')}</p>
-                                            <p className="text-sm text-zinc-200 font-medium">{activeJob.date}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-1.5">{t('diarization.table.duration')}</p>
-                                            <p className="text-sm text-zinc-200 font-medium flex items-center gap-1.5">
-                                                <Clock className="w-4 h-4 text-zinc-400"/>
-                                                {activeJob.duration}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-1.5">{t('diarization.table.type')}</p>
-                                            <p className="text-sm text-zinc-200 font-medium">{activeJob.sourceType}</p>
-                                        </div>
-                                        {activeJob.modelSize && (
-                                        <div>
-                                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-1.5">{t('diarization.table.model')}</p>
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-200 text-xs font-bold border border-white/5">
-                                                {activeJob.modelSize}
-                                            </span>
-                                        </div>
-                                        )}
-                                        <div>
-                                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-1.5">{t('diarization.detail.speakers_count')}</p>
-                                            <p className="text-sm text-zinc-200 font-medium">{speakers.length || [...new Set((activeJob.segments || []).map(s => s.speaker))].length}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-1.5">{t('diarization.table.status')}</p>
-                                            {activeJob.status === 'completed' && (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20">
-                                                    <CheckCircle2 className="w-3.5 h-3.5"/>
-                                                    {t('diarization.status.completed')}
-                                                </span>
-                                            )}
-                                            {(activeJob.status === 'pending' || activeJob.status === 'processing') && (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-400 text-xs font-bold border border-amber-500/20">
-                                                    <Loader2 className="w-3.5 h-3.5 animate-spin"/>
-                                                    {activeJob.status === 'pending' ? t('diarization.status.in_queue') : t('common.status.processing')}
-                                                </span>
-                                            )}
-                                            {activeJob.status === 'failed' && (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-500/10 text-rose-400 text-xs font-bold border border-rose-500/20">
-                                                    <AlertCircle className="w-3.5 h-3.5"/>
-                                                    {t('diarization.status.failed')}
-                                                </span>
-                                            )}
-                                            {activeJob.status === 'ready' && (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 text-xs font-bold border border-blue-500/20">
-                                                    <User className="w-3.5 h-3.5"/>
-                                                    {t('diarization.status.waiting')}
-                                                </span>
-                                            )}
-                                        </div>
+                    {/* Horizontal File Details Bar */}
+                    {activeJob && (
+                        <div className="mb-6 bg-zinc-900/40 border border-white/5 rounded-2xl p-4 backdrop-blur-sm shadow-[0_4px_20px_rgba(0,0,0,0.2)]">
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                        <FileText className="w-4 h-4 text-emerald-400"/>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-0.5">{t('diarization.detail.original_name')}</p>
+                                        <p className="text-xs text-zinc-200 font-semibold truncate">{activeJob.title}</p>
                                     </div>
                                 </div>
-                            )}
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                        <Clock className="w-4 h-4 text-emerald-400"/>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-0.5">{t('diarization.table.duration')}</p>
+                                        <p className="text-xs text-zinc-200 font-semibold">{activeJob.duration}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                        {activeJob.sourceType === 'youtube' ? <Youtube className="w-4 h-4 text-emerald-400"/> : <Upload className="w-4 h-4 text-emerald-400"/>}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-0.5">{t('diarization.table.type')}</p>
+                                        <p className="text-xs text-zinc-200 font-semibold uppercase">{activeJob.sourceType}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                        <User className="w-4 h-4 text-emerald-400"/>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-0.5">{t('diarization.detail.speakers_count')}</p>
+                                        <p className="text-xs text-zinc-200 font-semibold">{speakers.length}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                        <Database className="w-4 h-4 text-emerald-400"/>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-0.5">{t('diarization.table.model')}</p>
+                                        <p className="text-xs text-zinc-200 font-semibold uppercase">{activeJob.modelSize || '--'}</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-1">{t('diarization.table.status')}</p>
+                                    {activeJob.status === 'completed' ? (
+                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-bold border border-emerald-500/20">
+                                            <CheckCircle2 className="w-3 h-3"/>
+                                            {t('diarization.status.completed')}
+                                        </span>
+                                    ) : activeJob.status === 'ready' ? (
+                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 text-[10px] font-bold border border-blue-500/20">
+                                            <User className="w-3 h-3"/>
+                                            {t('diarization.status.waiting')}
+                                        </span>
+                                    ) : activeJob.status === 'failed' ? (
+                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 text-[10px] font-bold border border-rose-500/20">
+                                            <AlertCircle className="w-3 h-3"/>
+                                            {t('diarization.status.failed')}
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 text-[10px] font-bold border border-amber-500/20">
+                                            <Loader2 className="w-3 h-3 animate-spin"/>
+                                            {t('common.status.processing')}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
                         </div>
+                    )}
 
-                        {/* Right Column: Dynamic Content based on Step */}
-                        <div
-                            className="bg-zinc-900/40 border border-white/5 rounded-2xl p-6 backdrop-blur-sm flex flex-col h-full min-h-0 lg:col-span-8">
+
+                    <div className="flex-1">
+                        {/* Main Interaction Area */}
+                        <div className="bg-zinc-900/40 border border-white/5 rounded-2xl p-6 backdrop-blur-sm flex flex-col">
                             {step === 'processing' && (
-                                <div className="h-full flex flex-col items-center justify-center text-zinc-500 gap-4">
+                                <div className="h-full flex flex-col items-center justify-center text-zinc-500 gap-4 py-20">
                                     <div className="relative">
                                         <div
                                             className="w-16 h-16 rounded-full border-2 border-emerald-500/20 border-t-emerald-500 animate-spin"/>
@@ -961,7 +1045,7 @@ export function DiarizationView() {
                             )}
 
                             {step === 'error' && (
-                                <div className="h-full flex flex-col items-center justify-center text-zinc-500 gap-6 p-8 text-center">
+                                <div className="h-full flex flex-col items-center justify-center text-zinc-500 gap-6 p-8 text-center py-20">
                                     <div className="p-4 rounded-full bg-rose-500/10 border border-rose-500/20 shadow-[0_0_20px_rgba(244,63,94,0.1)]">
                                         <AlertCircle className="w-12 h-12 text-rose-500"/>
                                     </div>
@@ -989,201 +1073,177 @@ export function DiarizationView() {
                                 </div>
                             )}
 
-                            {step === 'identification' && (
-                                <div className="flex flex-col h-full min-h-0">
-                                    <div className="mb-6 flex items-center justify-between">
-                                        <div>
-                                            <h4 className="text-xl font-bold text-white mb-2">{t('diarization.detail.id_speakers_title')}</h4>
-                                            <p className="text-zinc-400 text-sm">{t('diarization.detail.id_speakers_desc', { count: speakers.length })}</p>
-                                        </div>
-                                        <button
-                                            onClick={handleRecognizeSpeakers}
-                                            disabled={isRecognizing}
-                                            className="flex items-center gap-2 px-4 py-2 text-sm font-bold bg-zinc-800 text-zinc-200 rounded-xl hover:bg-zinc-700 transition-colors border border-white/5 disabled:opacity-50 flex-shrink-0 ml-4"
-                                        >
-                                            {isRecognizing ? <Loader2 className="w-4 h-4 animate-spin"/> :
-                                                <Mic className="w-4 h-4"/>}
-                                            {t('diarization.detail.auto_identify')}
-                                        </button>
-                                    </div>
-
-                                    <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar pr-2">
-                                        {speakers.map((s, i) => (
-                                            <motion.div
-                                                initial={{opacity: 0, x: 20}}
-                                                animate={{opacity: 1, x: 0}}
-                                                transition={{delay: i * 0.1}}
-                                                key={s.id}
-                                                className="bg-black/40 border border-white/5 rounded-2xl p-4 flex flex-col gap-4"
+                            {/* Combined Unified View */}
+                            {(step === 'identification' || step === 'result') && (
+                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                                    {/* Column 1: Speaker Identification */}
+                                    <div className="lg:col-span-4 lg:sticky lg:top-8 self-start h-auto bg-black/20 rounded-2xl p-5 border border-white/5">
+                                        <div className="mb-6 flex items-center justify-between gap-4">
+                                            <div className="min-w-0">
+                                                <h4 className="text-lg font-bold text-white truncate">{t('diarization.detail.id_speakers_title')}</h4>
+                                                <p className="text-zinc-500 text-[10px] uppercase font-bold tracking-wider mt-1">{t('diarization.detail.id_speakers_desc', { count: speakers.length }).split('.')[0]}</p>
+                                            </div>
+                                            <button
+                                                onClick={handleRecognizeSpeakers}
+                                                disabled={isRecognizing}
+                                                title={t('diarization.detail.auto_identify')}
+                                                className="p-2.5 bg-zinc-800 text-emerald-400 rounded-xl hover:bg-zinc-700 transition-colors border border-white/5 disabled:opacity-50"
                                             >
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-3">
-                                                        <button
-                                                            onClick={() => togglePlay(s.id)}
-                                                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${s.isPlaying ? 'bg-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.4)]' : 'bg-zinc-800 text-emerald-400 hover:bg-zinc-700'}`}
+                                                {isRecognizing ? <Loader2 className="w-5 h-5 animate-spin"/> : <Mic className="w-5 h-5"/>}
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto custom-scrollbar pr-1">
+                                            {speakers.map((s, i) => (
+                                                <motion.div
+                                                    layout
+                                                    initial={{opacity: 0, y: 10}}
+                                                    animate={{opacity: 1, y: 0}}
+                                                    key={s.id}
+                                                    className="bg-zinc-900/60 border border-white/5 rounded-2xl p-4 flex flex-col gap-4 shadow-lg hover:border-emerald-500/30 transition-colors"
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-3">
+                                                            <button
+                                                                onClick={() => togglePlay(s.id)}
+                                                                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${s.isPlaying ? 'bg-emerald-500 text-black' : 'bg-zinc-800 text-emerald-400 hover:bg-zinc-700'}`}
+                                                            >
+                                                                {s.isPlaying ? <Square className="w-4 h-4 fill-current"/> : <Play className="w-4 h-4 fill-current ml-0.5"/>}
+                                                            </button>
+                                                            <div>
+                                                                <p className="text-xs font-bold text-zinc-300">{t('diarization.detail.voice_label', { index: i + 1 })}</p>
+                                                                <p className="text-[10px] text-zinc-500 font-mono">({s.label})</p>
+                                                            </div>
+                                                        </div>
+                                                        {availableVoices.some(v => v.name === s.assigned) && s.assigned !== 'Desconhecido' ? (
+                                                            <button
+                                                                onClick={() => {
+                                                                    setTrainingSpeaker(s);
+                                                                    setVoiceProfileName(s.assigned);
+                                                                }}
+                                                                className="p-2 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/10 hover:border-blue-500/20"
+                                                                title={t('diarization.detail.reinforce_voice')}
+                                                            >
+                                                                <RefreshCw className="w-4 h-4" />
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => {
+                                                                    setTrainingSpeaker(s);
+                                                                    setVoiceProfileName('');
+                                                                }}
+                                                                className="p-2 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors border border-emerald-500/10 hover:border-emerald-500/20"
+                                                                title={t('diarization.detail.train_voice')}
+                                                            >
+                                                                <UserPlus className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="relative group/select">
+                                                        <select
+                                                            value={availableVoices.some(v => v.name === s.assigned) ? s.assigned : 'Desconhecido'}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                setSpeakers(prev => prev.map(sp => sp.id === s.id ? { ...sp, assigned: val === 'Desconhecido' ? s.label : val } : sp));
+                                                            }}
+                                                            className="w-full bg-black/40 p-2.5 rounded-xl border border-white/5 focus:border-emerald-500/40 transition-colors text-[13px] text-white font-medium appearance-none cursor-pointer outline-none"
                                                         >
-                                                            {s.isPlaying ? <Square className="w-4 h-4 fill-current"/> :
-                                                                <Play className="w-4 h-4 fill-current ml-0.5"/>}
-                                                        </button>
-                                                        <div>
-                                                            <p className="text-sm font-bold text-zinc-200">{t('diarization.detail.voice_label', { index: i + 1 })}
-                                                                <span
-                                                                    className="text-zinc-500 font-normal text-xs">({s.label})</span>
-                                                            </p>
-                                                            {s.confidence > 0 &&
-                                                                <p className="text-xs text-zinc-500">{t('diarization.detail.confidence')}: {s.confidence}%</p>}
+                                                            <option value="Desconhecido" className="bg-zinc-900 text-zinc-400">{t('diarization.detail.unknown_speaker')}</option>
+                                                            {availableVoices.map((v) => (
+                                                                <option key={v.id} value={v.name} className="bg-zinc-900 text-white">
+                                                                    {v.name}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500 group-hover/select:text-emerald-500 transition-colors">
+                                                            <ChevronLeft className="w-4 h-4 -rotate-90" />
                                                         </div>
                                                     </div>
+                                                </motion.div>
+                                            ))}
+                                        </div>
 
-                                                    <div className="flex items-center gap-1 h-8 px-4">
-                                                        {[...Array(16)].map((_, j) => (
-                                                            <motion.div
-                                                                key={j}
-                                                                animate={s.isPlaying ? {height: ['20%', '100%', '40%', '80%', '20%']} : {height: '20%'}}
-                                                                transition={s.isPlaying ? {
-                                                                    repeat: Infinity,
-                                                                    duration: 0.6 + Math.random() * 0.4,
-                                                                    ease: "easeInOut"
-                                                                } : {duration: 0.3}}
-                                                                className="w-1 bg-emerald-500/50 rounded-full"
-                                                                style={{height: '20%'}}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                <div
-                                                    className="flex items-center gap-3 bg-zinc-900/50 p-2 rounded-xl border border-white/5 focus-within:border-emerald-500/50 transition-colors">
-                                                    <div
-                                                        className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center">
-                                                        <User className="w-4 h-4 text-zinc-400"/>
-                                                    </div>
-                                                    <input
-                                                        type="text"
-                                                        list={`voices-list-${s.id}`}
-                                                        value={s.assigned}
-                                                        onChange={(e) => {
-                                                            setSpeakers(prev => prev.map(sp => sp.id === s.id ? {
-                                                                ...sp,
-                                                                assigned: e.target.value
-                                                            } : sp));
-                                                        }}
-                                                        placeholder={t('diarization.detail.speaker_placeholder')}
-                                                        className="flex-1 bg-transparent border-none text-sm text-white focus:outline-none font-medium"
-                                                    />
-                                                    <datalist id={`voices-list-${s.id}`}>
-                                                        {availableVoices.map((v) => (
-                                                            <option key={v.id} value={v.name} />
-                                                        ))}
-                                                    </datalist>
-                                                </div>
-
-                                                <div className="flex justify-end mt-3">
-                                                    <button
-                                                        onClick={() => {
-                                                            setTrainingSpeaker(s);
-                                                            setVoiceProfileName(s.assigned !== 'Desconhecido' && !s.assigned.startsWith('SPEAKER_') ? s.assigned : '');
-                                                        }}
-                                                        className="text-xs font-bold px-3 py-1.5 bg-zinc-800/50 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors flex items-center gap-1.5 border border-white/5"
-                                                    >
-                                                        {availableVoices.some(v => v.name === s.assigned) ? (
-                                                            <>
-                                                                <RefreshCw className="w-3.5 h-3.5"/>
-                                                                {t('diarization.detail.reinforce_voice')}
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Mic className="w-3.5 h-3.5"/>
-                                                                {t('diarization.detail.train_voice')}
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                </div>
-                                            </motion.div>
-                                        ))}
+                                        <div className="mt-6 pt-5 border-t border-white/5 space-y-3">
+                                            <button
+                                                onClick={handleSaveToContext}
+                                                disabled={isSaving || selectedSubjects.length === 0}
+                                                className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-500 text-black font-bold rounded-xl hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] disabled:opacity-50"
+                                            >
+                                                {isSaving ? <Loader2 className="w-5 h-5 animate-spin"/> : <Save className="w-5 h-5"/>}
+                                                {t('diarization.detail.index_base')}
+                                            </button>
+                                        </div>
                                     </div>
 
-                                    <div className="pt-6 mt-4 border-t border-white/5">
-                                        <button
-                                            onClick={applyIdentification}
-                                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-emerald-500 text-black font-bold rounded-xl hover:bg-emerald-400 transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)]"
-                                        >
-                                            {t('diarization.detail.generate_transcript')}
-                                            <ArrowRight className="w-5 h-5"/>
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {step === 'result' && (
-                                <div className="flex flex-col h-full min-h-0">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                                                <FileText className="w-5 h-5 text-emerald-400"/>
+                                    {/* Column 2: Live Transcript */}
+                                    <div className="lg:col-span-8 bg-black/20 rounded-2xl border border-white/5">
+                                        <div className="p-5 border-b border-white/5 bg-black/20 flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 rounded-lg bg-emerald-500/10">
+                                                    <FileText className="w-5 h-5 text-emerald-400"/>
+                                                </div>
+                                                <h3 className="text-lg font-bold text-white uppercase tracking-tight">{t('diarization.detail.final_transcript')}</h3>
                                             </div>
-                                            <div>
-                                                <h3 className="text-lg font-bold text-white leading-tight">{t('diarization.detail.final_transcript')}</h3>
-                                                <p className="text-xs text-zinc-500">{t('diarization.detail.segments_count', { count: finalSegments.length })}</p>
+                                            <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest bg-zinc-800/50 px-2.5 py-1 rounded-full border border-white/5">
+                                                {finalSegments.length} Segments
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={handleSaveToContext}
-                                            disabled={isSaving || selectedSubjects.length === 0}
-                                            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-black text-sm font-bold rounded-xl hover:bg-emerald-400 transition-all disabled:opacity-50"
-                                        >
-                                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin"/> :
-                                                <Save className="w-4 h-4"/>}
-                                            {t('diarization.detail.index_base')}
-                                        </button>
-                                    </div>
 
-                                    <div className="flex-1 bg-black/40 border border-white/5 rounded-2xl overflow-hidden backdrop-blur-sm flex flex-col">
-                                        <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
-                                            <div className="space-y-3 pb-4">
-                                                {finalSegments.map((seg, i) => {
-                                                    const hash = seg.speakerName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                                                    const colorIdx = hash % 5;
-                                                    const colors = [
-                                                        'border-emerald-500/20 bg-emerald-500/5 text-emerald-400',
-                                                        'border-blue-500/20 bg-blue-500/5 text-blue-400',
-                                                        'border-purple-500/20 bg-purple-500/5 text-purple-400',
-                                                        'border-amber-500/20 bg-amber-500/5 text-amber-400',
-                                                        'border-rose-500/20 bg-rose-500/5 text-rose-400'
-                                                    ];
-                                                    const colorClass = colors[colorIdx];
+                                        <div className="p-6 space-y-4">
+                                            {finalSegments.map((seg, i) => {
+                                                const colors = [
+                                                    'border-emerald-500/20 bg-emerald-500/5 text-emerald-400',
+                                                    'border-blue-500/20 bg-blue-500/5 text-blue-400',
+                                                    'border-purple-500/20 bg-purple-500/5 text-purple-400',
+                                                    'border-amber-500/20 bg-amber-500/5 text-amber-400',
+                                                    'border-rose-500/20 bg-rose-500/5 text-rose-400',
+                                                    'border-indigo-500/20 bg-indigo-500/5 text-indigo-400',
+                                                    'border-fuchsia-500/20 bg-fuchsia-500/5 text-fuchsia-400',
+                                                    'border-cyan-500/20 bg-cyan-500/5 text-cyan-400',
+                                                    'border-orange-500/20 bg-orange-500/5 text-orange-400',
+                                                    'border-pink-500/20 bg-pink-500/5 text-pink-400'
+                                                ];
+                                                // Use the pre-calculated unique color index for this speaker name
+                                                const colorIdx = speakerColorMap[seg.speakerName] ?? 0;
+                                                const colorClass = colors[colorIdx % colors.length];
 
-                                                    return (
-                                                        <motion.div
-                                                            initial={{opacity: 0, x: -10}}
-                                                            animate={{opacity: 1, x: 0}}
-                                                            transition={{delay: Math.min(i * 0.03, 1)}}
-                                                            key={seg.id}
-                                                            className={`group flex flex-col gap-1 p-3 rounded-xl border transition-all hover:bg-white/5 ${colorClass.split(' ').slice(0, 2).join(' ')}`}
-                                                        >
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${colorClass.split(' ').slice(0, 3).join(' ')}`}>
-                                                                        {seg.speakerName.charAt(0).toUpperCase()}
-                                                                    </div>
-                                                                    <span className={`text-xs font-bold uppercase tracking-wider ${colorClass.split(' ').pop()}`}>
-                                                                        {seg.speakerName}
-                                                                    </span>
+                                                return (
+                                                    <motion.div
+                                                        key={seg.id || i}
+                                                        initial={{opacity: 0, x: 10}}
+                                                        animate={{opacity: 1, x: 0}}
+                                                        transition={{delay: Math.min(i * 0.01, 0.5)}}
+                                                        className={`group flex flex-col gap-2 p-4 rounded-2xl border transition-all hover:bg-white/5 ${colorClass.split(' ').slice(0, 2).join(' ')}`}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2.5">
+                                                                <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-black border ${colorClass.split(' ').slice(0, 3).join(' ')}`}>
+                                                                    {seg.speakerName.charAt(0).toUpperCase()}
                                                                 </div>
-                                                                <div className="flex items-center gap-1 text-[10px] font-mono text-zinc-500 group-hover:text-zinc-400 transition-colors">
-                                                                    <Clock className="w-3 h-3"/>
-                                                                    <span>{seg.startTime}</span>
-                                                                    <span className="opacity-30">→</span>
-                                                                    <span>{seg.endTime}</span>
-                                                                </div>
+                                                                <span className={`text-[11px] font-black uppercase tracking-widest ${colorClass.split(' ').pop()}`}>
+                                                                    {seg.speakerName}
+                                                                </span>
                                                             </div>
-                                                            <p className="text-zinc-300 text-sm leading-relaxed pl-7 font-sans">
-                                                                {seg.text}
-                                                            </p>
-                                                        </motion.div>
-                                                    );
-                                                })}
-                                            </div>
+                                                            <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-zinc-500 py-0.5 px-2 bg-black/20 rounded-md border border-white/5">
+                                                                <Clock className="w-3 h-3"/>
+                                                                <span>{seg.startTime}</span>
+                                                                <span className="opacity-30">—</span>
+                                                                <span>{seg.endTime}</span>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-zinc-300 text-[14px] leading-relaxed pl-8 font-medium">
+                                                            {seg.text}
+                                                        </p>
+                                                    </motion.div>
+                                                );
+                                            })}
+                                            {finalSegments.length === 0 && (
+                                                <div className="h-full flex flex-col items-center justify-center text-zinc-600 py-20 opacity-50">
+                                                    <Loader2 className="w-12 h-12 mb-4 animate-spin"/>
+                                                    <p className="font-bold uppercase text-xs tracking-widest">Carregando transcrição...</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

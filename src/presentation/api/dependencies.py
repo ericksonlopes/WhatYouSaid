@@ -23,6 +23,8 @@ from src.application.use_cases.manage_voice_profiles import (
     TrainVoiceProfileFromSpeakerSegmentUseCase,
     ListRegisteredVoiceProfilesUseCase,
     DeleteVoiceProfileUseCase,
+    ListVoiceAudioFilesUseCase,
+    DeleteVoiceAudioFileUseCase,
 )
 from src.application.use_cases.retrieve_processed_audio_history import (
     RetrieveProcessedAudioHistoryUseCase,
@@ -505,6 +507,18 @@ def get_delete_voice_profile_use_case(
     db: Session = Depends(get_db),
 ) -> DeleteVoiceProfileUseCase:
     return DeleteVoiceProfileUseCase(db)
+
+
+def get_list_voice_audio_files_use_case(
+    db: Session = Depends(get_db),
+) -> ListVoiceAudioFilesUseCase:
+    return ListVoiceAudioFilesUseCase(db)
+
+
+def get_delete_voice_audio_file_use_case(
+    db: Session = Depends(get_db),
+) -> DeleteVoiceAudioFileUseCase:
+    return DeleteVoiceAudioFileUseCase(db)
 
 
 # --- Worker context resolution (no HTTP Request required) ---

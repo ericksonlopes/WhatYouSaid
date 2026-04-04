@@ -431,6 +431,41 @@ export const api = {
     return response.json();
   },
 
+  async fetchVoiceAudioFiles(voiceId: string): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/voices/${voiceId}/audios`, {
+      headers: getHeaders()
+    });
+    await handleResponseError(response, 'Failed to fetch voice audio files');
+    return response.json();
+  },
+
+  async deleteVoiceAudioFile(s3Key: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/voices/audios/${encodeURIComponent(s3Key)}`, {
+      method: 'DELETE',
+      headers: getHeaders()
+    });
+    await handleResponseError(response, 'Failed to delete voice audio file');
+    return response.json();
+  },
+
+  async fetchVoiceAudioUrl(s3Key: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/voices/audios/${encodeURIComponent(s3Key)}`, {
+      headers: getHeaders()
+    });
+    await handleResponseError(response, 'Failed to get voice audio URL');
+    return response.json();
+  },
+
+  async registerVoiceProfile(formData: FormData): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/voices/upload`, {
+      method: 'POST',
+      headers: getHeaders(null),
+      body: formData
+    });
+    await handleResponseError(response, 'Voice registration failed');
+    return response.json();
+  },
+
   // Auth Methods
   async fetchAuthConfig(): Promise<{ enable_google: boolean; redirect_uri: string }> {
     const response = await fetch(`${API_BASE_URL}/auth/config`, {
