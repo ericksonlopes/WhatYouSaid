@@ -130,9 +130,15 @@ class ChunkWeaviateRepository(IVectorRepository):
             weaviate_filters_list = []
             for k, v in filters.items():
                 if k == "id":
-                    weaviate_filters_list.append(Filter.by_id().equal(v))
+                    if isinstance(v, list):
+                        weaviate_filters_list.append(Filter.by_id().equal(v[0] if v else None))
+                    else:
+                        weaviate_filters_list.append(Filter.by_id().equal(v))
                 else:
-                    weaviate_filters_list.append(Filter.by_property(k).equal(v))
+                    if isinstance(v, list):
+                        weaviate_filters_list.append(Filter.by_property(k).contains_any(v))
+                    else:
+                        weaviate_filters_list.append(Filter.by_property(k).equal(v))
 
             if weaviate_filters_list:
                 if len(weaviate_filters_list) == 1:
@@ -281,9 +287,15 @@ class ChunkWeaviateRepository(IVectorRepository):
             weaviate_filters_list = []
             for k, v in filters.items():
                 if k == "id":
-                    weaviate_filters_list.append(Filter.by_id().equal(v))
+                    if isinstance(v, list):
+                        weaviate_filters_list.append(Filter.by_id().equal(v[0] if v else None))
+                    else:
+                        weaviate_filters_list.append(Filter.by_id().equal(v))
                 else:
-                    weaviate_filters_list.append(Filter.by_property(k).equal(v))
+                    if isinstance(v, list):
+                        weaviate_filters_list.append(Filter.by_property(k).contains_any(v))
+                    else:
+                        weaviate_filters_list.append(Filter.by_property(k).equal(v))
 
             if weaviate_filters_list:
                 if len(weaviate_filters_list) == 1:
@@ -343,9 +355,15 @@ class ChunkWeaviateRepository(IVectorRepository):
                     weaviate_filters_list = []
                     for k, v in filters.items():
                         if k == "id":
-                            weaviate_filters_list.append(Filter.by_id().equal(v))
+                            if isinstance(v, list):
+                                weaviate_filters_list.append(Filter.by_id().equal(v[0] if v else None))
+                            else:
+                                weaviate_filters_list.append(Filter.by_id().equal(v))
                         else:
-                            weaviate_filters_list.append(Filter.by_property(k).equal(v))
+                            if isinstance(v, list):
+                                weaviate_filters_list.append(Filter.by_property(k).contains_any(v))
+                            else:
+                                weaviate_filters_list.append(Filter.by_property(k).equal(v))
 
                     if weaviate_filters_list:
                         if len(weaviate_filters_list) == 1:

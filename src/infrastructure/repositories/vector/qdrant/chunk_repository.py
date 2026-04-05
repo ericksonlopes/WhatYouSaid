@@ -295,11 +295,20 @@ class ChunkQdrantRepository(IVectorRepository):
             ] = []
             for k, v in filters.items():
                 if k == "id":
-                    must_conditions.append(rest.HasIdCondition(has_id=[str(v)]))
+                    if isinstance(v, list):
+                        must_conditions.append(rest.HasIdCondition(has_id=[str(id_val) for id_val in v]))
+                    else:
+                        must_conditions.append(rest.HasIdCondition(has_id=[str(v)]))
                 else:
-                    must_conditions.append(
-                        rest.FieldCondition(key=k, match=rest.MatchValue(value=v))
-                    )
+                    if isinstance(v, list):
+                        # Use MatchAny for list matching in Qdrant
+                        must_conditions.append(
+                            rest.FieldCondition(key=k, match=rest.MatchAny(any=[str(item) for item in v]))
+                        )
+                    else:
+                        must_conditions.append(
+                            rest.FieldCondition(key=k, match=rest.MatchValue(value=v))
+                        )
 
             if must_conditions:
                 return rest.Filter(must=must_conditions)

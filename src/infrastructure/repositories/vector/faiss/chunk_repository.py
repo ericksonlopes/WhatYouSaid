@@ -149,7 +149,12 @@ class ChunkFAISSRepository(IVectorRepository):
 
             def filter_func(metadata: dict) -> bool:
                 for k, v in filters.items():
-                    if str(metadata.get(k)) != str(v):
+                    # If v is a list, check for membership
+                    if isinstance(v, list):
+                        if str(metadata.get(k)) not in [str(item) for item in v]:
+                            return False
+                    # Otherwise, check for exact equality
+                    elif str(metadata.get(k)) != str(v):
                         return False
                 return True
 
@@ -335,7 +340,14 @@ class ChunkFAISSRepository(IVectorRepository):
                     match = True
                     if isinstance(filters, dict):
                         for k, v in filters.items():
-                            if str(doc.metadata.get(k)) != str(v):
+                            val = doc.metadata.get(k)
+                            # If v is a list, check membership
+                            if isinstance(v, list):
+                                if str(val) not in [str(item) for item in v]:
+                                    match = False
+                                    break
+                            # Otherwise check exact equality
+                            elif str(val) != str(v):
                                 match = False
                                 break
                     if match:
@@ -376,7 +388,14 @@ class ChunkFAISSRepository(IVectorRepository):
                 match = True
                 if isinstance(filters, dict):
                     for k, v in filters.items():
-                        if str(doc.metadata.get(k)) != str(v):
+                        val = doc.metadata.get(k)
+                        # If v is a list, check membership
+                        if isinstance(v, list):
+                            if str(val) not in [str(item) for item in v]:
+                                match = False
+                                break
+                        # Otherwise check exact equality
+                        elif str(val) != str(v):
                             match = False
                             break
 

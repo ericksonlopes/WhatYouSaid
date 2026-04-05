@@ -1,5 +1,7 @@
 from typing import Any, Dict, List, Optional
+
 from langchain_core.documents import Document
+
 from src.config.logger import Logger
 
 logger = Logger()
@@ -64,7 +66,7 @@ class TextSplitterService:
 
                 chunk_metadata = (metadata or {}).copy()
                 chunk_metadata.update(
-                    {"token_count": len(chunk_ids), "chunk_index": chunk_index}
+                    {"tokens_count": len(chunk_ids), "chunk_index": chunk_index}
                 )
 
                 documents.append(
@@ -95,7 +97,7 @@ class TextSplitterService:
                 chunk_metadata = (metadata or {}).copy()
                 chunk_metadata.update(
                     {
-                        "token_count": len(content) // 4,
+                        "tokens_count": len(content) // 4,
                         "chunk_index": idx,
                         "is_fallback": True,
                     }

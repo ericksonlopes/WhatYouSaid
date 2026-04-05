@@ -175,14 +175,14 @@ export const api = {
     };
   },
 
-  async search(query: string, topK: number, subjectId?: string, searchMode?: string, reRank: boolean = true): Promise<any> {
+  async search(query: string, topK: number, subjectIds?: string[], searchMode?: string, reRank: boolean = true): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/search`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({
         query,
         top_k: topK,
-        subject_id: subjectId,
+        subject_ids: subjectIds,
         search_mode: searchMode ?? 'semantic',
         re_rank: reRank,
       })
@@ -328,8 +328,13 @@ export const api = {
   },
 
   // Diarization Methods
-  async fetchDiarizations(limit = 20, offset = 0): Promise<any[]> {
-    const response = await fetch(`${API_BASE_URL}/audio?limit=${limit}&offset=${offset}`, {
+  async fetchDiarizations(limit = 20, offset = 0, subjectId?: string): Promise<any[]> {
+    const url = new URL(`${API_BASE_URL}/audio`, globalThis.location.origin);
+    url.searchParams.append('limit', limit.toString());
+    url.searchParams.append('offset', offset.toString());
+    if (subjectId) url.searchParams.append('subject_id', subjectId);
+
+    const response = await fetch(url.toString(), {
       headers: getHeaders()
     });
     await handleResponseError(response, 'Failed to fetch diarizations');
@@ -363,6 +368,7 @@ export const api = {
     max_speakers?: number;
     model_size?: string;
     recognize_voices?: boolean;
+    subject_id?: string;
   }): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/audio`, {
       method: 'POST',

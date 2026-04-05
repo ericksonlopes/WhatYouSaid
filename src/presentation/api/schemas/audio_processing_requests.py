@@ -18,6 +18,7 @@ class AudioProcessingRequest(BaseModel):
     max_speakers: Optional[int] = None
     model_size: Optional[str] = "base"
     recognize_voices: Optional[bool] = True
+    subject_id: Optional[str] = None
 
 
 class UpdateDiarizationRequest(BaseModel):

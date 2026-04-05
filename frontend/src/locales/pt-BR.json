@@ -59,16 +59,20 @@
       "title": "Operações",
       "chat": "Chat RAG (Bloqueado)",
       "search": "Busca Semântica",
-      "diarization": "Diarização",
+      "diarization": "Reconhecimento de Fala",
       "voices": "Perfis de Voz",
       "sources": "Fontes de Conteúdo",
       "chunks": "Fontes > Chunks",
       "activity": "Monitor de Atividade",
-      "knowledge_contexts": "Contextos de Conhecimento"
+      "knowledge_contexts": "Bases de Conhecimento",
+      "database": "Detalhes da Fonte",
+      "voice_profiles": "Perfis de Voz"
     },
     "groups": {
       "search": "Pesquisas",
+      "contexts": "Contextos",
       "data": "Dados",
+      "tools": "Diarização & Reconhecimento",
       "monitor": "Monitor"
     },
     "profile": {
@@ -113,8 +117,11 @@
     "title": "Fontes de Conteúdo",
     "subtitle": {
       "multiple": "Mostrando fontes para {{count}} contexto(s).",
-      "all": "Mostrando todas as fontes no banco de dados."
+      "all": "Mostrando todas as fontes no banco de dados.",
+      "view": "Gerencie suas fontes de conhecimento indexadas"
     },
+    "loading": "Carregando fontes...",
+    "add_btn": "Adicionar",
     "delete_confirm": "Tem certeza que deseja excluir esta fonte de conteúdo? Isso removerá permanentemente todos os fragmentos e embeddings associados.",
     "table": {
       "title": "Título",
@@ -129,6 +136,9 @@
       "tokens_chunk": "Tokens(Chunk)",
       "actions": "Ações",
       "none": "Nenhuma fonte encontrada.",
+      "empty_hint": "Use o botão \"Adicionar\" no topo para começar",
+      "showing": "Exibindo",
+      "rows_per_page": "Linhas por página",
       "pagination": "Exibindo {{start}} a {{end}} de {{total}} resultados",
       "types": {
         "all": "Todos os Tipos",
@@ -179,6 +189,13 @@
         "origin_url": "URL de Origem"
       }
     }
+  },
+  "ecosystem": {
+    "title": "Ecossistema",
+    "description": "Escolha uma base para gerenciar e visualizar suas fontes específicas.",
+    "no_base": "Nenhuma base encontrada",
+    "no_active_base": "Nenhuma Base Ativa",
+    "sources_count": "Fontes"
   },
   "activity": {
     "title": "Monitor de Atividade",
@@ -538,6 +555,36 @@
       "final_transcript": "Transcrição Final",
       "segments_count": "{{count}} segmentos gerados",
       "index_base": "Indexar na Base"
+    },
+    "identification": {
+      "title": "Identificação de Oradores",
+      "subtitle": "Atribua nomes às vozes reconhecidas",
+      "auto_id": "Auto-ID",
+      "unknown": "Desconhecido",
+      "use_label": "Usar Label ({{label}})",
+      "known_profiles": "Perfis Conhecidos",
+      "new_name": "Novo Nome...",
+      "train_voice": "Treinar esta voz",
+      "reinforce_voice": "Reforçar esta voz",
+      "match_pct": "{{count}}% de match",
+      "save_btn": "Salvar e Indexar"
+    },
+    "transcript": {
+      "title": "Transcrição",
+      "subtitle": "Conteúdo de áudio refinado",
+      "search_placeholder": "Buscar na transcrição...",
+      "no_transcript": "Sem transcrição disponível",
+      "select_context_hint": "Selecione um contexto na barra lateral para salvar"
+    },
+    "voice_training": {
+      "title": "Treinar Perfil de Voz",
+      "sample_label": "Amostra do Orador",
+      "playing": "Reproduzindo...",
+      "listen_sample": "Ouvir Amostra",
+      "profile_name_label": "Nome do Perfil",
+      "profile_name_placeholder": "Ex: João da Silva",
+      "description": "Isso criará um novo perfil de voz que poderá ser identificado automaticamente em outros arquivos.",
+      "submit_btn": "Criar Perfil"
     },
     "modal": {
       "new_title": "Nova Diarização",

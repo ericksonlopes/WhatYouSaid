@@ -105,18 +105,26 @@ class ChunkChromaRepository(IVectorRepository):
         if not filters or not isinstance(filters, dict):
             return None
 
-        chroma_filters = {}
-        # Simple AND logic for all provided filters
+        filter_items = []
         for k, v in filters.items():
+            filter_val = v
             if isinstance(v, UUID):
-                v = str(v)
-            chroma_filters[k] = v
+                filter_val = str(v)
+            
+            # If v is a list, use $in operator
+            if isinstance(v, list):
+                # Ensure all items in list are strings (Chroma metadata requirement)
+                normalized_list = [str(item) for item in v]
+                filter_items.append({k: {"$in": normalized_list}})
+            else:
+                filter_items.append({k: {"$eq": filter_val}})
 
-        if len(chroma_filters) > 1:
-            # If multiple filters, we need the $and operator
-            return {"$and": [{k: {"$eq": v}} for k, v in chroma_filters.items()]}
+        if len(filter_items) > 1:
+            return {"$and": filter_items}
+        elif len(filter_items) == 1:
+            return filter_items[0]
 
-        return chroma_filters if chroma_filters else None
+        return None
 
     def retriever(
         self,

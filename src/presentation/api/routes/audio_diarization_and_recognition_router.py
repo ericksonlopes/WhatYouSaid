@@ -100,6 +100,7 @@ async def start_audio_processing_pipeline(
         external_source=request.source,
         language=request.language or "pt",
         model_size=request.model_size or "base",
+        subject_id=request.subject_id,
     )
 
     cmd = ProcessAudioCommand(
@@ -214,8 +215,9 @@ async def retrieve_all_processed_audio_history(
     ],
     limit: int = 10,
     offset: int = 0,
+    subject_id: str | None = None,
 ):
-    return use_case.execute(limit=limit, offset=offset)
+    return use_case.execute(limit=limit, offset=offset, subject_id=subject_id)
 
 
 @router.delete(

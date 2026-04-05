@@ -1,4 +1,4 @@
-from typing import Any, Optional, Union
+from typing import Any, List, Optional, Union
 from uuid import UUID
 
 
@@ -24,7 +24,7 @@ class SearchUseCase:
         self,
         query: str,
         top_k: int = 5,
-        subject_id: Optional[Union[str, UUID]] = None,
+        subject_ids: Optional[List[Union[str, UUID]]] = None,
         subject_name: Optional[str] = None,
         search_mode: SearchMode = SearchMode.SEMANTIC,
         re_rank: bool = True,
@@ -34,7 +34,7 @@ class SearchUseCase:
             context={
                 "query": query,
                 "top_k": top_k,
-                "subject_id": str(subject_id) if subject_id else None,
+                "subject_ids": [str(sid) for sid in subject_ids] if subject_ids else None,
                 "subject_name": subject_name,
                 "search_mode": str(search_mode),
                 "re_rank": re_rank,
@@ -42,8 +42,8 @@ class SearchUseCase:
         )
 
         # Validations
-        if subject_id and subject_name:
-            raise ValueError("Provide only one of subject_id or subject_name")
+        if subject_ids and subject_name:
+            raise ValueError("Provide only one of subject_ids or subject_name")
 
         filters: Optional[Any] = None
         # Resolve subject_name to ID if provided
@@ -60,10 +60,13 @@ class SearchUseCase:
                     context={"subject_name": subject_name},
                 )
                 return SearchChunksResult(query=query, results=[], total_count=0)
-            subject_id = subject.id
+            subject_ids = [subject.id]
 
-        if subject_id is not None:
-            filters = {"subject_id": str(subject_id)}
+        if subject_ids is not None:
+            # filters expects a dict for metadata filtering.
+            # Most vector stores support lists in metadata values.
+            # We'll normalize to List[str] for downstream repositories.
+            filters = {"subject_id": [str(sid) for sid in subject_ids]}
 
         # Execute retrieval
         logger.debug(

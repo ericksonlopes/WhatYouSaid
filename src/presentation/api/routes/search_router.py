@@ -32,7 +32,7 @@ def search_chunks(
         result = use_case.execute(
             query=request.query,
             top_k=request.top_k,
-            subject_id=request.subject_id,
+            subject_ids=request.subject_ids,
             subject_name=request.subject_name,
             search_mode=request.search_mode,
             re_rank=request.re_rank,

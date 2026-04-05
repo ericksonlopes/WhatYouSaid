@@ -14,7 +14,7 @@ class SearchRequest(BaseModel):
         json_schema_extra={"examples": ["Quem é o palestrante?"]},
     )
     top_k: int = Field(default=5, ge=1, le=50)
-    subject_id: Optional[str] = None
+    subject_ids: Optional[List[str]] = None
     subject_name: Optional[str] = None
     search_mode: SearchMode = Field(
         default=SearchMode.HYBRID,

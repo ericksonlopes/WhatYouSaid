@@ -105,8 +105,8 @@ export function SearchView() {
     setResults([]);
 
     try {
-      const subjectId = selectedSubjects.length > 0 ? selectedSubjects[0].id : undefined;
-      const data = await api.search(currentQuery, topK, subjectId, currentMode, currentUseRerank);
+      const subjectIds = selectedSubjects.length > 0 ? selectedSubjects.map(s => s.id) : undefined;
+      const data = await api.search(currentQuery, topK, subjectIds, currentMode, currentUseRerank);
 
       const mappedResults: SearchResult[] = data.results.map((res: any) => {
         // Resolve subject name from local subjects list if extra.subject_name is missing

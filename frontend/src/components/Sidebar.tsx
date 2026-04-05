@@ -4,26 +4,22 @@ import {useAuth} from '../store/AuthContext';
 import {useTranslation} from 'react-i18next';
 import {
   Activity as ActivityIcon,
-  CheckSquare,
   Database,
-  Layers,
   LogOut,
   MessageSquare,
   Mic,
-  Plus,
   Search,
   Settings,
-  Square,
-  User
+  User,
+  Layers
 } from 'lucide-react';
 
 import {SettingsModal} from './SettingsModal';
 
 export function Sidebar() {
-  const { subjects, selectedSubjects, toggleSubjectSelection, selectOnlySubject, currentView, setCurrentView, setIsAddSubjectModalOpen } = useAppContext();
+  const { currentView, setCurrentView } = useAppContext();
   const { user, logout, isAuthEnabled } = useAuth();
   const { t } = useTranslation();
-  const [searchQuery, setSearchQuery] = useState('');
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   const navGroups = [
@@ -36,19 +32,19 @@ export function Sidebar() {
       ]
     },
     {
+      id: 'contexts',
+      label: t('sidebar.groups.contexts'),
+      items: [
+        { id: 'knowledge_contexts', label: t('sidebar.operations.knowledge_contexts'), icon: Layers },
+        { id: 'voice_profiles', label: t('voices.title', 'Vozes Reconhecidas'), icon: User },
+      ]
+    },
+    {
       id: 'data',
       label: t('sidebar.groups.data'),
       items: [
         { id: 'sources', label: t('sidebar.operations.sources'), icon: Database },
-        { id: 'knowledge_contexts', label: t('sidebar.operations.knowledge_contexts') || 'Knowledge Contexts', icon: Layers },
-      ]
-    },
-    {
-      id: 'tools',
-      label: t('sidebar.groups.tools', 'Tools'),
-      items: [
-        {id: 'diarization', label: t('sidebar.operations.diarization', 'Reconhecimento de Fala'), icon: Mic},
-        {id: 'voice_profiles', label: t('voices.title', 'Vozes Reconhecidas'), icon: User},
+        { id: 'diarization', label: t('sidebar.operations.diarization'), icon: Mic },
       ]
     },
     {
@@ -59,10 +55,6 @@ export function Sidebar() {
       ]
     }
   ] as const;
-
-  const filteredSubjects = subjects.filter(s =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const getItemClass = (isActive: boolean, isDisabled: boolean) => {
     if (isActive) return 'bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20';
@@ -85,92 +77,8 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Context Selector (Subjects) */}
-      <div className="flex flex-col flex-1 min-h-0 border-b border-border-subtle">
-        <div className="p-4 pb-2 flex items-center justify-between">
-          <h2 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-2 whitespace-nowrap overflow-hidden text-ellipsis">
-            {t('sidebar.contexts.title')}
-          </h2>
-          <button
-            onClick={() => setIsAddSubjectModalOpen(true)}
-            className="group p-1 rounded-md text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
-            title={t('sidebar.contexts.create')}
-          >
-            <Plus className="w-4 h-4 transition-transform duration-300 group-hover:rotate-90" />
-          </button>
-        </div>
-
-        {/* Search Contexts */}
-        <div className="px-4 pb-3">
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
-            <input
-              type="text"
-              placeholder={t('sidebar.contexts.placeholder')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-black/40 border border-border-subtle rounded-lg pl-8 pr-3 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-600 transition-colors placeholder:text-zinc-600"
-            />
-          </div>
-        </div>
-
-        {/* Scrollable Context List */}
-        <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1 custom-scrollbar">
-          {filteredSubjects.length === 0 ? (
-            <div className="text-xs text-zinc-500 text-center py-4">{t('sidebar.contexts.none')}</div>
-          ) : (
-            filteredSubjects.map((subject) => {
-              const isSelected = selectedSubjects.some(s => s.id === subject.id);
-
-              return (
-                <div key={subject.id} className="relative w-full group">
-                  <button
-                    type="button"
-                    onClick={() => toggleSubjectSelection(subject)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all select-none cursor-pointer outline-none ${isSelected
-                        ? 'bg-zinc-800 text-white font-medium shadow-sm'
-                        : 'text-zinc-400 hover:bg-panel-hover hover:text-zinc-200'
-                      }`}
-                    title={t('sidebar.contexts.toggle')}
-                  >
-                    <div className="flex items-center gap-3 truncate pr-8">
-                      {isSelected ? (
-                        <CheckSquare className="w-4 h-4 text-emerald-400 flex-shrink-0 transition-transform duration-200 scale-110" />
-                      ) : (
-                        <Square className="w-4 h-4 opacity-50 flex-shrink-0 group-hover:opacity-100 transition-transform duration-200 group-hover:scale-110" />
-                      )}
-                      <span className="truncate">{subject.name}</span>
-                    </div>
-
-                    <div className="flex items-center">
-                      {subject.sourceCount !== undefined && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 transition-opacity duration-200 group-hover:opacity-0 ${isSelected ? 'bg-zinc-700 text-zinc-300' : 'bg-black/40 text-zinc-500'
-                          }`}>
-                          {subject.sourceCount}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      selectOnlySubject(subject);
-                    }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 px-2 py-0.5 text-[10px] font-medium bg-zinc-600 text-white rounded hover:bg-emerald-500 hover:text-black transition-all shadow-sm z-10"
-                    title={t('sidebar.contexts.only')}
-                  >
-                    {t('sidebar.contexts.only')}
-                  </button>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-      {/* Navigation Groups */}
-      <div className="p-4 pt-2 space-y-6">
+      {/* Navigation Groups - Scrollable Area */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 pt-2 space-y-6">
         {navGroups.map((group, index) => (
           <div key={group.id} className="space-y-2">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-600 px-3">

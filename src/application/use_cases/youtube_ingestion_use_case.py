@@ -968,7 +968,7 @@ class YoutubeIngestionUseCase:
                 subject_id=subject.id,
                 index=i,
                 content=doc.page_content,
-                tokens_count=doc.metadata.get("token_count"),
+                tokens_count=doc.metadata.get("tokens_count"),
                 extra={**doc.metadata, "vector_store_type": self.vector_store_type},
                 language=cmd.language,
                 embedding_model=self.model_loader_service.model_name,

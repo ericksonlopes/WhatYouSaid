@@ -20,6 +20,7 @@ class DiarizationRepository:
         external_source: str,
         language: str,
         model_size: str | None = None,
+        subject_id: str | None = None,
     ) -> DiarizationRecord:
         record = DiarizationRecord(
             title=title,
@@ -28,6 +29,7 @@ class DiarizationRepository:
             language=language,
             status=DiarizationStatus.PENDING.value,
             model_size=model_size,
+            subject_id=subject_id,
         )
         self.db.add(record)
         self.db.commit()
@@ -93,10 +95,13 @@ class DiarizationRepository:
         self.db.refresh(record)
         return record
 
-    def get_all(self, limit: int = 10, offset: int = 0) -> List[DiarizationRecord]:
+    def get_all(self, limit: int = 10, offset: int = 0, subject_id: str | None = None) -> List[DiarizationRecord]:
+        query = self.db.query(DiarizationRecord)
+        if subject_id:
+            query = query.filter(DiarizationRecord.subject_id == subject_id)
+        
         result = (
-            self.db.query(DiarizationRecord)
-            .order_by(DiarizationRecord.created_at.desc())
+            query.order_by(DiarizationRecord.created_at.desc())
             .offset(offset)
             .limit(limit)
             .all()

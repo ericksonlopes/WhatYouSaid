@@ -5,7 +5,7 @@ ORM models for diarization and voice recognition tables.
 import datetime
 import uuid
 
-from sqlalchemy import Column, String, Float, DateTime, JSON
+from sqlalchemy import Column, String, Float, DateTime, JSON, ForeignKey
 
 from src.domain.entities.enums.diarization_status_enum import DiarizationStatus
 from src.infrastructure.repositories.sql.connector import Base
@@ -20,6 +20,7 @@ class DiarizationRecord(Base):
 
     id = Column(String, primary_key=True, default=_generate_uuid)
     title = Column(String, index=True)
+    subject_id = Column(String, ForeignKey("knowledge_subjects.id"), nullable=True, index=True)
     source_type = Column(String)
     external_source = Column(String)
     language = Column(String)

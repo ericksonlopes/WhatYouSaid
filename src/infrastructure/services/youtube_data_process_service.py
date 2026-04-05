@@ -183,7 +183,7 @@ class YoutubeDataProcessService:
             ids = _encode(text)
             logger.debug(
                 "Tokenized snippet",
-                context={**context, "snippet_index": idx, "token_count": len(ids)},
+                context={**context, "snippet_index": idx, "tokens_count": len(ids)},
             )
             for t_id in ids:
                 token_ids.append(t_id)
@@ -245,7 +245,7 @@ class YoutubeDataProcessService:
                 "chunk_index": i // step,
                 "window_start": window_start,
                 "window_end": window_end,
-                "token_count": len(chunk_ids),
+                "tokens_count": len(chunk_ids),
             }
             logger.debug("Creating document for token chunk", context=chunk_context)
             documents.append(
@@ -255,7 +255,7 @@ class YoutubeDataProcessService:
                         "window_start": window_start,
                         "window_end": window_end,
                         "video_id": self._get_video_id(transcript),
-                        "token_count": len(chunk_ids),
+                        "tokens_count": len(chunk_ids),
                     },
                 )
             )
@@ -295,16 +295,16 @@ class YoutubeDataProcessService:
         content = " ".join(text_segments)
 
         # Calculate tokens if tokenizer is available
-        token_count = None
+        tokens_count = None
         tokenizer = getattr(self.model_loader_service.model, "tokenizer", None)
         if tokenizer:
             try:
                 tokens = tokenizer.encode(content, add_special_tokens=False)
-                token_count = len(tokens)
+                tokens_count = len(tokens)
             except Exception:
                 try:
                     tokens = tokenizer.encode(content)
-                    token_count = len(tokens)
+                    tokens_count = len(tokens)
                 except Exception:
                     pass
 
@@ -314,6 +314,6 @@ class YoutubeDataProcessService:
                 "window_start": start,
                 "window_end": end,
                 "video_id": video_id,
-                "token_count": token_count,
+                "tokens_count": tokens_count,
             },
         )

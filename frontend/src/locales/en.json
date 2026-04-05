@@ -59,16 +59,20 @@
       "title": "Operations",
       "chat": "RAG Chat (Locked)",
       "search": "Semantic Search",
-      "diarization": "Diarization",
+      "diarization": "Speech Recognition",
       "voices": "Voice Profiles",
       "sources": "Content Sources",
       "chunks": "Sources > Chunks",
       "activity": "Activity Monitor",
-      "knowledge_contexts": "Knowledge Contexts"
+      "knowledge_contexts": "Knowledge Bases",
+      "database": "Source Details",
+      "voice_profiles": "Voice Profiles"
     },
     "groups": {
       "search": "Searches",
+      "contexts": "Contexts",
       "data": "Data",
+      "tools": "Diarization & Recognition",
       "monitor": "Monitor"
     },
     "profile": {
@@ -113,8 +117,11 @@
     "title": "Content Sources",
     "subtitle": {
       "multiple": "Showing sources for {{count}} context(s).",
-      "all": "Showing all sources in the database."
+      "all": "Showing all sources in the database.",
+      "view": "Manage your indexed knowledge sources"
     },
+    "loading": "Loading sources...",
+    "add_btn": "Add",
     "delete_confirm": "Are you sure you want to delete this content source? This will permanently remove all associated chunks and embeddings.",
     "table": {
       "title": "Title",
@@ -129,6 +136,9 @@
       "tokens_chunk": "Tokens(Chunk)",
       "actions": "Actions",
       "none": "No sources found.",
+      "empty_hint": "Use the \"Add\" button at the top to get started",
+      "showing": "Showing",
+      "rows_per_page": "Rows per page",
       "pagination": "Showing {{start}} to {{end}} of {{total}} results",
       "types": {
         "all": "All Types",
@@ -179,6 +189,13 @@
         "origin_url": "Origin URL"
       }
     }
+  },
+  "ecosystem": {
+    "title": "Ecosystem",
+    "description": "Choose a base to manage and view its specific sources.",
+    "no_base": "No base found",
+    "no_active_base": "No Active Base",
+    "sources_count": "Sources"
   },
   "activity": {
     "title": "Activity Monitor",
@@ -539,6 +556,36 @@
       "final_transcript": "Final Transcript",
       "segments_count": "{{count}} segments generated",
       "index_base": "Index in Base"
+    },
+    "identification": {
+      "title": "Speaker Identification",
+      "subtitle": "Assign names to recognized voices",
+      "auto_id": "Auto-ID",
+      "unknown": "Unknown",
+      "use_label": "Use Label ({{label}})",
+      "known_profiles": "Known Profiles",
+      "new_name": "New Name...",
+      "train_voice": "Train this voice",
+      "reinforce_voice": "Reinforce this voice",
+      "match_pct": "{{count}}% match",
+      "save_btn": "Save & Index"
+    },
+    "transcript": {
+      "title": "Transcription",
+      "subtitle": "Refined audio content",
+      "search_placeholder": "Search in transcript...",
+      "no_transcript": "No transcript available",
+      "select_context_hint": "Select a context in the sidebar to save"
+    },
+    "voice_training": {
+      "title": "Train Voice Profile",
+      "sample_label": "Speaker Sample",
+      "playing": "Playing...",
+      "listen_sample": "Listen to Sample",
+      "profile_name_label": "Profile Name",
+      "profile_name_placeholder": "Ex: John Doe",
+      "description": "This will create a new voice profile that can be identified automatically in other files.",
+      "submit_btn": "Create Profile"
     },
     "modal": {
       "new_title": "New Diarization",

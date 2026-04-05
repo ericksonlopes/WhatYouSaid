@@ -10,12 +10,13 @@ class RetrieveProcessedAudioHistoryUseCase:
     def __init__(self, db: Session):
         self.repo = DiarizationRepository(db)
 
-    def execute(self, limit: int = 10, offset: int = 0) -> list[dict]:
-        records = self.repo.get_all(limit=limit, offset=offset)
+    def execute(self, limit: int = 10, offset: int = 0, subject_id: str | None = None) -> list[dict]:
+        records = self.repo.get_all(limit=limit, offset=offset, subject_id=subject_id)
         return [
             {
                 "id": r.id,
                 "title": r.title,
+                "subject_id": r.subject_id,
                 "source_type": r.source_type,
                 "external_source": r.external_source,
                 "language": r.language,

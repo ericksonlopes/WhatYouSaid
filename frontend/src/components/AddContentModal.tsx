@@ -37,7 +37,7 @@ interface SourceOption {
 
 export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
     const { t } = useTranslation();
-    const {subjects, selectedSubjects, modelInfo, addToast, setCurrentView} = useAppContext();
+    const {subjects, selectedSubjects, selectOnlySubject, modelInfo, addToast, setCurrentView} = useAppContext();
     const {startIngestion} = useIngestion();
     
     const SOURCES: SourceOption[] = [
@@ -78,6 +78,16 @@ export function AddContentModal({isOpen, onClose}: AddContentModalProps) {
             }
         }
     }, [isOpen, selectedSubjects]);
+
+    // Sync local targetSubjectId back to global selectedSubjects
+    useEffect(() => {
+        if (isOpen && targetSubjectId) {
+            const subject = subjects.find(s => s.id === targetSubjectId);
+            if (subject && (selectedSubjects.length !== 1 || selectedSubjects[0].id !== targetSubjectId)) {
+                selectOnlySubject(subject);
+            }
+        }
+    }, [targetSubjectId, isOpen, subjects, selectedSubjects, selectOnlySubject]);
 
     const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
         e.preventDefault();

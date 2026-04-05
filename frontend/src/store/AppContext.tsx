@@ -9,6 +9,7 @@ import {useAuth} from './AuthContext';
 
 interface AppState {
   selectedSubjects: Subject[];
+  setSelectedSubjects: (subjects: Subject[]) => void;
   toggleSubjectSelection: (subject: Subject) => void;
   selectOnlySubject: (subject: Subject) => void;
   currentView: ViewState;
@@ -381,6 +382,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
 
   const contextValue = React.useMemo(() => ({
     selectedSubjects,
+    setSelectedSubjects,
     toggleSubjectSelection,
     selectOnlySubject,
     currentView,
@@ -426,6 +428,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
     setIsAddSubjectModalOpen,
   }), [
     selectedSubjects,
+    setSelectedSubjects,
     toggleSubjectSelection,
     selectOnlySubject,
     currentView,
