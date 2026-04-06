@@ -12,6 +12,9 @@ from src.application.use_cases.generate_speaker_audio_access_url import (
 from src.application.use_cases.identify_speakers_in_processed_audio import (
     IdentifySpeakersInProcessedAudioUseCase,
 )
+from src.application.use_cases.delete_diarization_use_case import (
+    DeleteDiarizationUseCase,
+)
 from src.application.use_cases.list_s3_audio_files import ListS3AudioFilesUseCase
 from src.application.use_cases.retrieve_processed_audio_history import (
     RetrieveProcessedAudioHistoryUseCase,
@@ -26,6 +29,7 @@ from src.presentation.api.dependencies import (
     get_identify_speakers_use_case,
     get_list_s3_files_use_case,
     get_retrieve_history_use_case,
+    get_delete_diarization_use_case,
 )
 from src.presentation.api.schemas.audio_processing_requests import (
     AudioProcessingRequest,
@@ -241,14 +245,12 @@ async def retrieve_all_processed_audio_history(
     },
 )
 async def delete_diarization_record(
-    diarization_id: str, db: Annotated[Session, Depends(get_db)]
+    diarization_id: str,
+    use_case: Annotated[
+        DeleteDiarizationUseCase, Depends(get_delete_diarization_use_case)
+    ],
 ):
-    from src.infrastructure.repositories.sql.diarization_repository import (
-        DiarizationRepository,
-    )
-
-    repo = DiarizationRepository(db)
-    deleted = repo.delete(diarization_id)
+    deleted = use_case.execute(diarization_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Diarization record not found")
-    return {"status": "success", "message": "Diarization record deleted"}
+    return {"status": "success", "message": "Diarization record and its files deleted"}

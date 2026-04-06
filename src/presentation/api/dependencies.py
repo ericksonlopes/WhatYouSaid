@@ -9,6 +9,9 @@ from src.application.use_cases.content_source_use_case import ContentSourceUseCa
 from src.application.use_cases.diarization_ingestion_use_case import (
     DiarizationIngestionUseCase,
 )
+from src.application.use_cases.delete_diarization_use_case import (
+    DeleteDiarizationUseCase,
+)
 from src.application.use_cases.file_ingestion_use_case import FileIngestionUseCase
 from src.application.use_cases.generate_speaker_audio_access_url import (
     GenerateSpeakerAudioAccessUrlUseCase,
@@ -477,6 +480,12 @@ def get_list_s3_files_use_case(
     db: Session = Depends(get_db),
 ) -> ListS3AudioFilesUseCase:
     return ListS3AudioFilesUseCase(db)
+
+
+def get_delete_diarization_use_case(
+    db: Session = Depends(get_db),
+) -> DeleteDiarizationUseCase:
+    return DeleteDiarizationUseCase(db)
 
 
 def get_generate_speaker_url_use_case(

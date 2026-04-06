@@ -77,6 +77,22 @@ class StorageService:
     def delete_file(self, s3_key: str):
         self.s3.delete_object(Bucket=self.bucket, Key=s3_key)
 
+    def delete_directory(self, s3_prefix: str):
+        """Recursively delete all objects with the given prefix in S3."""
+        if not s3_prefix:
+            return
+
+        paginator = self.s3.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=self.bucket, Prefix=s3_prefix):
+            if "Contents" in page:
+                delete_list = [{"Key": obj["Key"]} for obj in page["Contents"]]
+                self.s3.delete_objects(
+                    Bucket=self.bucket, Delete={"Objects": delete_list}
+                )
+                logger.info(
+                    "Deleted %d objects with prefix %s", len(delete_list), s3_prefix
+                )
+
     def list_files(self, prefix: str = "", extension: str | None = None) -> list[dict]:
         paginator = self.s3.get_paginator("list_objects_v2")
         files = []
