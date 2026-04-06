@@ -24,12 +24,13 @@ class TestSubjectRouter:
         app.dependency_overrides.pop(get_ks_use_case, None)
 
     def test_create_subject_success(self, mock_ks_service):
-        mock_ks_service.create_subject.return_value = {
-            "id": "123e4567-e89b-12d3-a456-426614174000",
-            "name": "test",
-            "description": "desc",
-            "icon": "icon",
-        }
+        from types import SimpleNamespace
+        mock_ks_service.create_subject.return_value = SimpleNamespace(
+            id="123e4567-e89b-12d3-a456-426614174000",
+            name="test",
+            description="desc",
+            icon="icon",
+        )
 
         response = client.post(
             "/rest/subjects", json={"name": "test", "description": "desc"}

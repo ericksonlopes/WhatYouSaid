@@ -46,14 +46,17 @@ def update_source_title(
             raise HTTPException(status_code=404, detail="Content source not found")
 
         cs_service.update_title(source_id, update.title)
-        
+
         # Notify frontend
-        event_bus.publish("ingestion_status", {
-            "type": "source",
-            "action": "update",
-            "id": str(source_id),
-            "title": update.title
-        })
+        event_bus.publish(
+            "ingestion_status",
+            {
+                "type": "source",
+                "action": "update",
+                "id": str(source_id),
+                "title": update.title,
+            },
+        )
 
         return {"success": True, "message": f"Source {id} title updated successfully"}
     except ValueError:
@@ -127,13 +130,12 @@ def delete_source(
         success = use_case.delete(source_id)
         if not success:
             raise HTTPException(status_code=404, detail="Content source not found")
-        
+
         # Notify frontend
-        event_bus.publish("ingestion_status", {
-            "type": "source",
-            "action": "delete",
-            "id": str(source_id)
-        })
+        event_bus.publish(
+            "ingestion_status",
+            {"type": "source", "action": "delete", "id": str(source_id)},
+        )
 
         return {"success": True, "message": f"Source {id} deleted successfully"}
     except ValueError:

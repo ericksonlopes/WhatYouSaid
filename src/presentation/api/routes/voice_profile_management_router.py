@@ -45,7 +45,10 @@ async def register_new_voice_profile(
             request.name, request.audio_path, force=request.force
         )
         # Notify
-        event_bus.publish("ingestion_status", {"type": "voice", "action": "register", "name": request.name})
+        event_bus.publish(
+            "ingestion_status",
+            {"type": "voice", "action": "register", "name": request.name},
+        )
         return {"status": "success", "voice_id": voice_id, "name": request.name}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -73,7 +76,9 @@ async def upload_and_register_new_voice_profile(
 
         voice_id = use_case.execute(name, temp_path, force=force)
         # Notify
-        event_bus.publish("ingestion_status", {"type": "voice", "action": "register", "name": name})
+        event_bus.publish(
+            "ingestion_status", {"type": "voice", "action": "register", "name": name}
+        )
         return {"status": "success", "voice_id": voice_id, "name": name}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -108,7 +113,10 @@ async def train_voice_profile_from_existing_speaker_segment(
             force=request.force,
         )
         # Notify
-        event_bus.publish("ingestion_status", {"type": "voice", "action": "train", "name": request.name})
+        event_bus.publish(
+            "ingestion_status",
+            {"type": "voice", "action": "train", "name": request.name},
+        )
         return {"status": "success", "voice_id": voice_id, "name": request.name}
     except ValueError as e:
         raise HTTPException(
@@ -138,7 +146,9 @@ async def delete_existing_voice_profile(
     try:
         use_case.execute(name)
         # Notify
-        event_bus.publish("ingestion_status", {"type": "voice", "action": "delete", "name": name})
+        event_bus.publish(
+            "ingestion_status", {"type": "voice", "action": "delete", "name": name}
+        )
         return {
             "status": "success",
             "message": f"Voice profile '{name}' successfully removed",
@@ -168,7 +178,9 @@ async def delete_voice_audio_file(
     try:
         use_case.execute(s3_key)
         # Notify (voice updated)
-        event_bus.publish("ingestion_status", {"type": "voice", "action": "audio_deleted"})
+        event_bus.publish(
+            "ingestion_status", {"type": "voice", "action": "audio_deleted"}
+        )
         return {"status": "success", "message": "Audio file deleted"}
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))

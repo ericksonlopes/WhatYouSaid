@@ -47,12 +47,15 @@ def create_subject(
             external_ref=subject.external_ref,
         )
         # Notify frontend
-        event_bus.publish("ingestion_status", {
-            "type": "subject",
-            "action": "create",
-            "id": str(created.id),
-            "name": created.name
-        })
+        event_bus.publish(
+            "ingestion_status",
+            {
+                "type": "subject",
+                "action": "create",
+                "id": str(created.id),
+                "name": created.name,
+            },
+        )
         return created
     except Exception as e:
         logger.error(e, context={"action": "create_subject"})
@@ -99,12 +102,15 @@ def update_subject(
             icon=subject.icon,
         )
         # Notify frontend
-        event_bus.publish("ingestion_status", {
-            "type": "subject",
-            "action": "update",
-            "id": str(subject_id),
-            "name": subject.name
-        })
+        event_bus.publish(
+            "ingestion_status",
+            {
+                "type": "subject",
+                "action": "update",
+                "id": str(subject_id),
+                "name": subject.name,
+            },
+        )
     except Exception as e:
         logger.error(
             e, context={"action": "update_subject", "subject_id": str(subject_id)}
@@ -130,13 +136,12 @@ def delete_subject(
         success = ks_use_case.delete_knowledge(subject_id=subject_id)
         if not success:
             raise HTTPException(status_code=404, detail="Subject not found")
-        
+
         # Notify frontend
-        event_bus.publish("ingestion_status", {
-            "type": "subject",
-            "action": "delete",
-            "id": str(subject_id)
-        })
+        event_bus.publish(
+            "ingestion_status",
+            {"type": "subject", "action": "delete", "id": str(subject_id)},
+        )
     except HTTPException:
         raise
     except Exception as e:
