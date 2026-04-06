@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+
 from src.config.logger import setup_logging
 from src.presentation.api.dependencies import get_current_user
 from src.presentation.api.middleware.trace_middleware import TraceMiddleware

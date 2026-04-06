@@ -217,7 +217,19 @@ async def retrieve_all_processed_audio_history(
     offset: int = 0,
     subject_id: str | None = None,
 ):
-    return use_case.execute(limit=limit, offset=offset, subject_id=subject_id)
+    try:
+        logger.info(
+            "Fetching audio history: limit=%s, offset=%s, subject_id=%s",
+            limit, offset, subject_id,
+        )
+        result = use_case.execute(limit=limit, offset=offset, subject_id=subject_id)
+        logger.info("Audio history returned %d records", len(result))
+        return result
+    except Exception as e:
+        logger.error(
+            "Failed to retrieve audio history: %s\n%s", str(e), traceback.format_exc()
+        )
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete(
