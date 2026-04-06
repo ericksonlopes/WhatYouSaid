@@ -1,3 +1,4 @@
+from contextlib import suppress
 import os
 from typing import cast
 
@@ -39,13 +40,11 @@ class ListRegisteredVoiceProfilesUseCase:
         for r in records:
             samples_count = 0
             if r.audios_path:
-                try:
+                with suppress(Exception):
                     files = storage.list_files(
                         prefix=cast(str, r.audios_path), extension=".wav"
                     )
                     samples_count = len(files)
-                except Exception:
-                    pass
 
             result.append(
                 {

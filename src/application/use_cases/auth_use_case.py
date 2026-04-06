@@ -70,8 +70,9 @@ class AuthUseCase:
 
         return {
             "access_token": jwt_token,
-            "token_type": "bearer",
+            "token_type": "bearer",  # nosec
             "user": {
+
                 "id": user.id,
                 "email": user.email,
                 "full_name": user.full_name,

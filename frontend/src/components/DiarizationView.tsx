@@ -343,7 +343,13 @@ export function DiarizationView() {
                                     <div>
                                         <div className="flex items-center gap-3">
                                             <h2 className="text-xl font-black text-white uppercase tracking-tight">{activeJob?.title}</h2>
-                                            {activeJob && <StatusBadge status={activeJob.status} size="sm" />}
+                                            {activeJob && (
+                                                <StatusBadge 
+                                                    status={activeJob.status} 
+                                                    message={activeJob.statusMessage || activeJob.errorMessage}
+                                                    size="sm" 
+                                                />
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-4 mt-1">
                                             <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{activeJob?.date}</span>

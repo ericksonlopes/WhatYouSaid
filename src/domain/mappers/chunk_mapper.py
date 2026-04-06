@@ -4,6 +4,7 @@ This module exposes a single class with static methods to convert between
 the domain Chunk entity and the persistence ChunkModel used by repositories.
 """
 
+from contextlib import suppress
 from typing import Any, Dict
 from uuid import uuid4
 
@@ -34,13 +35,11 @@ class ChunkMapper:
             data["source_type"] = source.value
         elif isinstance(source, str):
             # try to normalize enum names like 'YOUTUBE' to their values
-            try:
+            with suppress(Exception):
                 data["source_type"] = SourceType[source].value
-            except Exception:
-                try:
+            if not isinstance(data.get("source_type"), str) or data["source_type"] == source:
+                with suppress(Exception):
                     data["source_type"] = SourceType(source).value
-                except Exception:
-                    pass
         return ChunkModel(**data)
 
     @staticmethod
@@ -49,13 +48,11 @@ class ChunkMapper:
         data = model.model_dump()
         source = data.get("source_type")
         if isinstance(source, str):
-            try:
+            with suppress(ValueError):
                 data["source_type"] = SourceType(source)
-            except ValueError:
-                try:
+            if isinstance(data.get("source_type"), str):
+                with suppress(Exception):
                     data["source_type"] = SourceType[source]
-                except Exception:
-                    pass
         return ChunkEntity(**data)
 
     @staticmethod
@@ -132,10 +129,8 @@ class ChunkMapper:
         """
         s = source.strip()
         # try by name (case-insensitive)
-        try:
+        with suppress(Exception):
             return SourceType[s.upper()].value
-        except Exception:
-            pass
         # try match to value ignoring case
         for member in SourceType:
             if member.value.lower() == s.lower() or member.name.lower() == s.lower():

@@ -1,4 +1,5 @@
 import datetime
+from contextlib import suppress
 import logging
 import os
 import uuid
@@ -11,7 +12,7 @@ from sqlalchemy.orm import Session
 from src.config.settings import settings
 from src.infrastructure.repositories.sql.models.voice_record import VoiceRecord
 from src.infrastructure.repositories.storage.storage import StorageService
-from src.infrastructure.utils.audio_utils import get_best_device
+from src.infrastructure.utils.audio_utils import cosine_similarity, get_best_device
 
 logger = logging.getLogger(__name__)
 
@@ -90,8 +91,23 @@ class VoiceDB:
             new_embedding = np.array(self._extract_embedding(audio_path))
 
             if existing:
-                logger.info("Reinforcing existing voice profile: %s", name)
                 old_emb = np.array(existing.embedding)
+                similarity = cosine_similarity(old_emb, new_embedding)
+
+                if similarity >= 0.95:
+                    logger.info(
+                        "Skipping reinforcement for '%s': audio too similar "
+                        "(similarity=%.4f), would duplicate existing reference.",
+                        name,
+                        similarity,
+                    )
+                    return str(existing.id), ""
+
+                logger.info(
+                    "Reinforcing existing voice profile: %s (similarity=%.4f)",
+                    name,
+                    similarity,
+                )
                 combined_emb = (old_emb + new_embedding) / 2.0
                 existing.embedding = combined_emb.tolist()
 
@@ -134,10 +150,8 @@ class VoiceDB:
         if voice.audios_path:
             files = self.storage.list_files(prefix=cast(str, voice.audios_path))
             for f in files:
-                try:
+                with suppress(Exception):
                     self.storage.delete_file(f["key"])
-                except Exception:
-                    pass
 
         self.db.delete(voice)
         self.db.commit()

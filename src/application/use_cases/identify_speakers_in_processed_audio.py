@@ -67,7 +67,8 @@ class IdentifySpeakersInProcessedAudioUseCase:
                         _, s3_path = voice_db.add(
                             name=best_match, audio_path=match.audio_path
                         )
-                        reinforced_paths[spk] = s3_path
+                        if s3_path:
+                            reinforced_paths[spk] = s3_path
                     except Exception as e:
                         logger.error(
                             "Failed to reinforce voice profile '%s': %s", best_match, e

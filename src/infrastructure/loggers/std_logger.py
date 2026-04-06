@@ -1,4 +1,5 @@
 import inspect
+from contextlib import suppress
 import logging
 import os
 import sys
@@ -176,10 +177,8 @@ class StdLogger(ILogger):
 
         # Handle standard logging message interpolation if args are provided
         if args:
-            try:
+            with suppress(Exception):
                 message = message % args
-            except Exception:
-                pass
 
         ctx = StdLogger.get_log_record(level, message)
 

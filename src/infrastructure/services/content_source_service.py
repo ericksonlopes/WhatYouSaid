@@ -63,10 +63,8 @@ class ContentSourceService:
         )  # Ingestion status
         model = self._repo.get_by_id(created_id)
         entity = ContentSourceMapper.model_to_entity(model)
-        assert entity is not None
-
-        # Notification removed (WebSocket decommissioned)
-
+        if entity is None:
+            raise RuntimeError("Failed to map created content source model to entity")
         return entity
 
     def get_by_source_info(

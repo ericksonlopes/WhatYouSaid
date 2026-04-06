@@ -1,4 +1,5 @@
 import math
+from contextlib import suppress
 from typing import Literal, List, Tuple, Dict, Optional
 
 from langchain_core.documents import Document
@@ -298,15 +299,13 @@ class YoutubeDataProcessService:
         tokens_count = None
         tokenizer = getattr(self.model_loader_service.model, "tokenizer", None)
         if tokenizer:
-            try:
+            with suppress(Exception):
                 tokens = tokenizer.encode(content, add_special_tokens=False)
                 tokens_count = len(tokens)
-            except Exception:
-                try:
+            if tokens_count is None:
+                with suppress(Exception):
                     tokens = tokenizer.encode(content)
                     tokens_count = len(tokens)
-                except Exception:
-                    pass
 
         return Document(
             page_content=content,

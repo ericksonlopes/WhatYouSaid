@@ -45,8 +45,8 @@ class IngestionJobService:
         )
         model = self._repo.get_by_id(job_id)
         entity = IngestionJobMapper.model_to_entity(model)
-        assert entity is not None
-
+        if entity is None:
+            raise RuntimeError("Failed to map created ingestion job model to entity")
         return entity
 
     def update_job(

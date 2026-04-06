@@ -100,7 +100,7 @@ class TestVoiceDB:
         v = VoiceRecord(
             id="exists-123",
             name="Exists",
-            embedding=[0.1, 0.1],
+            embedding=[0.1, 0.9],
             audios_path="voices/exists-123/",
         )
         sqlite_memory.add(v)
@@ -108,14 +108,40 @@ class TestVoiceDB:
 
         db_service = VoiceDB(sqlite_memory, hf_token="fake")
 
-        with patch.object(db_service, "_extract_embedding", return_value=[0.3, 0.3]):
+        with patch.object(db_service, "_extract_embedding", return_value=[0.9, 0.1]):
             voice_id, s3_path = db_service.add("Exists", "local.wav")
 
             assert voice_id == "exists-123"
             assert s3_path.startswith("voices/exists-123/sample_")
             assert s3_path.endswith(".wav")
             updated = sqlite_memory.get(VoiceRecord, "exists-123")
-            assert np.allclose(updated.embedding, [0.2, 0.2])
+            assert np.allclose(updated.embedding, [0.5, 0.5])
+
+    def test_add_voice_skips_reinforcement_when_too_similar(self, sqlite_memory):
+        from src.infrastructure.repositories.sql.models.voice_record import VoiceRecord
+
+        v = VoiceRecord(
+            id="exists-456",
+            name="Similar",
+            embedding=[0.1, 0.2],
+            audios_path="voices/exists-456/",
+        )
+        sqlite_memory.add(v)
+        sqlite_memory.commit()
+
+        db_service = VoiceDB(sqlite_memory, hf_token="fake")
+
+        # Same direction embedding → cosine similarity ≈ 1.0 → should skip
+        with patch.object(db_service, "_extract_embedding", return_value=[0.3, 0.6]):
+            voice_id, s3_path = db_service.add("Similar", "local.wav")
+
+            assert voice_id == "exists-456"
+            assert s3_path == ""
+            # Embedding should NOT be updated
+            updated = sqlite_memory.get(VoiceRecord, "exists-456")
+            assert np.allclose(updated.embedding, [0.1, 0.2])
+            # No file should be uploaded
+            assert not self.mock_storage.upload_file.called
 
     def test_remove_by_invalid_name(self, sqlite_memory):
         db_service = VoiceDB(sqlite_memory, hf_token="fake")

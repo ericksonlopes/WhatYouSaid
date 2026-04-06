@@ -1,4 +1,5 @@
 import concurrent.futures
+from contextlib import suppress
 import random
 import re
 import threading
@@ -248,7 +249,7 @@ class YoutubeIngestionUseCase:
 
             # Wait if there are more batches
             if i + batch_size < len(video_list):
-                total_wait = current_wait_time + random.uniform(0, 5)
+                total_wait = current_wait_time + random.uniform(0, 5)  # nosec
                 logger.debug(
                     "Throttling: waiting before next batch",
                     context={"wait_time": total_wait},
@@ -329,7 +330,7 @@ class YoutubeIngestionUseCase:
         ingestion = None
         source = None
         if cmd.ingestion_job_id:
-            try:
+            with suppress(Exception):
                 jid = (
                     UUID(cmd.ingestion_job_id)
                     if isinstance(cmd.ingestion_job_id, str)
@@ -338,11 +339,6 @@ class YoutubeIngestionUseCase:
                 ingestion = self.ingestion_service.get_by_id(jid)
                 if ingestion and ingestion.content_source_id:
                     source = self.cs_service.get_by_id(ingestion.content_source_id)
-            except Exception as context_error:
-                logger.debug(
-                    "Could not recover job context",
-                    context={"error": str(context_error)},
-                )
 
         try:
             subject = self._resolve_subject(cmd)
@@ -465,11 +461,9 @@ class YoutubeIngestionUseCase:
         job = None
         jid = cmd.ingestion_job_id if hasattr(cmd, "ingestion_job_id") else None
         if jid:
-            try:
+            with suppress(Exception):
                 job_uuid = UUID(jid) if isinstance(jid, str) else jid
                 job = self.ingestion_service.get_by_id(job_uuid)
-            except Exception:
-                pass
 
         if not job:
             job = self._create_ingestion_job(

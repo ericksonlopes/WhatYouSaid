@@ -42,7 +42,8 @@ class KnowledgeSubjectService:
         )
         model = self._repo.get_by_id(created_id)
         entity = KnowledgeSubjectMapper.model_to_entity(model)
-        assert entity is not None
+        if entity is None:
+            raise RuntimeError("Failed to map subject model to entity")
         return entity
 
     def get_by_name(self, name: str) -> Optional[KnowledgeSubjectEntity]:
@@ -80,7 +81,8 @@ class KnowledgeSubjectService:
         existing = self._repo.get_by_external_ref(external_ref)
         if existing is not None:
             entity = KnowledgeSubjectMapper.model_to_entity(existing)
-            assert entity is not None
+            if entity is None:
+                raise RuntimeError("Failed to map existing subject model to entity")
             return entity
 
         created_id = self._repo.create_subject(
@@ -90,7 +92,8 @@ class KnowledgeSubjectService:
         )
         model = self._repo.get_by_id(created_id)
         entity = KnowledgeSubjectMapper.model_to_entity(model)
-        assert entity is not None
+        if entity is None:
+            raise RuntimeError("Failed to map subject model to entity")
         return entity
 
     def list_subjects(self, limit: int = 100) -> List[KnowledgeSubjectEntity]:
