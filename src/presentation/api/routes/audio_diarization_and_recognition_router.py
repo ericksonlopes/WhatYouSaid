@@ -220,7 +220,9 @@ async def retrieve_all_processed_audio_history(
     try:
         logger.info(
             "Fetching audio history: limit=%s, offset=%s, subject_id=%s",
-            limit, offset, subject_id,
+            limit,
+            offset,
+            subject_id,
         )
         result = use_case.execute(limit=limit, offset=offset, subject_id=subject_id)
         logger.info("Audio history returned %d records", len(result))

@@ -37,7 +37,10 @@ class ChunkMapper:
             # try to normalize enum names like 'YOUTUBE' to their values
             with suppress(Exception):
                 data["source_type"] = SourceType[source].value
-            if not isinstance(data.get("source_type"), str) or data["source_type"] == source:
+            if (
+                not isinstance(data.get("source_type"), str)
+                or data["source_type"] == source
+            ):
                 with suppress(Exception):
                     data["source_type"] = SourceType(source).value
         return ChunkModel(**data)
