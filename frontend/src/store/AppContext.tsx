@@ -299,18 +299,15 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
     const connectSSE = () => {
         if (eventSource) eventSource.close();
         
-        console.log('[SSE] Connecting to notification stream...');
         eventSource = new EventSource('/rest/notifications/events');
 
         eventSource.onopen = () => {
-            console.log('[SSE] Global connection established');
             retryCount = 0;
         };
 
         eventSource.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                console.log('[SSE] Received event:', data);
                 setLastEvent(data);
                 
                 // Dispatch refreshes based on event type
@@ -337,7 +334,6 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
             
             if (retryCount < maxRetries) {
                 const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
-                console.log(`[SSE] Retrying in ${delay}ms... (Attempt ${retryCount + 1}/${maxRetries})`);
                 setTimeout(connectSSE, delay);
                 retryCount++;
             } else {
