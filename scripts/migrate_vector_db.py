@@ -77,9 +77,14 @@ def migrate_vector_db(batch_size: int = 100) -> None:
             if not chunk_models_sql:
                 break
 
+            # Capture keyset cursors from the last row of this batch
+            last_created_at = chunk_models_sql[-1].created_at
+            last_id = chunk_models_sql[-1].id
+
             documents = []
             for chunk_sql in chunk_models_sql:
                 extra_data: Dict[str, Any] = (
+                    # Shallow copy is sufficient: we only add a top-level key below
                     dict(chunk_sql.extra)
                     if isinstance(chunk_sql.extra, dict)
                     else {}
@@ -107,10 +112,7 @@ def migrate_vector_db(batch_size: int = 100) -> None:
                 )
                 documents.append(doc)
 
-            last_created_at = chunk_models_sql[-1].created_at
-            last_id = chunk_models_sql[-1].id
             total_migrated += len(documents)
-
             logger.info(
                 f"Uploading batch of {len(documents)} chunks to vector db... (Total migrated so far: {total_migrated})"
             )
