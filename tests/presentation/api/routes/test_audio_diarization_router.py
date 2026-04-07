@@ -143,6 +143,67 @@ class TestAudioDiarizationRouter:
 
         app.dependency_overrides.clear()
 
+        app.dependency_overrides.clear()
+
+    def test_start_audio_processing_pipeline_with_subject(
+        self, mock_db, mock_task_queue
+    ):
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_task_queue_service] = lambda: mock_task_queue
+        record_mock = MagicMock(id="new-uuid")
+
+        with (
+            patch(
+                "src.infrastructure.repositories.sql.diarization_repository.DiarizationRepository.get_by_external_source",
+                return_value=None,
+            ),
+            patch(
+                "src.infrastructure.repositories.sql.diarization_repository.DiarizationRepository.create_pending",
+                return_value=record_mock,
+            ),
+        ):
+            payload = {
+                "source_type": "youtube",
+                "source": "https://youtube.com/watch?v=test",
+                "subject_id": "893c5240-f1c5-412e-9d6e-8d54c1e679a2",
+            }
+            response = client.post("/rest/audio", json=payload)
+            assert response.status_code == 200
+            assert response.json()["id"] == "new-uuid"
+
+        app.dependency_overrides.clear()
+
+    def test_start_audio_processing_pipeline_failed_retry(
+        self, mock_db, mock_task_queue
+    ):
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_task_queue_service] = lambda: mock_task_queue
+
+        # Existing but failed
+        existing_record = MagicMock(id="old-uuid", status="failed")
+        new_record = MagicMock(id="new-uuid")
+
+        with (
+            patch(
+                "src.infrastructure.repositories.sql.diarization_repository.DiarizationRepository.get_by_external_source",
+                return_value=existing_record,
+            ),
+            patch(
+                "src.infrastructure.repositories.sql.diarization_repository.DiarizationRepository.create_pending",
+                return_value=new_record,
+            ),
+        ):
+            payload = {
+                "source_type": "youtube",
+                "source": "https://youtube.com/watch?v=test",
+            }
+            response = client.post("/rest/audio", json=payload)
+            assert response.status_code == 200
+            assert response.json()["id"] == "new-uuid"
+            assert mock_task_queue.enqueue.called
+
+        app.dependency_overrides.clear()
+
     def test_identify_speakers_existing(self, mock_db):
         app.dependency_overrides[get_db] = lambda: mock_db
         mock_use_case = MagicMock()
