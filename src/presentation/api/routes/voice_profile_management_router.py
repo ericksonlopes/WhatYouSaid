@@ -14,7 +14,6 @@ from src.application.use_cases.manage_voice_profiles import (
     RegisterNewVoiceProfileUseCase,
 )
 from src.application.workers import run_voice_training_worker
-from src.domain.entities.enums.diarization_status_enum import DiarizationStatus
 from src.domain.interfaces.services.i_event_bus import IEventBus
 from src.domain.interfaces.services.i_task_queue import ITaskQueue
 from src.infrastructure.repositories.sql.diarization_repository import (
@@ -111,25 +110,21 @@ async def train_voice_profile_from_existing_speaker_segment(
         if not record:
             raise HTTPException(status_code=404, detail=f"Diarization not found: {request.diarization_id}")
 
-        # 2. Update status to TRAINING immediately
-        repo.update_status(
-            request.diarization_id,
-            DiarizationStatus.TRAINING.value,
-            status_message=f"Preparando treinamento de voz: {request.name}",
-        )
-
-        # 3. Notify frontend
+        # 2. Notify frontend (voice-scoped — do NOT touch the diarization record's
+        # status, since voice training is orthogonal to the diarization lifecycle
+        # and mutating the record's status corrupts its real state on reload)
         event_bus.publish(
             "ingestion_status",
             {
-                "type": "diarization",
-                "id": request.diarization_id,
-                "status": DiarizationStatus.TRAINING.value,
-                "message": f"Iniciando treinamento de voz '{request.name}'...",
+                "type": "voice",
+                "action": "train_started",
+                "name": request.name,
+                "diarization_id": request.diarization_id,
+                "speaker_label": request.speaker_label,
             },
         )
 
-        # 4. Enqueue background task
+        # 3. Enqueue background task
         cmd = TrainVoiceCommand(
             diarization_id=request.diarization_id,
             speaker_label=request.speaker_label,

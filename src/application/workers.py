@@ -562,10 +562,11 @@ def run_audio_diarization_worker(cmd: ProcessAudioCommand):
 
 def run_voice_training_worker(cmd: TrainVoiceCommand):
     """Background worker function for voice profile training from speaker segment."""
-    set_global_context({"correlation_id": f"worker-voice-train-{cmd.name}"})
-
+    # Redis-serialized payloads arrive as dicts — convert BEFORE touching fields.
     if isinstance(cmd, dict):
         cmd = TrainVoiceCommand(**cmd)
+
+    set_global_context({"correlation_id": f"worker-voice-train-{cmd.name}"})
 
     app = _get_app()
     if not app:

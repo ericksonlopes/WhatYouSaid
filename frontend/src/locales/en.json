@@ -713,7 +713,10 @@
       "delete_file_error": "Failed to delete audio sample"
     },
     "status": {
-      "samples": "{{count}} audio files"
+      "samples": "{{count}} audio files",
+      "processing": "Training",
+      "ready": "Ready",
+      "failed": "Failed"
     },
     "card": {
       "created_at": "Created"
