@@ -81,25 +81,27 @@ export function buildTranscriptFromSegments(segments: any[], mapping?: any) {
 }
 
 export function extractSpeakersFromSegments(segments: any[], recognition?: any): any[] {
-    const speakerLabels = [...new Set(segments.map((s: any) => s.speaker as string))].sort();
+    const speakerLabels = [
+        ...new Set(
+            segments
+                .map((s: any) => s.speaker)
+                .filter((speaker: any) => !!speaker)
+                .map((speaker: any) => String(speaker))
+        )
+    ].sort((a, b) => a.localeCompare(b));
     const mapping = recognition?.mapping || {};
     const details = recognition?.details || {};
 
-    const reverseMapping: Record<string, string> = {};
-    for (const [key, value] of Object.entries(mapping)) {
-        reverseMapping[value as string] = key;
-    }
-
     return speakerLabels.map((label, i) => {
         const identifiedName = mapping[label];
-        const isAlreadyIdentified = !identifiedName && reverseMapping[label];
-        const originalLabel = isAlreadyIdentified ? reverseMapping[label] : label;
+        const assigned = identifiedName || label;
         
-        const assigned = identifiedName || (isAlreadyIdentified ? label : label);
-        
-        const confidence = details[originalLabel]?.score
-            ? Math.round(details[originalLabel].score * 100)
-            : (identifiedName ? 95 : 0);
+        let confidence = 0;
+        if (details[label]?.score) {
+            confidence = Math.round(details[label].score * 100);
+        } else if (identifiedName) {
+            confidence = 95;
+        }
 
         return {
             id: String(i),
