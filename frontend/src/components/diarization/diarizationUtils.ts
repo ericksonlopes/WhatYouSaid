@@ -81,7 +81,14 @@ export function buildTranscriptFromSegments(segments: any[], mapping?: any) {
 }
 
 export function extractSpeakersFromSegments(segments: any[], recognition?: any): any[] {
-    const speakerLabels = [...new Set(segments.map((s: any) => s.speaker as string))].sort((a, b) => a.localeCompare(b));
+    const speakerLabels = [
+        ...new Set(
+            segments
+                .map((s: any) => s.speaker)
+                .filter((speaker: any) => !!speaker)
+                .map((speaker: any) => String(speaker))
+        )
+    ].sort((a, b) => a.localeCompare(b));
     const mapping = recognition?.mapping || {};
     const details = recognition?.details || {};
 
