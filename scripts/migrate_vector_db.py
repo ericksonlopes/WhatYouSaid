@@ -3,18 +3,26 @@ Script to migrate/re-ingest chunks into the configured vector database.
 It reads the `chunk_index` records from the SQL database and pushes
 them to the Vector Store, using the current embedding model.
 This is useful when changing embedding models or vector databases.
+
+NOTE: This script reuses the existing chunk IDs as vector document IDs.
+Backends that do not upsert on insert (e.g. ChromaDB) may produce
+duplicate-ID errors or silent duplicates if the target collection is
+non-empty. Run `scripts/clear_vector_db.py` before this script to
+ensure a clean migration.
 """
 
 import os
 import sys
+import traceback
 from datetime import datetime
-from typing import cast, Dict, Any
+from typing import cast, Dict, Any, Optional
 from uuid import UUID
 
 # Add project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, and_
 from src.infrastructure.repositories.sql.connector import Session as DBSessionFactory
 from src.infrastructure.repositories.sql.models.chunk_index import ChunkIndexModel
 from src.infrastructure.services.model_loader_service import ModelLoaderService
@@ -44,26 +52,35 @@ def migrate_vector_db(batch_size: int = 100) -> None:
 
     db: Session = DBSessionFactory()
     try:
-        total_chunks = db.query(ChunkIndexModel).count()
-        logger.info(f"Total chunks to migrate: {total_chunks}")
+        total_migrated = 0
+        last_created_at: Optional[datetime] = None
+        last_id: Optional[UUID] = None
 
-        offset = 0
-        while offset < total_chunks:
-            chunk_models_sql = (
-                db.query(ChunkIndexModel)
-                .order_by(ChunkIndexModel.created_at)
-                .offset(offset)
-                .limit(batch_size)
-                .all()
+        while True:
+            query = db.query(ChunkIndexModel).order_by(
+                ChunkIndexModel.created_at, ChunkIndexModel.id
             )
+            # Keyset pagination: skip rows already processed in previous batches
+            if last_created_at is not None:
+                query = query.filter(
+                    or_(
+                        ChunkIndexModel.created_at > last_created_at,
+                        and_(
+                            ChunkIndexModel.created_at == last_created_at,
+                            ChunkIndexModel.id > last_id,
+                        ),
+                    )
+                )
+
+            chunk_models_sql = query.limit(batch_size).all()
 
             if not chunk_models_sql:
                 break
 
             documents = []
             for chunk_sql in chunk_models_sql:
-                extra_data = (
-                    cast(Dict[str, Any], chunk_sql.extra)
+                extra_data: Dict[str, Any] = (
+                    dict(chunk_sql.extra)
                     if isinstance(chunk_sql.extra, dict)
                     else {}
                 )
@@ -84,25 +101,33 @@ def migrate_vector_db(batch_size: int = 100) -> None:
                     tokens_count=cast(int, chunk_sql.tokens_count),
                     language=cast(str, chunk_sql.language),
                     embedding_model=embedding_model_name,
-                    created_at=cast(datetime, chunk_sql.created_at or datetime.now()),
+                    created_at=cast(datetime, chunk_sql.created_at),
                     version_number=cast(int, chunk_sql.version_number),
                     extra=extra_data,
                 )
                 documents.append(doc)
 
+            last_created_at = chunk_models_sql[-1].created_at
+            last_id = chunk_models_sql[-1].id
+            total_migrated += len(documents)
+
             logger.info(
-                f"Uploading batch of {len(documents)} chunks to vector db... (Progress: {offset + len(documents)} / {total_chunks})"
+                f"Uploading batch of {len(documents)} chunks to vector db... (Total migrated so far: {total_migrated})"
             )
 
             # create_documents will internally call the EmbeddingService for the texts and save them
             vector_repo.create_documents(documents)
 
-            offset += batch_size
+            # Expunge all ORM objects to prevent unbounded memory growth
+            db.expunge_all()
 
-        logger.info("Vector DB migration finished successfully!")
+        logger.info(
+            f"Vector DB migration finished successfully! Total chunks migrated: {total_migrated}"
+        )
 
     except Exception as e:
-        logger.error(f"Migration failed: {e}")
+        logger.error(f"Migration failed: {e}\n{traceback.format_exc()}")
+        sys.exit(1)
     finally:
         db.close()
 
