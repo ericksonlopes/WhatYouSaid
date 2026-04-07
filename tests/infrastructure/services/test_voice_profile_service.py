@@ -44,12 +44,12 @@ class TestVoiceDB:
                     voice_id, _ = db_service.add("Test User", "local.wav")
 
                     assert voice_id is not None
-                    
+
                     # Verify status was updated to ready
                     record = sqlite_memory.get(VoiceRecord, voice_id)
                     assert record.status == "ready"
                     assert record.status_message is None
-                    
+
                     voices = db_service.voices
                     assert "Test User" in voices
 
@@ -159,13 +159,13 @@ class TestVoiceDB:
         # After failure, it should NOT have created a successful record
         # but let's check if it created a fixed "failed" record if we implement it that way.
         # Currently, if it fails at download, it doesn't even create the record yet in the DB.
-        # Wait, the record is created AFTER the S3 check block. 
+        # Wait, the record is created AFTER the S3 check block.
         # So no record should exist in DB yet.
         assert sqlite_memory.query(VoiceRecord).count() == 0
 
     def test_add_voice_embedding_extraction_failure(self, sqlite_memory):
         db_service = VoiceDB(sqlite_memory, hf_token="fake")
-        
+
         # Fail during embedding extraction
         with patch.object(db_service, "_extract_embedding", side_effect=Exception("Model Error")):
             with pytest.raises(Exception, match="Model Error"):
@@ -183,10 +183,10 @@ class TestVoiceDB:
         sqlite_memory.commit()
 
         self.mock_storage.list_files.return_value = [{"key": "f1.wav"}, {"key": "f2.wav"}]
-        
+
         db_service = VoiceDB(sqlite_memory, hf_token="fake")
         files = db_service.list_audio_files("v1")
-        
+
         assert len(files) == 2
         self.mock_storage.list_files.assert_called_once_with(prefix="voices/v1/", extension=".wav")
 
@@ -202,15 +202,15 @@ class TestVoiceDB:
         sqlite_memory.commit()
 
         db_service = VoiceDB(sqlite_memory, hf_token="fake")
-        
+
         # list_voices should only show ready ones
         voice_list = db_service.list_voices()
         assert "Ready" in voice_list
         assert "Processing" not in voice_list
-        
+
         # len should only show ready ones
         assert len(db_service) == 1
-        
+
         # .voices property should only show ready ones
         assert "Ready" in db_service.voices
         assert "Processing" not in db_service.voices
