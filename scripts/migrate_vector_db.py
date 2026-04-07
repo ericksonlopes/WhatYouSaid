@@ -4,13 +4,17 @@ It reads the `chunk_index` records from the SQL database and pushes
 them to the Vector Store, using the current embedding model.
 This is useful when changing embedding models or vector databases.
 
-NOTE: This script reuses the existing chunk IDs as vector document IDs.
-Backends that do not upsert on insert (e.g. ChromaDB) may produce
-duplicate-ID errors or silent duplicates if the target collection is
-non-empty. Run `scripts/clear_vector_db.py` before this script to
-ensure a clean migration.
+Usage:
+    python scripts/migrate_vector_db.py [--clear]
+
+Options:
+    --clear   Clear the target vector collection before migrating.
+              Required for backends that do not upsert on insert
+              (e.g. ChromaDB) to avoid duplicate-ID errors.
+              Equivalent to running `scripts/clear_vector_db.py` first.
 """
 
+import argparse
 import os
 import sys
 import traceback
@@ -18,11 +22,15 @@ from datetime import datetime
 from typing import cast, Dict, Any, Optional
 from uuid import UUID
 
-# Add project root to sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# Add project root and scripts directory to sys.path
+_SCRIPTS_DIR = os.path.abspath(os.path.dirname(__file__))
+_PROJECT_ROOT = os.path.abspath(os.path.join(_SCRIPTS_DIR, ".."))
+sys.path.insert(0, _PROJECT_ROOT)
+sys.path.insert(0, _SCRIPTS_DIR)
 
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
+from clear_vector_db import clear_vector_db
 from src.infrastructure.repositories.sql.connector import Session as DBSessionFactory
 from src.infrastructure.repositories.sql.models.chunk_index import ChunkIndexModel
 from src.infrastructure.services.model_loader_service import ModelLoaderService
@@ -34,7 +42,7 @@ from src.presentation.api.dependencies import get_vector_repository
 logger = Logger()
 
 
-def migrate_vector_db(batch_size: int = 100) -> None:
+def migrate_vector_db(batch_size: int = 100, clear: bool = False) -> None:
     settings = Settings()
 
     embedding_model_name = settings.model_embedding.name
@@ -49,6 +57,10 @@ def migrate_vector_db(batch_size: int = 100) -> None:
     if not vector_repo.is_ready():
         logger.error("Vector Repository is not ready. Aborting.")
         sys.exit(1)
+
+    if clear:
+        logger.info("--clear flag set: clearing the vector collection before migration...")
+        clear_vector_db()
 
     db: Session = DBSessionFactory()
     try:
@@ -135,4 +147,17 @@ def migrate_vector_db(batch_size: int = 100) -> None:
 
 
 if __name__ == "__main__":
-    migrate_vector_db()
+    parser = argparse.ArgumentParser(
+        description="Migrate chunk_index records from SQL into the configured vector store."
+    )
+    parser.add_argument(
+        "--clear",
+        action="store_true",
+        help=(
+            "Clear the target vector collection before migrating. "
+            "Use this for backends that do not upsert on insert (e.g. ChromaDB) "
+            "to avoid duplicate-ID errors."
+        ),
+    )
+    args = parser.parse_args()
+    migrate_vector_db(clear=args.clear)
