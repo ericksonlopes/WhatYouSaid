@@ -2,115 +2,129 @@
 
 # WhatYouSaid
 
-[![codecov](https://codecov.io/github/ericksonlopes/WhatYouSaid/branch/main/graph/badge.svg?token=8CZJARVJUE)](https://codecov.io/github/ericksonlopes/WhatYouSaid)
+## The Vectorized Intelligence & Diarization Hub
 
+
+[![codecov](https://codecov.io/github/ericksonlopes/WhatYouSaid/branch/main/graph/badge.svg?token=8CZJARVJUE)](https://codecov.io/github/ericksonlopes/WhatYouSaid)
 [![Tests](https://github.com/ericksonlopes/WhatYouSaid/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/ericksonlopes/WhatYouSaid/actions/workflows/tests.yml)
 [![Code Quality](https://github.com/ericksonlopes/WhatYouSaid/actions/workflows/code-quality.yml/badge.svg?branch=main)](https://github.com/ericksonlopes/WhatYouSaid/actions/workflows/code-quality.yml)
 [![Security](https://github.com/ericksonlopes/WhatYouSaid/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/ericksonlopes/WhatYouSaid/actions/workflows/security.yml)
 
 ![Python](https://img.shields.io/badge/-Python-3776AB?&logo=Python&logoColor=FFFFFF)
 ![React](https://img.shields.io/badge/-React-61DAFB?&logo=React&logoColor=000000)
-![Pytest](https://img.shields.io/badge/-Pytest-0A9EDC?&logo=Pytest&logoColor=FFFFFF)
-![GitHub Actions](https://img.shields.io/badge/-GitHub%20Actions-2088FF?&logo=GitHub%20Actions&logoColor=FFFFFF)
+![FastAPI](https://img.shields.io/badge/-FastAPI-05998B?&logo=FastAPI&logoColor=FFFFFF)
+![Redis](https://img.shields.io/badge/-Redis-DC382D?&logo=Redis&logoColor=FFFFFF)
+![Postgres](https://img.shields.io/badge/-PostgreSQL-4169E1?&logo=PostgreSQL&logoColor=FFFFFF)
 
 </div>
 
-WhatYouSaid is a vectorized data hub designed to explore any topic or knowledge domain. It extracts, processes, and indexes content from YouTube videos, local files, and remote URLs to enable advanced semantic search and Retrieval-Augmented Generation (RAG) workflows.
-
-This repository provides modular extractors, robust splitting utilities, and a scalable background processing pipeline to build searchable knowledge bases efficiently.
+**WhatYouSaid** is a state-of-the-art vectorized data hub designed to explore any knowledge domain. It transforms unstructured audio, video, files, and web content into structured, searchable intelligence using advanced AI techniques, including **Speaker Diarization**, **Voice Recognition**, and **RAG** (Retrieval-Augmented Generation).
 
 ---
 
-## 📚 Documentation
+## ✨ Features
 
-Detailed guides for specific topics:
+### 🎧 Diarization & Voice Intelligence
 
-- 🐳 **[Docker Deployment Guide](docs/docker-deployment.md)**: Learn how to use Docker Profiles to run different combinations of databases (MySQL, Postgres, SQLite) and vector stores (FAISS, Weaviate).
+- **Speaker Segmentation**: Automatically split audio/video files by speaker using WhisperX/Whisper for unmatched accuracy.
+- **Voice Recognition**: Identify and label speakers across your entire knowledge base using trained voice profiles.
+- **Diarization Pipeline**: Interactive dashboard to review, edit, and finalize transcripts and speaker assignments before indexing.
+
+
+### 📥 Multi-Source Ingestion
+
+- **YouTube Ecosystem**: Full support for individual videos, entire playlists, or entire channels.
+- **Document Extractors**: High-fidelity extraction from PDF, DOCX, and TXT files.
+- **Web Intelligence**: Powerful scraping via **Crawl4AI** and **Docling** for websites and remote URLs.
+- **Robust Pipeline**: Step-by-step progress tracking with real-time SSE notifications and full rollback support on failure.
+
+### 🔍 Advanced Semantic Search
+
+- **Hybrid Search**: Combining Vector (FAISS/Weaviate/Chroma) and Keyword (BM25) search for maximum precision.
+- **Re-Ranking**: Specialized Cross-Encoders ensure the most relevant context is always at the top.
+- **Pluggable Architecture**: Seamlessly switch between SQL databases (SQLite/Postgres/MySQL) and Vector stores.
 
 ---
 
-## 🚀 Features
+## 🚀 Quick Start
 
-- **Multi-source Extraction**: Ingest data from YouTube (transcripts), local files (PDF, DOCX, TXT), **remote URLs** via Docling, and **Websites** via Crawl4AI.
-- **Robust Fallbacks**: Integrated `PlainTextExtractor` ensuring successful ingestion even for formats not supported by specialized extractors.
-- **Async Task Queue**: High-performance background processing powered by **Redis**, ensuring responsive workflows.
-- **Structured Logging & Tracing**: Centralized logging equipped with contextvars and request tracing (Correlation IDs) for end-to-end observability.
-- **Real-time Updates**: Live ingestion status and progress monitoring via a **Redis Event Bus** (SSE-ready).
-- **Advanced Search**: Semantic, keyword (BM25), and **Hybrid Search** with cross-encoder re-ranking for maximum precision.
-- **Pluggable Vector Stores**: Support for **FAISS** (local), **ChromaDB**, **Weaviate** (scalable), and **Qdrant**.
-- **Pluggable SQL Databases**: Support for **SQLite**, **PostgreSQL**, **MySQL**, **MariaDB**, and **MSSQL**.
-- **Modern Dashboard**: A clean React + Tailwind CSS frontend for managing knowledge subjects, content sources, and monitoring background tasks.
+WhatYouSaid is powered by **Python 3.12** and uses **uv** for high-speed dependency management.
 
----
+### 1. Prerequisites
 
-## 🛠️ Infrastructure & Deployment
+- [uv](https://github.com/astral-sh/uv) (Recommended) or `pip`
+- [Docker](https://www.docker.com/)
 
-WhatYouSaid is designed to be flexible, from a lightweight local setup to a scalable production-ready environment.
+### 2. Environment Setup
 
-### 1. Storage & Messaging Options
-
-| Component | Lightweight (Local) | Scalable / Production |
-| :--- | :--- | :--- |
-| **Relational Database** | **SQLite** (Default, file-based) | **PostgreSQL**, **MySQL**, **MariaDB**, **MSSQL** |
-| **Vector Store** | **FAISS** (Local, file-based) | **Weaviate** (Container or Cloud), **ChromaDB** |
-| **Task Queue & Bus** | **In-memory** (Limited) | **Redis** (Default in Docker) |
-
-### 2. Docker Compose Profiles & Dependencies
-
-We use **Docker Profiles** to keep the environment lean. Only the services you need are started. The project also natively supports both **CPU** and **GPU** environments via optional Python dependencies.
-
-> 📘 **Detailed Guide**: For a step-by-step tutorial on different deployment scenarios, see our [Docker Deployment Guide](docs/docker-deployment.md).
-
-#### **Scenario A: Lite (Default)**
-Uses **SQLite**, **FAISS**, and **Redis**.
 ```bash
+# Clone the repository
+git clone https://github.com/ericksonlopes/WhatYouSaid.git
+cd WhatYouSaid
+
+# Install dependencies (including dev groups)
+uv sync --group dev
+```
+
+### 3. Spin Up Infrastructure
+
+```bash
+# Lite mode: SQLite + FAISS + Redis
 docker-compose up -d
-```
 
-#### **Scenario B: Scalable (Base)**
-Starts **PostgreSQL**, **Weaviate**, and **Redis**.
-```bash
+# Scalable mode: PostgreSQL + Weaviate + Redis
 docker-compose --profile base up -d
-# Note: Set SQL__TYPE=postgres and VECTOR__STORE_TYPE=weaviate in .env
 ```
 
----
+### 4. Run Application
 
-## 🏗️ Architecture
-
-The system follows a clean architecture approach, ensuring separation of concerns:
-
-- **Application Layer**: Contains use cases (e.g., `FileIngestionUseCase`, `SearchUseCase`) and a `ServiceRegistry` for background worker dependency resolution.
-- **Infrastructure Layer**:
-  - `extractors/`: Fetch raw content (Docling, YouTube, PlainText).
-  - `repositories/`: Data persistence (SQLAlchemy for relational, specialized clients for Vector Stores).
-  - `services/`: Core logic (text splitting, embedding, re-ranking, Redis task queue).
-- **Presentation Layer**: FastAPI-based REST API with real-time SSE notifications.
-
----
-
-## 🧪 Quality & Testing
-
-We maintain a high standard of code quality and test coverage:
-
-- **417+ Automated Tests**: Covering unit, integration, and complex edge cases.
-- **93% Code Coverage**: Verified via `pytest-cov`.
-- **Strict Linting**: Powered by `ruff` for code style and `mypy` for static type checking.
-- **Security Scanning**: Integrated `bandit` scans for vulnerability detection.
-
-**Run tests locally:**
 ```bash
-uv run pytest
+# Start Backend (FastAPI)
+python main.py
+
+# Start Frontend (React)
+cd frontend
+npm install
+npm run dev
 ```
 
 ---
 
-## 🤝 Contributing
+## 🐳 Deployment Profiles
 
-Contributions are welcome. Please:
-- Open an issue to discuss major changes.
-- Add tests for any new feature or bug fix.
-- Ensure `ruff check .` and `mypy .` pass before submitting.
+We use **Docker Profiles** to keep your environment lean. Only the services you need are started.
+
+| Component | Lite Profile (Default) | Scalable Profile (`base`) |
+| :--- | :--- | :--- |
+| **Relational DB** | SQLite (File-based) | PostgreSQL / MySQL / MariaDB |
+| **Vector Store** | FAISS (Local) | Weaviate / ChromaDB / Qdrant |
+| **Task Queue** | Redis | Redis (Production-ready) |
+
+> [!TIP]
+> Use the **Scalable** profile if you require high-concurrency access or plan to manage multi-gigabyte vector indexes.
+
+---
+
+## 🏗️ Clean Architecture
+
+The system follows a modular approach ensuring maximum testability and maintainability:
+
+- **Application Layer**: Orchestrates logic via use cases and resolves background worker dependencies through a `ServiceRegistry`.
+- **Infrastructure Layer**:
+  - `extractors/`: Fetch raw content from specialized sources (Docling, YouTube, Crawl4AI).
+  - `repositories/`: Persistence via SQL (SQLAlchemy) and specialized Vector clients.
+  - `services/`: Core providers for embeddings, text splitting, and re-ranking.
+- **Presentation Layer**: FastAPI-based REST API with real-time event broadcasting and a modern React dashboard.
+
+---
+
+## 🤝 Contributing & Quality
+
+Contributions are what make the open-source community such an amazing place! Please:
+
+1. Open an **Issue** to discuss proposed changes.
+2. Ensure `uv run ruff check . --fix` and `uv run mypy .` pass.
+3. Run all tests: `uv run pytest`.
 
 ---
 
@@ -119,8 +133,9 @@ Contributions are welcome. Please:
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 <div align="center">
-    <p>Made with ❤️ by Erickson Lopes </p>
 
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Erickson_Lopes-blue)](https://www.linkedin.com/in/ericksonlopes/)
+Hand-crafted with ❤️ by **Erickson Lopes**
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Erickson_Lopes-blue?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/ericksonlopes/)
 
 </div>

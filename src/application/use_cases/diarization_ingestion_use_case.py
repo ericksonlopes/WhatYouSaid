@@ -59,26 +59,18 @@ class DiarizationIngestionUseCase:
         self.event_bus = event_bus
 
     def execute(self, cmd: IngestDiarizationCommand) -> Dict[str, Any]:
-        self.event_bus.publish(
-            "ingestion_status",
-            {
-                "job_id": str(cmd.ingestion_job_id) if cmd.ingestion_job_id else "new",
-                "status": "started",
-                "diarization_id": str(cmd.diarization_id),
-            },
-        )
+        """Orchestrates the ingestion of diarization results with status tracking and rollback."""
+        self._publish_initial_status(cmd)
         logger.info(
-            "Starting Diarization ingestion",
-            context={
-                "diarization_id": str(cmd.diarization_id),
-                "subject_id": str(cmd.subject_id),
-            },
+            "Starting Diarization ingestion pipeline",
+            context={"diarization_id": str(cmd.diarization_id), "subject_id": str(cmd.subject_id)},
         )
 
-        ingestion = None
+        job = None
         source = None
 
         try:
+            # 1. Resolve domain objects and source info
             record = self.diarization_repo.get_by_id(str(cmd.diarization_id))
             if not record:
                 raise ValueError(f"Diarization record not found: {cmd.diarization_id}")
@@ -89,97 +81,123 @@ class DiarizationIngestionUseCase:
 
             source_type, external_source = self._resolve_source_info(record)
 
-            if cmd.ingestion_job_id:
-                ingestion = self.ingestion_service.get_by_id(cmd.ingestion_job_id)
+            # 2. Setup ingestion job tracking
+            job = self._ensure_ingestion_job(cmd, external_source, source_type, subject.id)
 
-            if ingestion is None:
-                ingestion = self._create_ingestion_job(external_source, source_type, subject.id)
-
-            self.ingestion_service.update_job(
-                job_id=ingestion.id,
-                status=IngestionJobStatus.PROCESSING,
-                status_message="Formatting transcript from diarization...",
-                current_step=1,
-                total_steps=4,
-            )
-
-            full_text = self._format_transcript(cast(list, record.segments), cast(dict, record.recognition_results))
-            if not full_text:
-                raise ValueError("No segments found in diarization record")
-
+            # 3. Format transcript and prepare source
+            full_text = self._prepare_transcript(job, record)
             display_name = cmd.name or cast(str, record.name) or "Transcrição"
             source = self._get_or_create_source(source_type, external_source, subject.id, display_name, cmd, record)
 
-            # Generate chunks and Embeddings
-            self.ingestion_service.update_job(
-                job_id=ingestion.id,
-                status=IngestionJobStatus.PROCESSING,
-                status_message="Generating embeddings...",
-                current_step=2,
-                total_steps=4,
-                content_source_id=source.id,
-            )
-
+            # 4. Generate and index chunks
+            self._report_step(job, 2, "Generating embeddings...", content_id=source.id)
             split_docs = self._generate_split_docs(full_text, display_name, external_source, source_type, cmd, record)
 
-            # Persist Chunks
-            chunks = self._build_chunk_entities(split_docs, source, subject, cmd, ingestion.id)
+            chunks = self._build_chunk_entities(split_docs, source, subject, cmd, job.id)
             self.chunk_service.create_chunks(chunks)
 
-            # Index
-            self.ingestion_service.update_job(
-                job_id=ingestion.id,
-                status=IngestionJobStatus.PROCESSING,
-                status_message="Indexing in vector store...",
-                current_step=3,
-                total_steps=4,
-            )
+            self._report_step(job, 3, "Indexing in vector store...")
             self.vector_service.index_documents(chunks)
 
-            # Finalize
-            self._finalize_ingestion(ingestion, source, chunks, cmd)
-
-            # Update Diarization record status to COMPLETED
-            self.diarization_repo.update_status(
-                diarization_id=str(cmd.diarization_id),
-                status=DiarizationStatus.COMPLETED.value,
-                status_message="Ingestão concluída com sucesso",
-                error_message="",  # Clear any previous error
-            )
-
-            # Notify frontend that diarization is fully done
-            self.event_bus.publish(
-                "ingestion_status",
-                {
-                    "type": "diarization",
-                    "id": str(cmd.diarization_id),
-                    "status": "done",
-                    "message": "Diarização indexada com sucesso",
-                },
-            )
+            # 5. Finalize
+            self._finalize_ingestion(job, source, chunks, cmd)
+            self._complete_diarization_record(cmd)
+            self._publish_final_notification(cmd)
 
             return {
                 "diarization_id": str(cmd.diarization_id),
                 "created_chunks": len(chunks),
                 "source_id": source.id,
-                "job_id": ingestion.id,
+                "job_id": job.id,
             }
 
         except Exception as e:
             logger.error(e, context={"action": "diarization_ingestion_execute"})
-            if ingestion:
-                self.ingestion_service.update_job(
-                    job_id=ingestion.id,
-                    status=IngestionJobStatus.FAILED,
-                    error_message=str(e),
-                )
-            if source:
-                self.cs_service.update_processing_status(
-                    content_source_id=source.id,
-                    status=ContentSourceStatus.FAILED,
-                    error_message=str(e),
-                )
+            self._rollback_on_failure(job, source, e)
             raise
+
+    def _publish_initial_status(self, cmd: IngestDiarizationCommand) -> None:
+        self.event_bus.publish(
+            "ingestion_status",
+            {
+                "job_id": str(cmd.ingestion_job_id) if cmd.ingestion_job_id else "new",
+                "status": "started",
+                "diarization_id": str(cmd.diarization_id),
+            },
+        )
+
+    def _ensure_ingestion_job(
+        self, cmd: IngestDiarizationCommand, external_source: str, source_type: SourceType, subject_id: UUID
+    ) -> Any:
+        job = None
+        if cmd.ingestion_job_id:
+            job = self.ingestion_service.get_by_id(cmd.ingestion_job_id)
+
+        if not job:
+            job = self._create_ingestion_job(external_source, source_type, subject_id)
+        return job
+
+    def _prepare_transcript(self, job: Any, record: Any) -> str:
+        self.ingestion_service.update_job(
+            job_id=job.id,
+            status=IngestionJobStatus.PROCESSING,
+            status_message="Formatting transcript from diarization...",
+            current_step=1,
+            total_steps=4,
+        )
+        full_text = self._format_transcript(cast(list, record.segments), cast(dict, record.recognition_results))
+        if not full_text:
+            raise ValueError("No segments found in diarization record")
+        return full_text
+
+    def _report_step(self, job: Any, step: int, message: str, content_id: Optional[UUID] = None) -> None:
+        self.ingestion_service.update_job(
+            job_id=job.id,
+            status=IngestionJobStatus.PROCESSING,
+            status_message=message,
+            current_step=step,
+            total_steps=4,
+            content_source_id=content_id,
+        )
+
+    def _complete_diarization_record(self, cmd: IngestDiarizationCommand) -> None:
+        self.diarization_repo.update_status(
+            diarization_id=str(cmd.diarization_id),
+            status=DiarizationStatus.COMPLETED.value,
+            status_message="Ingestão concluída com sucesso",
+            error_message="",
+        )
+
+    def _publish_final_notification(self, cmd: IngestDiarizationCommand) -> None:
+        self.event_bus.publish(
+            "ingestion_status",
+            {
+                "type": "diarization",
+                "id": str(cmd.diarization_id),
+                "status": "done",
+                "message": "Diarização indexada com sucesso",
+            },
+        )
+
+    def _rollback_on_failure(self, job: Optional[Any], source: Optional[Any], error: Exception) -> None:
+        """Rolls back changes if ingestion fails."""
+        if job:
+            self.ingestion_service.update_job(
+                job_id=job.id,
+                status=IngestionJobStatus.FAILED,
+                error_message=str(error),
+            )
+            # Cleanup SQL Chunks
+            self.chunk_service.delete_by_job_id(job.id)
+
+        if source:
+            self.cs_service.update_processing_status(
+                content_source_id=source.id,
+                status=ContentSourceStatus.FAILED,
+                error_message=str(error),
+            )
+            # Vector cleanup is handled by job_id filters if possible, or by source_id
+            self.vector_service.delete(filters={"content_source_id": str(source.id)})
 
     def _resolve_source_info(self, record: Any) -> tuple[SourceType, str]:
         source_type_val = cast(str, record.source_type)
@@ -197,7 +215,6 @@ class DiarizationIngestionUseCase:
             if original:
                 external_source = original
 
-        # Normalize YouTube IDs to prevent duplicates (Short URLs, Full URLs vs 11-char IDs)
         if source_type == SourceType.YOUTUBE:
             normalized_vid = YoutubeExtractor.get_video_id(external_source)
             if normalized_vid:
@@ -244,7 +261,6 @@ class DiarizationIngestionUseCase:
             )
         else:
             self.cs_service.update_processing_status(source.id, ContentSourceStatus.PROCESSING)
-            # Update title if it has changed
             if cmd.name and source.title != cmd.name:
                 self.cs_service.update_title(source.id, cmd.name)
 
@@ -332,10 +348,18 @@ class DiarizationIngestionUseCase:
         if not segments:
             return ""
 
-        mapping = recognition.get("mapping", {}) if recognition else {}
-
+        mapping = (recognition or {}).get("mapping", {})
         merged_lines = []
-        curr_speaker, curr_start, curr_end, curr_texts = None, None, None, []
+
+        curr_speaker: Optional[str] = None
+        curr_start = 0.0
+        curr_end = 0.0
+        curr_texts: List[str] = []
+
+        def flush_block() -> None:
+            if curr_speaker is not None:
+                ts = f"[{self._format_seconds(curr_start)} - {self._format_seconds(curr_end)}]"
+                merged_lines.append(f"{ts} {curr_speaker}: {' '.join(curr_texts)}")
 
         for seg in segments:
             spk_label = seg.get("speaker", "UNKNOWN")
@@ -344,28 +368,15 @@ class DiarizationIngestionUseCase:
             end = float(seg.get("end", 0))
             text = seg.get("text", "").strip()
 
-            if spk_name == curr_speaker:
-                curr_end = end
-                if text:
-                    curr_texts.append(text)
-            else:
-                if curr_speaker is not None:
-                    start_str = self._format_seconds(cast(float, curr_start))
-                    end_str = self._format_seconds(cast(float, curr_end))
-                    ts = f"[{start_str} - {end_str}]"
-                    merged_lines.append(f"{ts} {curr_speaker}: {' '.join(curr_texts)}")
+            if spk_name != curr_speaker:
+                flush_block()
+                curr_speaker, curr_start, curr_texts = spk_name, start, []
 
-                curr_speaker, curr_start, curr_end, curr_texts = (
-                    spk_name,
-                    start,
-                    end,
-                    [text] if text else [],
-                )
+            curr_end = end
+            if text:
+                curr_texts.append(text)
 
-        if curr_speaker is not None:
-            ts = f"[{self._format_seconds(cast(float, curr_start))} - {self._format_seconds(cast(float, curr_end))}]"
-            merged_lines.append(f"{ts} {curr_speaker}: {' '.join(curr_texts)}")
-
+        flush_block()
         return "\n".join(merged_lines)
 
     def _build_chunk_entities(
