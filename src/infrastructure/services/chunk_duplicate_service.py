@@ -28,9 +28,7 @@ class ChunkDuplicateService:
         self._chunk_repo = chunk_repo
         self._vector_service = vector_service
 
-    def find_and_register_duplicates(
-        self, chunk_ids: List[UUID], similarity_threshold: float = 0.90
-    ) -> int:
+    def find_and_register_duplicates(self, chunk_ids: List[UUID], similarity_threshold: float = 0.90) -> int:
         """
         Check a list of chunks for duplicates against the entire vector store.
         If duplicates are found with similarity >= threshold, register them.
@@ -56,19 +54,16 @@ class ChunkDuplicateService:
 
             if duplicates:
                 registered_count += self._register_cluster(
-                    source_id=cid, 
+                    source_id=cid,
                     source_content_source_id=str(chunk.content_source_id) if chunk.content_source_id else None,
-                    duplicates=duplicates, 
-                    processed_pairs=processed_pairs
+                    duplicates=duplicates,
+                    processed_pairs=processed_pairs,
                 )
 
         return registered_count
 
     def _filter_duplicates(
-        self,
-        source_id: UUID,
-        similar_chunks: List[Any],
-        threshold: float
+        self, source_id: UUID, similar_chunks: List[Any], threshold: float
     ) -> List[tuple[UUID, float]]:
         """Filter results to find valid duplicates above threshold."""
         duplicates = []
@@ -76,7 +71,7 @@ class ChunkDuplicateService:
         for sim_chunk in similar_chunks:
             if str(sim_chunk.id) == source_id_str:
                 continue
-            
+
             score = getattr(sim_chunk, "score", 0.0)
             if score >= threshold:
                 duplicates.append((sim_chunk.id, float(score)))
@@ -87,7 +82,7 @@ class ChunkDuplicateService:
         source_id: UUID,
         source_content_source_id: Optional[str],
         duplicates: List[tuple[UUID, float]],
-        processed_pairs: Set[tuple[str, ...]]
+        processed_pairs: Set[tuple[str, ...]],
     ) -> int:
         """Register a new duplicate group if not already processed."""
         duplicate_ids = [d[0] for d in duplicates]
@@ -100,26 +95,20 @@ class ChunkDuplicateService:
             # Get exact similarity for the highest match
             max_sim = max([float(d[1]) for d in duplicates] + [0.0])
             self._repo.create_duplicate_record(
-                chunk_ids=all_uuids,
-                similarity=max_sim,
-                status="pending",
-                content_source_id=source_content_source_id
+                chunk_ids=all_uuids, similarity=max_sim, status="pending", content_source_id=source_content_source_id
             )
             processed_pairs.add(cluster_key)
             return 1
         return 0
 
     def list_duplicates(
-        self,
-        status: Optional[str] = None,
-        subject_ids: Optional[List[str]] = None,
-        limit: int = 100,
-        offset: int = 0
+        self, status: Optional[str] = None, subject_ids: Optional[List[str]] = None, limit: int = 100, offset: int = 0
     ) -> tuple[List[ChunkDuplicateEntity], int]:
         """List mapped duplicate records."""
         models, total = self._repo.list_duplicates(status=status, subject_ids=subject_ids, limit=limit, offset=offset)
         entities = []
         from datetime import datetime
+
         for m in models:
             chunk_ids: List[UUID] = []
             if isinstance(m.chunk_ids, list):
@@ -128,20 +117,22 @@ class ChunkDuplicateService:
                         chunk_ids.append(UUID(cid))
                     elif isinstance(cid, UUID):
                         chunk_ids.append(cid)
-            
+
             # Ensure datetime types for Mypy
             created_at = m.created_at if isinstance(m.created_at, datetime) else datetime.now()
             updated_at = m.updated_at if isinstance(m.updated_at, datetime) else datetime.now()
 
-            entities.append(ChunkDuplicateEntity(
-                id=UUID(str(m.id)),
-                chunk_ids=chunk_ids,
-                similarity=float(m.similarity),
-                content_source_id=str(m.content_source_id) if m.content_source_id else None,
-                status=str(m.status),
-                created_at=created_at,
-                updated_at=updated_at,
-            ))
+            entities.append(
+                ChunkDuplicateEntity(
+                    id=UUID(str(m.id)),
+                    chunk_ids=chunk_ids,
+                    similarity=float(m.similarity),
+                    content_source_id=str(m.content_source_id) if m.content_source_id else None,
+                    status=str(m.status),
+                    created_at=created_at,
+                    updated_at=updated_at,
+                )
+            )
         return entities, total
 
     def resolve_duplicate(self, duplicate_id: UUID, status: str) -> bool:

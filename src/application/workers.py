@@ -1,5 +1,6 @@
 import logging
 from typing import Any
+from uuid import UUID
 
 from src.application.dtos.commands.ingest_diarization_command import (
     IngestDiarizationCommand,
@@ -10,6 +11,7 @@ from src.application.dtos.commands.ingest_youtube_command import IngestYoutubeCo
 from src.application.dtos.commands.process_audio_command import ProcessAudioCommand
 from src.application.dtos.commands.train_voice_command import TrainVoiceCommand
 from src.application.service_registry import registry
+from src.domain.entities.enums.ingestion_job_status_enum import IngestionJobStatus
 from src.infrastructure.loggers.std_logger import (
     clear_global_context,
     set_global_context,
@@ -113,6 +115,10 @@ def run_youtube_ingestion_worker(cmd: IngestYoutubeCommand):
         )
 
         ctx = resolve_ingestion_context(app)
+        if not ctx:
+            logger.error("Could not resolve ingestion context for YouTube worker")
+            return
+
         vector_repo = resolve_vector_repository(app)
         vector_svc = YouTubeVectorService(vector_repo)
 
@@ -130,12 +136,13 @@ def run_youtube_ingestion_worker(cmd: IngestYoutubeCommand):
 
         result = use_case.execute(cmd)
 
-        # Enqueue duplicate detection
-        if result and "vector_ids" in result:
+        # Enqueue duplicate detection if we have vector IDs
+        if result and getattr(result, "vector_ids", None):
+            task_ids = [UUID(str(vid)) for vid in result.vector_ids]
             task_queue = app.state.task_queue
             task_queue.enqueue(
                 run_duplicate_detection_worker,
-                {"chunk_ids": result["vector_ids"]},
+                {"chunk_ids": task_ids},
                 task_title=f"Dup Check YouTube: {cmd.video_url}",
             )
     except Exception as e:
@@ -166,15 +173,20 @@ def run_youtube_dispatcher_worker(cmd: IngestYoutubeCommand):
 
         task_queue = app.state.task_queue
         context = resolve_ingestion_context(app)
+        if not context:
+            logger.error("Could not resolve ingestion context for YouTube dispatcher")
+            return
+
         job_service = context.job_service
         job_id = str(cmd.ingestion_job_id) if cmd.ingestion_job_id else None
 
-        if job_id:
-            job_service.update_job_status(
-                job_id,
-                status="PROCESSING",
+        if job_id and job_service:
+            job_service.update_job(
+                UUID(job_id),
+                status=IngestionJobStatus.PROCESSING,
                 status_message=f"Resolving {cmd.data_type} videos...",
-                progress=5,
+                current_step=5,
+                total_steps=100,
             )
 
         # 1. Resolve the full list of URLs
@@ -184,8 +196,10 @@ def run_youtube_dispatcher_worker(cmd: IngestYoutubeCommand):
             playlist_url = cmd.video_url or (cmd.video_urls[0] if cmd.video_urls else None)
             if not playlist_url:
                 logger.warning("No URL provided for playlist dispatcher")
-                if job_id:
-                    job_service.update_job_status(job_id, "FAILED", "Missing playlist URL.")
+                if job_id and job_service:
+                    job_service.update_job(
+                        UUID(job_id), status=IngestionJobStatus.FAILED, status_message="Missing playlist URL."
+                    )
                 return
 
             extractor = YoutubeExtractor(language=cmd.language)
@@ -195,8 +209,10 @@ def run_youtube_dispatcher_worker(cmd: IngestYoutubeCommand):
             channel_url = cmd.video_url or (cmd.video_urls[0] if cmd.video_urls else None)
             if not channel_url:
                 logger.warning("No URL provided for channel dispatcher")
-                if job_id:
-                    job_service.update_job_status(job_id, "FAILED", "Missing channel URL.")
+                if job_id and job_service:
+                    job_service.update_job(
+                        UUID(job_id), status=IngestionJobStatus.FAILED, status_message="Missing channel URL."
+                    )
                 return
 
             extractor = YoutubeExtractor(language=cmd.language)
@@ -207,20 +223,21 @@ def run_youtube_dispatcher_worker(cmd: IngestYoutubeCommand):
 
         if not video_list:
             logger.warning(f"YouTube Dispatcher resolved 0 videos for type {cmd.data_type}.")
-            if job_id:
-                job_service.update_job_status(
-                    job_id,
-                    "FAILED",
-                    f"No videos found in {cmd.data_type}. Verify if the URL is valid and public.",
+            if job_id and job_service:
+                job_service.update_job(
+                    UUID(job_id),
+                    status=IngestionJobStatus.FAILED,
+                    status_message=f"No videos found in {cmd.data_type}. Verify if the URL is valid and public.",
                 )
             return
 
-        if job_id:
-            job_service.update_job_status(
-                job_id,
-                status="PROCESSING",
+        if job_id and job_service:
+            job_service.update_job(
+                UUID(job_id),
+                status=IngestionJobStatus.PROCESSING,
                 status_message=f"Dispatched {len(video_list)} videos for ingestion.",
-                progress=50,
+                current_step=50,
+                total_steps=100,
             )
 
         logger.info(f"YouTube Dispatcher resolved {len(video_list)} videos. Enqueueing individual tasks...")
@@ -248,21 +265,22 @@ def run_youtube_dispatcher_worker(cmd: IngestYoutubeCommand):
             )
 
         logger.info(f"Successfully dispatched {len(video_list)} YouTube ingestion tasks.")
-        if job_id:
-            job_service.update_job_status(
-                job_id,
-                status="SUCCESS",
+        if job_id and job_service:
+            job_service.update_job(
+                UUID(job_id),
+                status=IngestionJobStatus.FINISHED,
                 status_message=f"Dispatched {len(video_list)} videos successfully.",
-                progress=100,
+                current_step=100,
+                total_steps=100,
             )
 
     except Exception as e:
         logger.error(f"YouTube Dispatcher Worker Error: {e}", exc_info=True)
-        if job_id:
+        if job_id and job_service:
             try:
-                job_service.update_job_status(job_id, "FAILED", str(e))
-            except Exception:
-                pass
+                job_service.update_job(UUID(job_id), status=IngestionJobStatus.FAILED, error_message=str(e))
+            except Exception as outer_e:
+                logger.warning(f"Failed to update job status during error cleanup: {outer_e}")
     finally:
         clear_global_context()
 
@@ -321,8 +339,8 @@ def run_diarization_ingestion_worker(cmd: IngestDiarizationCommand):
                 task_queue = app.state.task_queue
                 task_queue.enqueue(
                     run_duplicate_detection_worker,
-                    {"chunk_ids": result["vector_ids"]},
-                    task_title=f"Dup Check Diarization: {cmd.source}"
+                    {"chunk_ids": [UUID(v) if isinstance(v, str) else v for v in result["vector_ids"]]},
+                    task_title=f"Dup Check Diarization: {cmd.name or str(cmd.diarization_id)}",
                 )
         finally:
             db.close()
@@ -387,8 +405,8 @@ def run_web_ingestion_worker(cmd: Any):
                 task_queue = app.state.task_queue
                 task_queue.enqueue(
                     run_duplicate_detection_worker,
-                    {"chunk_ids": result["vector_ids"]},
-                    task_title=f"Dup Check Web: {cmd.url}"
+                    {"chunk_ids": [UUID(v) if isinstance(v, str) else v for v in result["vector_ids"]]},
+                    task_title=f"Dup Check Web: {cmd.url}",
                 )
         except Exception as e:
             logging.getLogger(__name__).error(f"Worker Error: Failed to execute Web Scraping: {e}", exc_info=True)
@@ -696,12 +714,12 @@ def run_duplicate_detection_worker(cmd: dict):
         vector_repo = resolve_vector_repository(app)
         rerank_svc = resolve_rerank_service(app)
         vector_svc = get_chunk_vector_service(vector_repo, rerank_svc)
-        
+
         duplicate_repo = get_duplicate_repo()
         chunk_repo = get_chunk_repo()
-        
+
         service = ChunkDuplicateService(duplicate_repo, chunk_repo, vector_svc)
-        
+
         chunk_ids = cmd.get("chunk_ids", [])
         if not chunk_ids:
             return

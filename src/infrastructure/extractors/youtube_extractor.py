@@ -239,9 +239,7 @@ class YoutubeExtractor(IYoutubeExtractor):
         if len(header) >= 2 and header[0] == 0xFF and (header[1] & 0xE0) == 0xE0:
             return
 
-        raise ValueError(
-            f"Downloaded file is not a valid MP3 (header={header!r}): {path}"
-        )
+        raise ValueError(f"Downloaded file is not a valid MP3 (header={header!r}): {path}")
 
     def extract_playlist_videos(self, playlist_url: str) -> list[str]:
         """Extracts all video URLs from a YouTube playlist using yt_dlp."""

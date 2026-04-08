@@ -124,16 +124,23 @@ def ingest_youtube(
         logger.info("Running ingestion in background via queue", context={"reason": reason})
 
         # Ensure we have a job ID for background tasks so they are visible in UI
-        job_id = request.ingestion_job_id
+        job_id = str(request.ingestion_job_id) if request.ingestion_job_id else None
         if not job_id:
+            if not job_service:
+                logger.error("Job service dependency missing")
+                raise HTTPException(status_code=500, detail="Internal configuration error")
+
             job_title = request.title or request.video_url or f"YouTube {reason.capitalize()}"
+            from src.domain.entities.enums.ingestion_job_status_enum import IngestionJobStatus
+
+            s_uuid = UUID(request.subject_id) if request.subject_id else None
             job = job_service.create_job(
+                content_source_id=None,
+                status=IngestionJobStatus.STARTED,
                 source_title=job_title,
                 external_source=request.video_url or (request.video_urls[0] if request.video_urls else None),
-                subject_id=request.subject_id,
+                subject_id=s_uuid,
                 ingestion_type="YOUTUBE",
-                status="INITIALIZING",
-                status_message=f"Starting YouTube {reason} ingestion...",
             )
             job_id = str(job.id)
             cmd.ingestion_job_id = job_id
@@ -160,7 +167,15 @@ def ingest_youtube(
                 detail=result.reason or "This content has already been ingested.",
             )
 
-        return result
+        return IngestResponse(
+            skipped=result.skipped,
+            reason=result.reason,
+            source_id=result.source_id,
+            job_id=result.job_id,
+            created_chunks=result.created_chunks,
+            vector_ids=result.vector_ids,
+            video_results=result.video_results,
+        )
     except HTTPException:
         raise
     except ValueError as ve:

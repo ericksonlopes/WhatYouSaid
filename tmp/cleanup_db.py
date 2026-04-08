@@ -15,7 +15,7 @@ with engine.connect() as conn:
         # Check if is_active exists in chunk_index
         res = conn.execute(text("PRAGMA table_info(chunk_index)"))
         columns = [row[1] for row in res]
-        if 'is_active' in columns:
+        if "is_active" in columns:
             print("is_active already exists in chunk_index. Attempting to drop it (batch mode needed for SQLite).")
             # For simplicity in this scratch script, I'll just note it.
             # Usually we group these with migrations.

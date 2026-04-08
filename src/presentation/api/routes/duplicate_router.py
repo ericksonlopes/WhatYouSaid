@@ -32,7 +32,7 @@ def list_duplicates(
 ):
     """List all detected chunk duplicate groups."""
     entities, total = service.list_duplicates(status=status, subject_ids=subject_id, limit=limit, offset=offset)
-    
+
     # Enrich entities with chunk content if needed for UI
     results = []
     for entity in entities:
@@ -41,15 +41,17 @@ def list_duplicates(
         for cid in entity.chunk_ids:
             chunk = chunk_service.get_by_id(cid)
             if chunk:
-                chunks_info.append(ChunkMinimal(
-                    id=chunk.id,
-                    content=chunk.content or "",
-                    source_title=chunk.extra.get("source_title", "Unknown"),
-                    source_id=chunk.content_source_id
-                ))
+                chunks_info.append(
+                    ChunkMinimal(
+                        id=chunk.id,
+                        content=chunk.content or "",
+                        source_title=chunk.extra.get("source_title", "Unknown"),
+                        source_id=chunk.content_source_id,
+                    )
+                )
         resp.chunks = chunks_info
         results.append(resp)
-        
+
     return PaginatedChunkDuplicateResponse(results=results, total=total)
 
 
@@ -89,8 +91,8 @@ def analyze_all_chunks(
     """Run duplicate detection analysis on all existing chunks (heavy operation)."""
     # This should probably be a background task, but for now we'll do it synchronously
     # or just list everything and iterate
-    all_chunks = chunk_service.list_chunks(limit=1000) # Limit for safety
+    all_chunks = chunk_service.list_chunks(limit=1000)  # Limit for safety
     chunk_ids = [c.id for c in all_chunks]
-    
+
     count = service.find_and_register_duplicates(chunk_ids)
     return {"status": "success", "groups_found": count}

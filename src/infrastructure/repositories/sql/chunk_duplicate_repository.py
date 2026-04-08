@@ -11,15 +11,12 @@ from src.infrastructure.repositories.sql.utils.utils import ensure_uuid
 
 logger = Logger()
 
+
 class ChunkDuplicateSQLRepository:
     """Repository for managing duplicate chunk records in SQL."""
 
     def create_duplicate_record(
-        self,
-        chunk_ids: List[UUID],
-        similarity: float,
-        status: str = "pending",
-        content_source_id: Optional[str] = None
+        self, chunk_ids: List[UUID], similarity: float, status: str = "pending", content_source_id: Optional[str] = None
     ) -> ChunkDuplicateModel:
         """Create a new duplicate grouping record."""
         with Connector() as session:
@@ -28,7 +25,7 @@ class ChunkDuplicateSQLRepository:
                     chunk_ids=[str(cid) for cid in chunk_ids],
                     similarity=similarity,
                     status=status,
-                    content_source_id=content_source_id
+                    content_source_id=content_source_id,
                 )
                 session.add(record)
                 session.commit()
@@ -36,34 +33,26 @@ class ChunkDuplicateSQLRepository:
                 return record
             except Exception as e:
                 session.rollback()
-                logger.error(
-                    "Error creating duplicate record",
-                    context={"error": str(e)}
-                )
+                logger.error("Error creating duplicate record", context={"error": str(e)})
                 raise
 
     def list_duplicates(
-        self,
-        status: Optional[str] = None,
-        subject_ids: Optional[List[str]] = None,
-        limit: int = 100,
-        offset: int = 0
+        self, status: Optional[str] = None, subject_ids: Optional[List[str]] = None, limit: int = 100, offset: int = 0
     ) -> tuple[List[ChunkDuplicateModel], int]:
         """List duplicate records with optional status and context filtering."""
         with Connector() as session:
             query = session.query(ChunkDuplicateModel)
-            
+
             if subject_ids:
                 # Convert string IDs to UUID objects for safe matching in SQL
                 parsed_ids = [UUID(sid) for sid in subject_ids]
                 query = query.join(
-                    ContentSourceModel,
-                    ContentSourceModel.id == ChunkDuplicateModel.content_source_id
+                    ContentSourceModel, ContentSourceModel.id == ChunkDuplicateModel.content_source_id
                 ).filter(ContentSourceModel.subject_id.in_(parsed_ids))
-            
+
             if status:
                 query = query.filter(ChunkDuplicateModel.status == status)
-            
+
             total = query.count()
             items = query.order_by(desc(ChunkDuplicateModel.created_at)).limit(limit).offset(offset).all()
             return items, total
@@ -88,8 +77,7 @@ class ChunkDuplicateSQLRepository:
             except Exception as e:
                 session.rollback()
                 logger.error(
-                    "Error updating duplicate status",
-                    context={"duplicate_id": str(duplicate_id), "error": str(e)}
+                    "Error updating duplicate status", context={"duplicate_id": str(duplicate_id), "error": str(e)}
                 )
                 raise
 
@@ -107,7 +95,6 @@ class ChunkDuplicateSQLRepository:
             except Exception as e:
                 session.rollback()
                 logger.error(
-                    "Error deleting duplicate record",
-                    context={"duplicate_id": str(duplicate_id), "error": str(e)}
+                    "Error deleting duplicate record", context={"duplicate_id": str(duplicate_id), "error": str(e)}
                 )
                 raise
