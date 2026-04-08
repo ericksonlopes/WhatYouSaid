@@ -60,14 +60,20 @@ fi
 
 if [ -n "$EXTRAS" ]; then
     echo "📦 Installing: $EXTRAS"
-    uv sync --frozen --no-dev $EXTRAS
+    uv sync --frozen --no-dev $EXTRAS || { echo "⚠️ Warning: uv sync with EXTRAS failed. Attempting to continue with pre-installed dependencies..."; }
 else
     echo "✅ No extras needed, ensuring core dependencies are synchronized."
-    uv sync --frozen --no-dev
+    uv sync --frozen --no-dev || { echo "⚠️ Warning: uv sync failed. Attempting to continue with pre-installed dependencies..."; }
 fi
 
 echo "🔄 Running migrations..."
-uv run --no-dev alembic upgrade head
+if uv run --no-dev alembic upgrade head; then
+    echo "✅ Migrations completed successfully."
+else
+    echo "❌ Migration failed! Check your database connection settings."
+    # We exit here because the app won't work without migrations
+    exit 1
+fi
 
-echo "🎬 Starting application..."
+echo "🎬 Starting application on port ${PORT:-5000}..."
 exec uv run --no-dev uvicorn main:app --host 0.0.0.0 --port ${PORT:-5000}
