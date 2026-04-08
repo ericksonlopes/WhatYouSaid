@@ -9,12 +9,16 @@ services:
       - 5000:5000
     networks:
       - wys_network
+    restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
       interval: 15s
       timeout: 10s
-      retries: 10
+      retries: 5
       start_period: 60s
+    depends_on:
+      redis:
+        condition: service_healthy
     environment:
       - APP__ENV=${APP__ENV:-production}
       - APP__LIST_LOG_LEVELS=${APP__LIST_LOG_LEVELS:-INFO,WARNING,ERROR,CRITICAL}
@@ -69,6 +73,7 @@ services:
       - wys_network
     environment:
       - APP_URL=${APP_URL:-https://localhost:5000}
+    restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
@@ -87,6 +92,12 @@ services:
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - wys_network
 
@@ -96,6 +107,12 @@ services:
       - 6379:6379
     networks:
       - wys_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     command: redis-server --requirepass ${REDIS__PASSWORD:-password}
 
   weaviate:
@@ -112,6 +129,12 @@ services:
       AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
       PERSISTENCE_DATA_PATH: '/data/weaviate'
       CLUSTER_HOSTNAME: 'node1'
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   chroma:
     image: chromadb/chroma:0.5.23
@@ -140,6 +163,12 @@ services:
       POSTGRES_PASSWORD: ${SQL__PASSWORD:-pass}
       POSTGRES_DB: ${SQL__DATABASE:-whatyousaid}
       PGDATA: /var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${SQL__USER:-user} -d $${SQL__DATABASE:-whatyousaid}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mysql:
     image: mysql:8.0

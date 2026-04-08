@@ -25,8 +25,38 @@ if [ "$INSTALL_GPU" = "true" ]; then
     EXTRAS="$EXTRAS --extra gpu"
 fi
 
-echo "🚀 Automating environment for SQL:$SQL__TYPE and Vector:$VECTOR__STORE_TYPE"
+echo "🚀 Automating environment for SQL:$SQL_VAL and Vector:$VECTOR__STORE_TYPE"
 echo "📂 UV Cache Dir: $UV_CACHE_DIR"
+
+# Function to wait for a port to be open
+wait_for_port() {
+    local host="$1"
+    local port="$2"
+    local name="$3"
+    if [ -z "$host" ] || [ -z "$port" ]; then
+        return
+    fi
+    echo "⏳ Waiting for $name ($host:$port)..."
+    local max_retries=30
+    local count=0
+    while ! python3 -c "import socket; s = socket.socket(); s.connect(('$host', int('$port')))" 2>/dev/null; do
+        sleep 2
+        count=$((count + 1))
+        if [ $count -ge $max_retries ]; then
+            echo "⚠️ Warning: $name ($host:$port) still not reachable after $max_retries retries. Proceeding anyway..."
+            break
+        fi
+    done
+    echo "✅ $name is reachable!"
+}
+
+# Wait for Redis (always required)
+wait_for_port "${REDIS__HOST:-redis}" "${REDIS__PORT:-6379}" "Redis"
+
+# Wait for SQL if not sqlite
+if [ "$SQL_VAL" != "sqlite" ] && [ -n "$SQL__HOST" ]; then
+    wait_for_port "$SQL__HOST" "${SQL__PORT:-5432}" "Database ($SQL_VAL)"
+fi
 
 if [ -n "$EXTRAS" ]; then
     echo "📦 Installing: $EXTRAS"
