@@ -506,7 +506,7 @@ class YoutubeExtractor(IYoutubeExtractor):
         if not url:
             return None
 
-        # 1. Quick check for plain 11-char ID
+        # 1. Quick check for plain IDs (keep strict 11-char for plain strings)
         if len(url) == 11 and re.match(r"^[A-Za-z0-9_-]{11}$", url):
             return url
 
@@ -517,14 +517,14 @@ class YoutubeExtractor(IYoutubeExtractor):
             # Handle youtu.be/ID
             if "youtu.be" in netloc:
                 vid = parsed.path.lstrip("/")
-                return vid if len(vid) == 11 else None
+                return vid if 10 <= len(vid) <= 15 else None
 
             # Handle youtube.com/...
             if "youtube" in netloc:
                 q = parse_qs(parsed.query)
                 if "v" in q:
                     vid = q["v"][0]
-                    if len(vid) == 11:
+                    if 10 <= len(vid) <= 15:
                         return vid
 
                 path_parts = [p for p in parsed.path.split("/") if p]
@@ -532,13 +532,13 @@ class YoutubeExtractor(IYoutubeExtractor):
                 for i, part in enumerate(path_parts):
                     if part in ("embed", "v", "shorts") and i + 1 < len(path_parts):
                         vid = path_parts[i + 1]
-                        if len(vid) == 11:
+                        if 10 <= len(vid) <= 15:
                             return vid
 
                 # /path/ID fallback
                 if path_parts:
                     potential_id = path_parts[-1]
-                    if len(potential_id) == 11 and potential_id not in (
+                    if 10 <= len(potential_id) <= 15 and potential_id not in (
                         "videos",
                         "shorts",
                         "about",
@@ -547,9 +547,15 @@ class YoutubeExtractor(IYoutubeExtractor):
                     ):
                         return potential_id
 
-            # 2. Broader search: look for 11-char ID preceded by common prefixes
+            # 2. Broader search: look for ID preceded by common prefixes or as plain 11-char ID
+            # 2.1. Prefixed search (allow 10-15 chars)
+            m = re.search(r"(?:v=|be/|embed/|shorts/)([A-Za-z0-9_-]{10,15})", url)
+            if m:
+                return m.group(1)
+
+            # 2.2. Generic search (strict 11-char)
             m = re.search(
-                r"(?:v=|be/|embed/|shorts/|^|[^A-Za-z0-9_-])([A-Za-z0-9_-]{11})(?:$|[^A-Za-z0-9_-])",
+                r"(?:^|[^A-Za-z0-9_-])([A-Za-z0-9_-]{11})(?:$|[^A-Za-z0-9_-])",
                 url,
             )
             if m:

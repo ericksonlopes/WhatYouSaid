@@ -625,25 +625,28 @@ def run_audio_diarization_worker(cmd: ProcessAudioCommand):
                         DiarizationStatus,
                     )
 
-                    error_msg = f"Processo encerrou inesperadamente com código {process.exitcode}"
-                    repo.update_status(
-                        cmd.diarization_id,
-                        DiarizationStatus.FAILED.value,
-                        error_message=error_msg,
-                        status_message="Falha no processamento",
-                    )
+                    existing = repo.get_by_id(cmd.diarization_id)
+                    if not existing or existing.status != DiarizationStatus.FAILED.value or not existing.error_message:
+                        error_msg = f"Processo encerrou inesperadamente com código {process.exitcode}"
+                        repo.update_status(
+                            cmd.diarization_id,
+                            DiarizationStatus.FAILED.value,
+                            error_message=error_msg,
+                            status_message="Falha no processamento",
+                        )
 
-                    # Notify frontend via EventBus
-                    event_bus = RedisEventBus()
-                    event_bus.publish(
-                        "ingestion_status",
-                        {
-                            "type": "diarization",
-                            "id": cmd.diarization_id,
-                            "status": DiarizationStatus.FAILED.value,
-                            "message": f"Erro crítico no processamento: {error_msg}",
-                        },
-                    )
+                    # Notify frontend via EventBus (if not already recorded as failed with message)
+                    if not existing or existing.status != DiarizationStatus.FAILED.value:
+                        event_bus = RedisEventBus()
+                        event_bus.publish(
+                            "ingestion_status",
+                            {
+                                "type": "diarization",
+                                "id": cmd.diarization_id,
+                                "status": DiarizationStatus.FAILED.value,
+                                "message": f"Erro crítico no processamento: Código {process.exitcode}",
+                            },
+                        )
                 finally:
                     db.close()
         else:
