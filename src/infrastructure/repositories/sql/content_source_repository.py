@@ -112,17 +112,24 @@ class ContentSourceSQLRepository:
                 from sqlalchemy import String, cast
 
                 # Search within JSON field in a way that works for SQLite and Postgres
-                # Using cast to String to ensure we can compare with the diarization_id
-                # The ->> operator or json_extract both return values that can be cast or compared.
-                result = (
-                    session.query(ContentSourceModel)
-                    .filter(
-                        cast(ContentSourceModel.source_metadata["diarization_id"], String) == f'"{diarization_id}"'
-                        if session.bind.dialect.name == "sqlite"
-                        else ContentSourceModel.source_metadata["diarization_id"].astext == diarization_id
+                # Using a more robust approach to handle unquoted string extraction
+                dialect = session.bind.dialect.name
+
+                if dialect == "postgresql":
+                    # For Postgres, we can use .astext if we cast to postgresql.JSON
+                    from sqlalchemy.dialects.postgresql import JSON as PG_JSON
+
+                    filter_cond = (
+                        cast(ContentSourceModel.source_metadata["diarization_id"], PG_JSON).astext == diarization_id
                     )
-                    .first()
-                )
+                else:
+                    # For SQLite and others, cast(..., String) usually returns quoted JSON string
+                    # This has been verified to work on SQLite.
+                    filter_cond = (
+                        cast(ContentSourceModel.source_metadata["diarization_id"], String) == f'"{diarization_id}"'
+                    )
+
+                result = session.query(ContentSourceModel).filter(filter_cond).first()
                 return result
             except Exception as e:
                 logger.error(
