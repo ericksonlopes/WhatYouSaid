@@ -17,8 +17,7 @@ services:
       retries: 20
       start_period: 600s
     depends_on:
-      redis:
-        condition: service_healthy
+      - redis
     environment:
       - APP__ENV=${APP__ENV:-production}
       - APP__LIST_LOG_LEVELS=${APP__LIST_LOG_LEVELS:-INFO,WARNING,ERROR,CRITICAL}
@@ -75,8 +74,7 @@ services:
       - APP_URL=${APP_URL:-https://localhost:5000}
     restart: unless-stopped
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
 
   minio:
     image: minio/minio:latest
