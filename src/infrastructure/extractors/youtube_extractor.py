@@ -46,16 +46,16 @@ class YoutubeExtractor(IYoutubeExtractor):
         opts: dict = {
             "logger": logger,
             "no_warnings": quiet,
+            # Network Resilience
             "nocheckcertificate": True,
-            "quiet": True,
-            # Force IPv4 to avoid "Connection refused" on some network configurations
-            "source_address": "0.0.0.0",  # nosec
+            "geo_bypass": True,
+            "socket_timeout": 30,
             # Mimic a modern browser to avoid blocks
             "http_headers": {
                 "User-Agent": (
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                     "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/120.0.0.0 Safari/537.36"
+                    "Chrome/123.0.0.0 Safari/537.36"
                 ),
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.5",
@@ -66,8 +66,12 @@ class YoutubeExtractor(IYoutubeExtractor):
             "fragment_retries": 10,
             "retry_sleep_functions": {"http": lambda n: 5 * 2**n},
             # Use multiple clients to avoid "Sign in to confirm you're not a bot"
-            # mediaconnect is often more resilient for servers
-            "extractor_args": {"youtube": {"player_client": ["mediaconnect", "web", "mweb", "android"]}},
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["web", "mweb", "android", "ios", "mediaconnect", "tv"],
+                    "player_skip": ["webpage", "configs"],
+                }
+            },
         }
 
         # Use cookies if provided by user in data/cookies.txt
@@ -102,7 +106,7 @@ class YoutubeExtractor(IYoutubeExtractor):
                 return action()
             except Exception as e:
                 last_exception = e
-                # Check for specific fatal errors that shouldn't be retried
+                # Check for fatal errors
                 err_msg = str(e)
                 if any(x in err_msg for x in ["Private video", "not available", "Sign in"]):
                     logger.error(f"Fatal YouTube error: {e}")
@@ -113,11 +117,29 @@ class YoutubeExtractor(IYoutubeExtractor):
                     logger.error("YouTube IP Block detected in extractor retry loop")
                     raise YoutubeIPBlockedException(self.video_id or "unknown", err_msg)
 
-                delay = initial_delay * (2**attempt)
-                logger.warning(
-                    f"YouTube action failed (attempt {attempt + 1}/{max_retries}). Retrying in {delay}s...",
-                    context={"error": err_msg},
+                # Identify network errors that might benefit from simple retry
+                is_network_err = any(
+                    x in err_msg
+                    for x in [
+                        "Connection refused",
+                        "Connection reset",
+                        "EOF occurred",
+                        "getaddrinfo failed",
+                        "timed out",
+                    ]
                 )
+
+                delay = initial_delay * (2**attempt)
+                if is_network_err:
+                    logger.warning(
+                        f"YouTube network error (attempt {attempt + 1}/{max_retries}). Retrying in {delay}s...",
+                        context={"error": err_msg, "video_id": self.video_id},
+                    )
+                else:
+                    logger.warning(
+                        f"YouTube action failed (attempt {attempt + 1}/{max_retries}). Retrying in {delay}s...",
+                        context={"error": err_msg},
+                    )
                 time.sleep(delay)
         raise last_exception
 
