@@ -76,7 +76,7 @@ def test_ingest_youtube_exception(mock_use_case):
 def test_ingest_youtube_reprocess():
     # Use real dependency override for task_queue if needed,
     # but mock_app_state fixture already sets app.state.task_queue
-    from src.presentation.api.dependencies import get_task_queue_service, get_job_service
+    from src.presentation.api.dependencies import get_job_service, get_task_queue_service
     
     mock_queue = MagicMock()
     app.dependency_overrides[get_task_queue_service] = lambda: mock_queue
@@ -96,7 +96,8 @@ def test_ingest_youtube_reprocess():
 
         assert response.status_code == 200
         assert response.json()["skipped"] is False
-        assert response.json()["reason"] == "Ingestion started in background queue (Job: 123e4567-e89b-12d3-a456-426614174000)."
+        expected_reason = "Ingestion started in background queue (Job: 123e4567-e89b-12d3-a456-426614174000)."
+        assert response.json()["reason"] == expected_reason
         assert mock_queue.enqueue.called
     finally:
         app.dependency_overrides.pop(get_task_queue_service, None)

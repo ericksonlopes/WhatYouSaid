@@ -418,11 +418,11 @@ def run_web_ingestion_worker(cmd: Any):
 
 def _audio_diarization_subprocess(cmd_dict: dict):
     """Run audio diarization in a separate process to avoid torch/CUDA thread deadlocks."""
-    from src.infrastructure.connectors.connector_sql import (
-        Session as DBSessionFactory,
-    )
     from src.application.use_cases.process_audio_diarization_pipeline import (
         ProcessAudioDiarizationPipelineUseCase,
+    )
+    from src.infrastructure.connectors.connector_sql import (
+        Session as DBSessionFactory,
     )
     from src.infrastructure.repositories.sql.content_source_repository import (
         ContentSourceSQLRepository,
@@ -668,10 +668,10 @@ def run_voice_training_worker(cmd: TrainVoiceCommand):
         return
 
     try:
-        from src.infrastructure.connectors.connector_sql import Session as DBSession
         from src.application.use_cases.manage_voice_profiles import (
             TrainVoiceProfileFromSpeakerSegmentUseCase,
         )
+        from src.infrastructure.connectors.connector_sql import Session as DBSession
         from src.presentation.api.dependencies import resolve_ingestion_context
 
         ctx = resolve_ingestion_context(app)
